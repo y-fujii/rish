@@ -52,7 +52,7 @@
 
 [^(){}$* \t\n]+ {
 	yylval = boost::shared_ptr< string >(
-		new std::string( yytext )
+		new ast::Word( yytext )
 	);
 	return WORD;
 }

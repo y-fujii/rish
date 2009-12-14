@@ -2,16 +2,19 @@
 
 #include <string>
 
+namespace ast {
 
-struct Expr {
-	virtual ~Expr() {
+struct Ast {
+	virtual ~Ast() {
 	}
 };
 
-struct Word: Expr {
+struct Word: Ast {
 	Word( std::string const& w ):
 		word( w ) {
 	}
 
 	std::string word;
 };
+
+}

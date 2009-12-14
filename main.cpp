@@ -1,14 +1,22 @@
 
+#include <iostream>
+#include <assert.h>
 #include <histedit.h>
 
 
 int main( int argc, char** argv ) {
-	FILE* stdin = fdopen(0, "r");
-	FILE* stderr = fdopen(1, "w");
-	FILE* stdout = fdopen(2, "w");
-
+	FILE* stdin = fdopen( 0, "r" );
+	FILE* stderr = fdopen( 1, "w" );
+	FILE* stdout = fdopen( 2, "w" );
 	EditLine* el = el_init( argv[0], stdin, stdout, stderr );
-	el_gets( el, );
+
+	while( true ) {
+		int cnt = 0;
+		char const* line = el_gets( el, &cnt );
+		std::cout << line;
+	}
+
+	el_end( el );
 
 	return 0;
 }
