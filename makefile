@@ -1,10 +1,13 @@
 LEX = flex -X
 YACC = byacc
+CXX = g++ -pedantic -Wall -Wextra
 
 all:
-	$(YACC) -d -o parse.cpp parse.y
-	mv parse.h parse.hpp
+	$(YACC) -d parse.y
+	mv y.tab.h parse.hpp
+	mv y.tab.c parse.cpp
 	$(LEX) -o lex.cpp lex.l
+	$(CXX) -o rish main.cpp -ledit
 
 clean:
-	rm -f parse.hpp parse.cpp lex.cpp
+	rm -f parse.hpp parse.cpp lex.cpp rish
