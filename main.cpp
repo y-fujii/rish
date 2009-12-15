@@ -13,7 +13,8 @@ int main( int argc, char** argv ) {
 	while( true ) {
 		int cnt = 0;
 		char const* line = el_gets( el, &cnt );
-		std::cout << line;
+		lex::init( line, line + cnt );
+		Ast* ast = yyparse();
 	}
 
 	el_end( el );
