@@ -1,30 +1,12 @@
 %{
-	#include "ast.hpp"
-	#include "parse.hpp"
-	#include <string>
+	#include "lex.hpp"
 
-	#define YY_INPUT( buf, size, sizeMax ) { \
-		int c = getchar(); \
-		if( c == EOF ) { \
-			size = YY_NULL; \
-		} \
-		else { \
-			buf[0] = c; \
-			size = 1; \
-		} \
+	namespace lex {
+		char* bufCur;
+		char* bufEnd;
 	}
 
-	/*
-	int yywrap() {
-		return 1;
-	}
-	*/
-
-	void lexInit() {
-	}
-
-	void lexTerm() {
-	}
+	using namespace lex;
 %}
 
 spc	[ \t\n]
@@ -53,9 +35,7 @@ spc	[ \t\n]
 <<EOF>>	{ return EOF; }
 
 [^(){}$* \t\n]+ {
-	yylval = boost::shared_ptr< string >(
-		new ast::Word( yytext )
-	);
+	yylval = new ast::Word( yytext );
 	return WORD;
 }
 

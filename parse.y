@@ -41,8 +41,8 @@ command_stat
 	: if
 	| WHILE command_andor '{' command_list '}' else	{ $$ = new ast::While( $2, $4, $6 ); }
 	| FOR WORD            '{' command_list '}' else	{ $$ = new ast::For( $2, $4, $6 ); }
-	| BREAK arg										{ $$ = new ast::Break(); }
-	| RETURN arg									{ $$ = new ast::Return(); }
+	| BREAK arg										{ $$ = new ast::Break( $2 ); }
+	| RETURN arg									{ $$ = new ast::Return( $2 ); }
 	| LET var_list var_star '=' arg_list			{ $$ = new ast::Let( $2, $3, $5 ); }
 	| FUN var_list var_star '{' command_list '}'	{ $$ = new ast::Fun( $2, $3, $5 ); }
 	| '{' command_list '}'							{ $$ = $2 };
