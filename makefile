@@ -3,11 +3,15 @@ YACC = byacc
 CXX = g++ -pedantic -Wall -Wextra
 
 all:
-	$(YACC) -d parse.y
-	mv y.tab.h parse.hpp
-	mv y.tab.c parse.cpp
-	$(LEX) -o lex.cpp lex.l
+	$(YACC) -dv parser.y
+	mv y.tab.h parser.hpp
+	mv y.tab.c parser.cpp
+	mv y.output parser.out
+	$(LEX) -o lexer.cpp lexer.l
 	$(CXX) -o rish main.cpp -ledit
 
+wc:
+	wc parser.y lexer.l ast.hpp eval.hpp main.cpp
+
 clean:
-	rm -f parse.hpp parse.cpp lex.cpp rish
+	rm -f parser.hpp parser.cpp parser.out lexer.cpp rish
