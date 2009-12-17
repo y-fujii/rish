@@ -2,6 +2,8 @@
 #include <iostream>
 #include <assert.h>
 #include <histedit.h>
+#include "ast.hpp"
+#include "parser.hpp"
 
 
 int main( int argc, char** argv ) {

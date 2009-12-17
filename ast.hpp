@@ -1,73 +1,71 @@
 #pragma once
 
+#include <vector>
 #include <string>
 
 namespace ast {
 
-struct Ast {
-	virtual ~Ast() {}
+struct Arg {
 };
 
-struct Word: Ast {
+struct Statement {
+};
+
+struct Word: Arg {
 	Word( std::string const& w ): word( w ) {}
 	std::string word;
 };
 
-struct Var: Ast {
+struct Subst: Arg {
+	Subst( Statement* b ): body( b ) {}
+	Statement* body;
+};
+
+struct Var: Arg {
 	Var( std::string const& n ): name( n ) {}
 	std::string name;
 };
 
-struct List: Ast {
-	List( Word* w, List* n ): word( w ), next( n ) {}
-	Word* word;
-	List* next;
+struct List: Arg {
+	List( std::vector<Arg*>* a ): args( a ) {}
+	std::vector<Arg*>* args;
 };
 
-struct Subst: Ast {
-	Subst( Seq* s ): seq( s ) {}
-	Seq* seq;
-};
-
-struct Concat: Ast {
+struct Concat: Arg {
 	Concat( Arg* l, Arg* r ): lhs( l ), rhs( r ) {}
 	Arg* lhs;
 	Arg* rhs;
 };
 
-struct Star: Ast {
-	Star( std::string n ): name( n ) {}
-	std::string name;
-};
-
-struct Statement: Ast {
+struct VarList {
+	VarList( std::vector<std::string>* vs, std::string* vr ): vars( vs ), varr( vr ) {}
+	std::vector<std::string>* vars;
+	std::string* varr;
 };
 
 struct If: Statement {
-	If( c, t, e ): cond( c ), then( t ), elze( e ) {}
+	If( Statement* c, Statement* t, Statement* e ): cond( c ), then( t ), elze( e ) {}
 	Statement* cond;
 	Statement* then;
 	Statement* elze;
 };
 
 struct Command: Statement {
-	Command( Word* c, List* a ): cmd( c ), args( a ) {}
-	Word* cmd;
-	List* args;
+	Command( Arg* c, std::vector<Arg*>* a ): cmd( c ), args( a ) {}
+	Arg* cmd;
+	std::vector<Arg*>* args;
 };
 
 struct Fun: Statement {
-	Fun( List* as, Word* ar, Command* b ): args( as ), argr( ar ), body( b ) {}
-	List* args;
-	Word* argr;
-	Command* body;
+	Fun( VarList* a, Statement* b ): args( a ), body( b ) {}
+	VarList* args;
+	Statement* body;
 };
 
 struct Let: Statement {
-	Let( List* vs, Word* vr, List* v ): vars( vs ), varr( vr ), vals( v ) {}
-	List* vars;
-	Word* varr;
-	List* vals;
+	Let( VarList* l, std::vector<Arg*>* r ): lhs( l ), rhs( r ) {}
+	VarList* lhs;
+	std::vector<Arg*>* rhs;
 };
 
 struct Return: Statement {
@@ -81,45 +79,45 @@ struct Break: Statement {
 };
 
 struct For: Statement {
-	For( Word* v, Command* b, Command* e ): var( v ), body( b ), elze( e ) {}
-	Word* var;
-	Command* body;
-	Command* elze;
+	For( std::string* v, Statement* b, Statement* e ): var( v ), body( b ), elze( e ) {}
+	std::string* var;
+	Statement* body;
+	Statement* elze;
 };
 
 struct While: Statement {
-	While( Command* c, Command* b, Command* e ): cond( c ), body( b ), elze( e ) {}
-	Command* cond;
-	Command* body;
-	Command* elze;
+	While( Statement* c, Statement* b, Statement* e ): cond( c ), body( b ), elze( e ) {}
+	Statement* cond;
+	Statement* body;
+	Statement* elze;
 };
 
 struct Not: Statement {
-	Not( Command* b ): body( b ) {}
-	Command* body;
+	Not( Statement* b ): body( b ) {}
+	Statement* body;
 };
 
 struct Or: Statement {
-	Or( Command* l, Command* r ): lhs( l ), rhs( r ) {}
-	Command* lhs;
-	Command* rhs;
+	Or( Statement* l, Statement* r ): lhs( l ), rhs( r ) {}
+	Statement* lhs;
+	Statement* rhs;
 };
 
 struct And: Statement {
-	And( Command* l, Command* r ): lhs( l ), rhs( r ) {}
-	Command* lhs;
-	Command* rhs;
+	And( Statement* l, Statement* r ): lhs( l ), rhs( r ) {}
+	Statement* lhs;
+	Statement* rhs;
 };
 
 struct Bg: Statement {
-	And( Command* b ): body( b ) {}
-	Command* body;
+	Bg( Statement* b ): body( b ) {}
+	Statement* body;
 };
 
 struct Seq: Statement {
-	And( Command* l, Command* r ): lhs( l ), rhs( r ) {}
-	Command* lhs;
-	Command* rhs;
+	Seq( Statement* l, Statement* r ): lhs( l ), rhs( r ) {}
+	Statement* lhs;
+	Statement* rhs;
 };
 
 }

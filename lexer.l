@@ -32,11 +32,13 @@ spc	[ \t\n]
 ">|"	{ return RDFR; }
 "|>"	{ return RDT1; }
 "|>>"	{ return RDT2; }
-<<EOF>>	{ return EOF; }
+<<EOF>>	{ return EOS; }
 
 [^(){}$* \t\n]+ {
 	yylval = new ast::Word( yytext );
 	return WORD;
 }
+
+[\t\n ]
 
 %%
