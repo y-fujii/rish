@@ -5,6 +5,7 @@
 
 namespace ast {
 
+
 struct Arg {
 };
 
@@ -119,5 +120,6 @@ struct Seq: Statement {
 	Statement* lhs;
 	Statement* rhs;
 };
+
 
 }
