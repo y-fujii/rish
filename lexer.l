@@ -24,7 +24,6 @@ spc	[ \t\n]
 "!"		{ return '!'; }
 "|"		{ return '|'; }
 "="		{ return '='; }
-"*"		{ return '*'; }
 "^"		{ return '^'; }
 
 "&&"	{ return AND2; }
@@ -35,7 +34,7 @@ spc	[ \t\n]
 <<EOF>>	{ return EOS; }
 
 [^(){}$* \t\n]+ {
-	yylval = new ast::Word( yytext );
+	yylval.string = new std::string( yytext );
 	return WORD;
 }
 
