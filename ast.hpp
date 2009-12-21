@@ -6,42 +6,52 @@
 namespace ast {
 
 
-struct Arg {
+struct Expr {
 };
 
 struct Statement {
 };
 
-struct Word: Arg {
-	Word( std::string const& w ): word( w ) {}
-	std::string word;
+struct Word: Expr {
+	Word( std::string* w ): word( w ) {}
+	std::string* word;
 };
 
-struct Subst: Arg {
+struct Subst: Expr {
 	Subst( Statement* b ): body( b ) {}
 	Statement* body;
 };
 
-struct Var: Arg {
-	Var( std::string const& n ): name( n ) {}
-	std::string name;
+struct Var: Expr {
+	Var( std::string* n ): name( n ) {}
+	std::string* name;
 };
 
-struct List: Arg {
-	List( std::vector<Arg*>* a ): args( a ) {}
-	std::vector<Arg*>* args;
+struct List: Expr {
+	List( std::vector<Expr*>* a ): args( a ) {}
+	std::vector<Expr*>* args;
 };
 
-struct Concat: Arg {
-	Concat( Arg* l, Arg* r ): lhs( l ), rhs( r ) {}
-	Arg* lhs;
-	Arg* rhs;
+struct Concat: Expr {
+	Concat( Expr* l, Expr* r ): lhs( l ), rhs( r ) {}
+	Expr* lhs;
+	Expr* rhs;
 };
 
-struct VarList {
-	VarList( std::vector<std::string>* vs, std::string* vr ): vars( vs ), varr( vr ) {}
-	std::vector<std::string>* vars;
-	std::string* varr;
+struct VarLhs {
+};
+
+struct VarList: VarLhs {
+	VarList( std::vector<std::string*>* v ): vars( v ) {}
+	std::vector<std::string*>* vars;
+};
+
+struct VarStar: VarLhs {
+	VarStar( std::vector<std::string*>* h, std::string* s, std::vector<std::string*>* t ):
+		head( h ), star( s ), tail( t ) {}
+	std::vector<std::string*>* head;
+	std::string* star;
+	std::vector<std::string*>* tail;
 };
 
 struct If: Statement {
@@ -52,9 +62,9 @@ struct If: Statement {
 };
 
 struct Command: Statement {
-	Command( Arg* c, std::vector<Arg*>* a ): cmd( c ), args( a ) {}
-	Arg* cmd;
-	std::vector<Arg*>* args;
+	Command( Expr* c, std::vector<Expr*>* a ): cmd( c ), args( a ) {}
+	Expr* cmd;
+	std::vector<Expr*>* args;
 };
 
 struct Fun: Statement {
@@ -64,19 +74,19 @@ struct Fun: Statement {
 };
 
 struct Let: Statement {
-	Let( VarList* l, std::vector<Arg*>* r ): lhs( l ), rhs( r ) {}
+	Let( VarList* l, std::vector<Expr*>* r ): lhs( l ), rhs( r ) {}
 	VarList* lhs;
-	std::vector<Arg*>* rhs;
+	std::vector<Expr*>* rhs;
 };
 
 struct Return: Statement {
-	Return( Arg* r ): retv( r ) {}
-	Arg* retv;
+	Return( Expr* r ): retv( r ) {}
+	Expr* retv;
 };
 
 struct Break: Statement {
-	Break( Arg* r ): retv( r ) {}
-	Arg* retv;
+	Break( Expr* r ): retv( r ) {}
+	Expr* retv;
 };
 
 struct For: Statement {

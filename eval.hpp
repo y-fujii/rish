@@ -48,7 +48,11 @@ SharedArray evalValue( Value* v ) {
 			return arr;
 		}
 		MATCH( ast::tList ) {
-			return flatten( s->vals );
+			SharedArray dst;
+			for( auto i = s->vals.begin(); s->vals.end(); ++i ) {
+				dst.push_back( evalValue( *i ) );
+			}
+			return dst;
 		}
 		OTHERWISE {
 			assert( false );
