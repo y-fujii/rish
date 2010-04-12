@@ -1,12 +1,6 @@
 %{
-	#include "lex.hpp"
-
-	namespace lex {
-		char* bufCur;
-		char* bufEnd;
-	}
-
-	using namespace lex;
+	#include "ast.hpp"
+	#include "tokens.hpp"
 %}
 
 spc	[ \t\n]

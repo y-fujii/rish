@@ -3,7 +3,7 @@
 #include <iostream>
 #include <assert.h>
 #include <stdio.h>
-//#include <histedit.h>
+#include <histedit.h>
 #include "ast.hpp"
 #include "parser.hpp"
 
@@ -17,6 +17,7 @@ int main( int argc, char** argv ) {
 		char const* line = el_gets( el, &cnt );
 		if( line == NULL ) throw std::exception();
 		ast::Statement* ast = ast::parse( line, line + cnt );
+		assert( ast != NULL );
 	}
 
 	el_end( el );

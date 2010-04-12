@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <tr1/tuple>
 
 namespace ast {
 
@@ -68,15 +69,15 @@ struct Command: Statement {
 };
 
 struct Fun: Statement {
-	Fun( VarList* a, Statement* b ): args( a ), body( b ) {}
-	VarList* args;
+	Fun( VarLhs* a, Statement* b ): args( a ), body( b ) {}
+	VarLhs* args;
 	Statement* body;
 };
 
 struct Let: Statement {
-	Let( VarList* l, std::vector<Expr*>* r ): lhs( l ), rhs( r ) {}
-	VarList* lhs;
-	std::vector<Expr*>* rhs;
+	Let( VarLhs* l, List* r ): lhs( l ), rhs( r ) {}
+	VarLhs* lhs;
+	List* rhs;
 };
 
 struct Return: Statement {
@@ -121,12 +122,26 @@ struct And: Statement {
 };
 
 struct Bg: Statement {
-	Bg( Statement* b ): body( b ) {}
+	Bg( Statement* b, Expr* p ): body( b ), pid( p ) {}
 	Statement* body;
+	Expr* pid;
 };
 
 struct Seq: Statement {
 	Seq( Statement* l, Statement* r ): lhs( l ), rhs( r ) {}
+	Statement* lhs;
+	Statement* rhs;
+};
+
+struct Redir: Statement {
+	Redir( Statement* b, Expr* f, std::vector< std::tr1::tuple<Expr*, int> >* t ): body( b ), from( f ), to( t ) {}
+	Statement* body;
+	Expr* from;
+	std::vector< std::tr1::tuple<Expr*, int> >* to;
+};
+
+struct Pipe: Statement {
+	Pipe( Statement* l, Statement* r ): lhs( l ), rhs( r ) {}
 	Statement* lhs;
 	Statement* rhs;
 };
