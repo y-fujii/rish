@@ -1,37 +1,30 @@
 #pragma once
 
+#include <string>
+#include <ext/rope>
+#include <deque>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "ast.hpp"
+#include "compat.hpp"
 
 
 #define MATCH( c ) break; case (c):
 #define OTHERWISE break; default:
 
-void evalStatement( Statement* s ) {
-	switch( s->type ) {
-		MATCH( ast::tSequence ) {
-			Sequence* s = static_cast<ast::Sequence*>( s );
-			eval( s->lhs );
-			eval( s->rhs );
+void evalValue( std::deque<std::string>& dst, ast::Expr* e ) {
+	using namespace std;
+	using namespace ast;
+
+	switch( e->tag ) {
+		MATCH( tWord ) {
+			Word* w = static_cast<Word*>( e );
+			dst.push_back( *w->word );
 		}
-		MATCH( ast::tCommand ) {
-			Command* s = static_cast<ast::Command*>( s );
-
-			char** args = new char*[s->args->size() + 1];
-			for( int i = 0; i < s->args->size(); ++i ) {
-				args[i] = evalValue( s->args[i] )->c_ptr();
-			}
-			args[s->args->size() + 1] = NULL;
-
-			pid_t pid = fork();
-			if( pid < 0 ) {
-				throw std::exception();
-			}
-			else if( pid == 0 ) {
-				execv( s->cmd->c_ptr(), args );
-				throw std::exception();
-			}
-			if( waitpid( pid, NULL, 0 ) < 0 ) {
-				throw std::exception();
+		MATCH( tList ) {
+			List* l = static_cast<List*>( e );
+			for( auto i = l->vals->begin(); i != l->vals->end(); ++i ) {
+				evalValue( dst, *i );
 			}
 		}
 		OTHERWISE {
@@ -40,19 +33,40 @@ void evalStatement( Statement* s ) {
 	}
 }
 
-SharedArray evalValue( Value* v ) {
-	switch( s->type ) {
-		MATCH( ast::tWord ) {
-			SharedArray arr;
-			arr.push_back( s->word );
-			return arr;
+void evalStatement( ast::Statement* s ) {
+	using namespace std;
+	using namespace ast;
+
+	switch( s->tag ) {
+		MATCH( tSequence ) {
+			Sequence* t = static_cast<Sequence*>( s );
+			evalStatement( t->lhs );
+			evalStatement( t->rhs );
 		}
-		MATCH( ast::tList ) {
-			SharedArray dst;
-			for( auto i = s->vals.begin(); s->vals.end(); ++i ) {
-				dst.push_back( evalValue( *i ) );
+		MATCH( tCommand ) {
+			Command* c = static_cast<Command*>( s );
+
+			deque<string> args;
+			evalValue( args, c->args );
+
+			char const** args_raw = new char const*[args.size() + 1];
+			for( size_t i = 0; i < args.size(); ++i ) {
+				args_raw[i] = args[i].c_str();
 			}
-			return dst;
+			args_raw[args.size()] = NULL;
+
+
+			pid_t pid = fork();
+			if( pid < 0 ) {
+				throw exception();
+			}
+			else if( pid == 0 ) {
+				execv( args_raw[0], const_cast<char* const*>( &args_raw[1] ) );
+				throw exception();
+			}
+			if( waitpid( pid, NULL, 0 ) < 0 ) {
+				throw exception();
+			}
 		}
 		OTHERWISE {
 			assert( false );

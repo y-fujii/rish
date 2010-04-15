@@ -1,6 +1,6 @@
 LEX = flex -X
 YACC = byacc
-CXX = g++44 -pedantic -Wall -Wextra
+CXX = g++44 -std=gnu++0x -pedantic -Wall -Wextra
 
 rish: lexer.l parser.y ast.hpp eval.hpp main.cpp
 	$(YACC) -dv parser.y; \
