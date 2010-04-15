@@ -1,8 +1,11 @@
 LEX = flex -X
 YACC = byacc
-CXX = g++44 -g -std=gnu++0x -pedantic -Wall -Wextra
+CXX = g++44 -g -std=gnu++0x -pedantic -Wall -Wextra \
+	  -Wno-unused-function
 
-rish: lexer.l parser.y parser.hpp ast.hpp eval.hpp main.cpp
+SRCS = lexer.l parser.y parser.hpp ast.hpp eval.hpp command.hpp main.cpp
+
+rish: $(SRCS)
 	$(YACC) -dv parser.y; \
 	mv y.tab.h tokens.hpp; \
 	mv y.tab.c parser.cpp; \
@@ -11,7 +14,7 @@ rish: lexer.l parser.y parser.hpp ast.hpp eval.hpp main.cpp
 	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -ledit
 
 wc:
-	wc parser.y lexer.l ast.hpp eval.hpp main.cpp compat.hpp
+	wc $(SRCS)
 
 clean:
 	rm -f tokens.hpp parser.cpp parser.out lexer.hpp lexer.cpp rish
