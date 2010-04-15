@@ -17,11 +17,11 @@ void evalValue( std::deque<std::string>& dst, ast::Expr* e ) {
 	using namespace ast;
 
 	switch( e->tag ) {
-		MATCH( tWord ) {
+		MATCH( Expr::tWord ) {
 			Word* w = static_cast<Word*>( e );
 			dst.push_back( *w->word );
 		}
-		MATCH( tList ) {
+		MATCH( Expr::tList ) {
 			List* l = static_cast<List*>( e );
 			for( auto i = l->vals->begin(); i != l->vals->end(); ++i ) {
 				evalValue( dst, *i );
@@ -38,12 +38,16 @@ void evalStatement( ast::Statement* s ) {
 	using namespace ast;
 
 	switch( s->tag ) {
-		MATCH( tSequence ) {
+		MATCH( Statement::tSequence ) {
 			Sequence* t = static_cast<Sequence*>( s );
 			evalStatement( t->lhs );
 			evalStatement( t->rhs );
 		}
-		MATCH( tCommand ) {
+		MATCH( Statement::tRedir ) {
+			Redir* r = static_cast<Redir*>( s );
+			evalStatement( r->body );
+		}
+		MATCH( Statement::tCommand ) {
 			Command* c = static_cast<Command*>( s );
 
 			deque<string> args;
@@ -55,13 +59,12 @@ void evalStatement( ast::Statement* s ) {
 			}
 			args_raw[args.size()] = NULL;
 
-
 			pid_t pid = fork();
 			if( pid < 0 ) {
 				throw exception();
 			}
 			else if( pid == 0 ) {
-				execv( args_raw[0], const_cast<char* const*>( &args_raw[1] ) );
+				execvp( args_raw[0], const_cast<char* const*>( args_raw ) );
 				throw exception();
 			}
 			if( waitpid( pid, NULL, 0 ) < 0 ) {

@@ -7,48 +7,42 @@
 namespace ast {
 
 
-enum TagExpr {
-	tExpr,
-	tWord,
-	tSubst,
-	tVar,
-	tList,
-	tConcat
-};
-
-enum TagVar {
-	tVarLhs,
-	tVarList,
-	tVarStar
-};
-
-enum TagStatement {
-	tStatement,
-	tIf,
-	tCommand,
-	tFun,
-	tLet,
-	tReturn,
-	tBreak,
-	tFor,
-	tWhile,
-	tNot,
-	tOr,
-	tAnd,
-	tBg,
-	tSequence,
-	tRedir,
-	tPipe
-};
-
 struct Expr {
-	unsigned const tag;
-	protected: Expr( unsigned t ): tag( t ) {}
+	enum Tag {
+		tWord,
+		tSubst,
+		tVar,
+		tList,
+		tConcat
+	};
+	Tag const tag;
+
+	protected: Expr( Tag t ): tag( t ) {}
+	private: Expr();
 };
 
 struct Statement {
-	unsigned const tag;
-	protected: Statement( unsigned t ): tag( t ) {}
+	enum Tag {
+		tIf,
+		tCommand,
+		tFun,
+		tLet,
+		tReturn,
+		tBreak,
+		tFor,
+		tWhile,
+		tNot,
+		tOr,
+		tAnd,
+		tBg,
+		tSequence,
+		tRedir,
+		tPipe
+	};
+	Tag const tag;
+
+	protected: Statement( Tag t ): tag( t ) {}
+	private: Statement();
 };
 
 struct Word: Expr {
@@ -78,8 +72,14 @@ struct Concat: Expr {
 };
 
 struct VarLhs {
-	unsigned const tag;
-	VarLhs( unsigned t ): tag( t ) {}
+	enum Tag {
+		tVarList,
+		tVarStar
+	};
+	Tag const tag;
+
+	protected: VarLhs( Tag t ): tag( t ) {}
+	private: VarLhs();
 };
 
 struct VarList: VarLhs {
