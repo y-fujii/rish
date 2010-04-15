@@ -1,6 +1,7 @@
 %{
 	#include "ast.hpp"
 	#include "tokens.hpp"
+	#include <iostream>
 %}
 
 spc	[ \t\n]
@@ -25,7 +26,9 @@ spc	[ \t\n]
 ">|"	{ return RDFR; }
 "|>"	{ return RDT1; }
 "|>>"	{ return RDT2; }
+	/*
 <<EOF>>	{ return EOS; }
+	*/
 
 [^(){}$* \t\n]+ {
 	yylval.string = new std::string( yytext );

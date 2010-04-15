@@ -20,7 +20,7 @@ int main( int argc, char** argv ) {
 		int cnt = 0;
 		char const* line = el_gets( el, &cnt );
 		if( line == NULL ) throw std::exception();
-		ast::Statement* ast = ast::parse( line, line + cnt );
+		ast::Statement* ast = parse( line, line + cnt );
 		assert( ast != NULL );
 		evalStatement( ast );
 	}
