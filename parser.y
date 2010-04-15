@@ -54,7 +54,7 @@ top
 
 command_seq
 	: command_seq ';' command_bg		{ $$ = new Sequence( $1, $3 ); }
-	| command_bg ';'
+	| command_seq ';'
 	| command_bg
 
 command_bg
