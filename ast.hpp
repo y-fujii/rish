@@ -13,6 +13,7 @@ struct Expr {
 		tSubst,
 		tVar,
 		tList,
+		tNull,
 		tConcat
 	};
 	Tag const tag;
@@ -61,8 +62,13 @@ struct Var: Expr {
 };
 
 struct List: Expr {
-	List( std::deque<Expr*>* a ): Expr( tList ), vals( a ) {}
-	std::deque<Expr*>* vals;
+	List( Expr* l, Expr* r ): Expr( tList ), lhs( l ), rhs( r ) {}
+	Expr* lhs;
+	Expr* rhs;
+};
+
+struct Null: Expr {
+	Null(): Expr( tNull ) {}
 };
 
 struct Concat: Expr {
@@ -103,8 +109,8 @@ struct If: Statement {
 };
 
 struct Command: Statement {
-	Command( List* a ): Statement( tCommand ), args( a ) {}
-	List* args;
+	Command( Expr* a ): Statement( tCommand ), args( a ) {}
+	Expr* args;
 };
 
 struct Fun: Statement {
@@ -114,9 +120,9 @@ struct Fun: Statement {
 };
 
 struct Let: Statement {
-	Let( VarLhs* l, List* r ): Statement( tLet ), lhs( l ), rhs( r ) {}
+	Let( VarLhs* l, Expr* r ): Statement( tLet ), lhs( l ), rhs( r ) {}
 	VarLhs* lhs;
-	List* rhs;
+	Expr* rhs;
 };
 
 struct Return: Statement {
@@ -161,9 +167,9 @@ struct And: Statement {
 };
 
 struct Bg: Statement {
-	Bg( Statement* b, Expr* p ): Statement( tBg ), body( b ), pid( p ) {}
+	Bg( Statement* b, std::string* p ): Statement( tBg ), body( b ), pid( p ) {}
 	Statement* body;
-	Expr* pid;
+	std::string* pid;
 };
 
 struct Sequence: Statement {

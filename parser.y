@@ -29,17 +29,15 @@
 	std::deque< std::tuple<ast::Expr*, int> >* redir_to;
 	ast::VarLhs* var_lhs;
 	std::deque<std::string*>* var_list;
-	std::deque<ast::Expr*>* arg_list;
 }
 
+%type<string> WORD
+%type<expr> arg arg_concat arg_list0 arg_list1
 %type<statement> command_seq command_bg command_andor command_not
 %type<statement> command_redir command_pipe command_stat if_ else_
-%type<expr> arg arg_concat
 %type<redir_to> redir_to
-%type<string> WORD
 %type<var_lhs> var_lhs
 %type<var_list> var_list
-%type<arg_list> arg_list arg_list1
 
 %token AND2 OR2 RDT1 RDT2 RDFR EOS
 %token IF ELSE WHILE FOR BREAK RETURN LET FUN
@@ -58,7 +56,7 @@ command_seq
 	| command_bg
 
 command_bg
-	: command_andor '&' arg				{ $$ = new Bg( $1, $3 ); }
+	: command_andor '&' WORD			{ $$ = new Bg( $1, $3 ); }
 	| command_andor '&'					{ $$ = new Bg( $1, NULL ); }
 	| command_andor
 
@@ -90,10 +88,10 @@ command_stat
 	| FOR WORD            '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
 	| BREAK arg										{ $$ = new Break( $2 ); }
 	| RETURN arg									{ $$ = new Return( $2 ); }
-	| LET var_lhs '=' arg_list						{ $$ = new Let( $2, new List( $4 ) ); }
+	| LET var_lhs '=' arg_list0						{ $$ = new Let( $2, $4 ); }
 	| FUN var_lhs '{' command_seq '}'				{ $$ = new Fun( $2, $4 ); }
 	| '{' command_seq '}'							{ $$ = $2; };
-	| arg_list1							{ $$ = new Command( new List( $1 ) ); }
+	| arg_list1										{ $$ = new Command( $1 ); }
 
 if_
 	: IF command_andor '{' command_seq '}' else_	{ $$ = new If( $2, $4, $6 ); }
@@ -111,13 +109,13 @@ var_list
 	: var_list WORD				{ $1->push_back( $2 ); }
 	| /* empty */				{ $$ = new deque<string*>(); }
 
-arg_list
-	: arg_list arg_concat		{ $1->push_back( $2 ); }
-	| /* empty */				{ $$ = new deque<Expr*>(); }
+arg_list0
+	: arg_list0 arg_concat		{ $$ = new List( $1, $2 ); }
+	| /* empty */				{ $$ = new Null(); }
 
 arg_list1
-	: arg_list1 arg_concat		{ $1->push_back( $2 ); }
-	| arg_concat				{ $$ = new deque<Expr*>(); $$->push_back( $1 ); }
+	: arg_list1 arg_concat		{ $$ = new List( $1, $2 ); }
+	| arg_concat				{ $$ = new List( $1, new Null() ); }
 
 arg_concat
 	: arg_concat '^' arg		{ $$ = new Concat( $1, $3 ); }
@@ -131,7 +129,7 @@ arg
 	| arg '[' arg ']'			{ $$ = new Index( $1, $2 ); }
 	| arg '[' arg arg ']'		{ $$ = new Slice( $1, $2, $3 ); }
 	*/
-	| '(' arg_list ')'			{ $$ = new List( $2 ); }
+	| '(' arg_list0 ')'			{ $$ = $2; }
 
 /*
 word_wr
