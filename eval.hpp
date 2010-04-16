@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-#include <ext/rope>
+#include <iterator>
 #include <deque>
+#include <string>
 #include <unistd.h>
 #include <sys/wait.h>
 #include "ast.hpp"
@@ -13,20 +13,22 @@
 #define MATCH( c ) break; case (c):
 #define OTHERWISE break; default:
 
-void evalValue( std::deque<std::string>& dst, ast::Expr* e ) {
+template<class DstIter>
+void evalValue( DstIter dst, ast::Expr* e ) {
 	using namespace std;
 	using namespace ast;
 
 	switch( e->tag ) {
 		MATCH( Expr::tWord ) {
 			Word* w = static_cast<Word*>( e );
-			dst.push_back( *w->word );
+			*dst++ = *w->word;
 		}
 		MATCH( Expr::tList ) {
 			List* l = static_cast<List*>( e );
-			for( auto i = l->vals->begin(); i != l->vals->end(); ++i ) {
-				evalValue( dst, *i );
-			}
+			evalValue( dst, l->lhs );
+			evalValue( dst, l->rhs );
+		}
+		MATCH( Expr::tNull ) {
 		}
 		OTHERWISE {
 			assert( false );
@@ -51,7 +53,7 @@ void evalStatement( ast::Statement* s ) {
 		MATCH( Statement::tCommand ) {
 			Command* c = static_cast<Command*>( s );
 			deque<string> args;
-			evalValue( args, c->args );
+			evalValue( back_inserter( args ), c->args );
 			runCommand( args );
 		}
 		OTHERWISE {
