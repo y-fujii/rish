@@ -7,14 +7,11 @@
 #include <sys/wait.h>
 #include "ast.hpp"
 #include "command.hpp"
-#include "compat.hpp"
+#include "misc.hpp"
 
-
-#define MATCH( c ) break; case (c):
-#define OTHERWISE break; default:
 
 template<class DstIter>
-void evalValue( DstIter dst, ast::Expr* e ) {
+void evalValue( DstIter dst, ast::Expr* e /* , Environment* env */ ) {
 	using namespace std;
 	using namespace ast;
 
@@ -28,11 +25,37 @@ void evalValue( DstIter dst, ast::Expr* e ) {
 			evalValue( dst, l->lhs );
 			evalValue( dst, l->rhs );
 		}
+		MATCH( Expr::tConcat ) {
+			Concat* c = static_cast<Concat*>( e );
+			deque<string> lhs;
+			deque<string> rhs;
+			evalValue( back_inserter( lhs ), c->lhs );
+			evalValue( back_inserter( rhs ), c->rhs );
+			for( deque<string>::const_iterator i = lhs.begin(); i != lhs.end(); ++i ) {
+				for( deque<string>::const_iterator j = rhs.begin(); j != rhs.end(); ++j ) {
+					*dst++ = *i + *j;
+				}
+			}
+		}
+		MATCH( Expr::tVar ) {
+			/*
+			Var* v = static_cast<Var*>( e );
+			Environment::iterator it = env->find( v->name );
+			if( it == env->end() ) {
+				throw exception();
+			}
+			*dst++ = *it->second;
+			*/
+		}
+		MATCH( Expr::tSubst ) {
+		}
 		MATCH( Expr::tNull ) {
 		}
+		/*
 		OTHERWISE {
 			assert( false );
 		}
+		*/
 	}
 }
 
@@ -55,6 +78,8 @@ void evalStatement( ast::Statement* s ) {
 			deque<string> args;
 			evalValue( back_inserter( args ), c->args );
 			runCommand( args );
+		}
+		MATCH( Statement::tNone ) {
 		}
 		OTHERWISE {
 			assert( false );

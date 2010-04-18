@@ -1,6 +1,4 @@
 %{
-	#include <deque>
-	#include <iostream>
 	#include <exception>
 	#include <fcntl.h>
 	#include "ast.hpp"
@@ -12,21 +10,21 @@
 	int yylex();
 
 	extern "C" int yyerror( char const* ) {
-		throw std::exception();
+		throw exception();
 	}
 
 	extern "C" int yywrap() {
 		return 1;
 	}
 
-	ast::Statement* parse_result = NULL;
+	ast::Statement* parseResult = NULL;
 %}
 
 %union {
 	std::string* string;
 	ast::Expr* expr;
 	ast::Statement* statement;
-	std::deque< std::tuple<ast::Expr*, int> >* redir_to;
+	std::deque< std::pair<ast::Expr*, int> >* redir_to;
 	ast::VarLhs* var_lhs;
 	std::deque<std::string*>* var_list;
 }
@@ -39,21 +37,21 @@
 %type<var_lhs> var_lhs
 %type<var_list> var_list
 
-%token AND2 OR2 RDT1 RDT2 RDFR EOS
+%token AND2 OR2 RDT1 RDT2 RDFR WORD
 %token IF ELSE WHILE FOR BREAK RETURN LET FUN
-%token WORD
 
 %start top
 
 %%
 
 top
-	: command_seq						{ ::parse_result = $1; }
+	: command_seq						{ ::parseResult = $1; }
 
 command_seq
 	: command_seq ';' command_bg		{ $$ = new Sequence( $1, $3 ); }
 	| command_seq ';'
 	| command_bg
+	| /* empty */						{ $$ = new None(); }
 
 command_bg
 	: command_andor '&' WORD			{ $$ = new Bg( $1, $3 ); }
@@ -74,9 +72,9 @@ command_redir
 	| command_pipe redir_to				{ $$ = new Redir( $1, NULL, $2 ); }
 
 redir_to
-	: redir_to RDT1 arg					{ $1->push_back( make_tuple( $3, O_CREAT ) ); }
-	| redir_to RDT2 arg					{ $1->push_back( make_tuple( $3, O_APPEND ) ); }
-	| /* empty */						{ $$ = new deque< tuple<Expr*, int> >(); }
+	: redir_to RDT1 arg					{ $1->push_back( make_pair( $3, O_CREAT ) ); }
+	| redir_to RDT2 arg					{ $1->push_back( make_pair( $3, O_APPEND ) ); }
+	| /* empty */						{ $$ = new deque< pair<Expr*, int> >(); }
 
 command_pipe
 	: command_pipe '|' command_stat		{ $$ = new Pipe( $1, $3 ); }

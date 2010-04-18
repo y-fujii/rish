@@ -1,11 +1,15 @@
 #pragma once
 
 #include <deque>
+#include <iostream>
+#include <cassert>
 #include <unistd.h>
 
 
 void runCommand( std::deque<std::string> const& args ) {
 	using namespace std;
+
+	assert( args.size() > 0 );
 
 	if( args[0] == "cd" ) {
 		if( args.size() != 2 ) {
@@ -13,6 +17,11 @@ void runCommand( std::deque<std::string> const& args ) {
 		}
 		if( chdir( args[1].c_str() ) < 0 ) {
 			throw exception();
+		}
+	}
+	else if( args[0] == "print" ) {
+		for( deque<string>::const_iterator it = args.begin() + 1; it != args.end(); ++it ) {
+			cout << *it << '\n';
 		}
 	}
 	else {

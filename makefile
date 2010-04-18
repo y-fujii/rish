@@ -1,9 +1,9 @@
 LEX = flex -X
 YACC = byacc
-CXX = g++44 -g -std=gnu++0x -pedantic -Wall -Wextra \
-	  -Wno-unused-function
+CXX = g++ -g -pedantic -Wall -Wextra \
+	  -I$(HOME)/usr/include -L$(HOME)/usr/lib
 
-SRCS = lexer.l parser.y parser.hpp ast.hpp eval.hpp command.hpp main.cpp
+SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp wildcard.hpp main.cpp
 
 rish: $(SRCS)
 	$(YACC) -dv parser.y; \
@@ -11,7 +11,7 @@ rish: $(SRCS)
 	mv y.tab.c parser.cpp; \
 	mv y.output parser.out
 	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
-	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -ledit
+	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -ledit -lcurses
 
 wc:
 	wc $(SRCS)
