@@ -1,10 +1,15 @@
 #pragma once
-// The codes below are NOT LEGAL but work correctly on most compilers.
 
+#include <typeinfo>
 #include <stdint.h>
 
 
+#define MATCH( c ) break; case (c):
+#define OTHERWISE break; default:
+
 typedef uintptr_t TypeId;
+
+// The codes below are NOT LEGAL but work correctly on most compilers.
 
 template<class T>
 inline TypeId typeIdFast() {

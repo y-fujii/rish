@@ -1,8 +1,8 @@
 #pragma once
 
+#include <utility>
 #include <deque>
 #include <string>
-#include <tuple>
 
 namespace ast {
 
@@ -38,7 +38,8 @@ struct Statement {
 		tBg,
 		tSequence,
 		tRedir,
-		tPipe
+		tPipe,
+		tNone
 	};
 	Tag const tag;
 
@@ -179,16 +180,21 @@ struct Sequence: Statement {
 };
 
 struct Redir: Statement {
-	Redir( Statement* b, Expr* f, std::deque< std::tuple<Expr*, int> >* t ): Statement( tRedir ), body( b ), from( f ), to( t ) {}
+	Redir( Statement* b, Expr* f, std::deque< std::pair<Expr*, int> >* t ):
+		Statement( tRedir ), body( b ), from( f ), to( t ) {}
 	Statement* body;
 	Expr* from;
-	std::deque< std::tuple<Expr*, int> >* to;
+	std::deque< std::pair<Expr*, int> >* to;
 };
 
 struct Pipe: Statement {
 	Pipe( Statement* l, Statement* r ): Statement( tPipe ), lhs( l ), rhs( r ) {}
 	Statement* lhs;
 	Statement* rhs;
+};
+
+struct None: Statement {
+	None(): Statement( tNone ) {}
 };
 
 
