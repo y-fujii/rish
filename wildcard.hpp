@@ -7,6 +7,10 @@ inline uint16_t metaChar( char c ) {
 	return c | 0xff00;
 }
 
+inline bool isMeta( uint16_t m ) {
+	return (m & 0xff00) != 0;
+}
+
 template<class PatIter, class SrcIter>
 bool matchWildcard( PatIter patIt, PatIter patEnd, SrcIter srcIt, SrcIter srcEnd ) {
 	if( patIt == patEnd ) {

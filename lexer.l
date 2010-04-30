@@ -3,6 +3,8 @@
 	#include <string.h>
 	#include "ast.hpp"
 	#include "tokens.hpp"
+
+	using namespace std;
 %}
 
 spc	[ \t\n]
@@ -28,13 +30,13 @@ spc	[ \t\n]
 "|>"	{ return RDT1; }
 "|>>"	{ return RDT2; }
 
-[^(){}$*" \t\n]+ {
-	yylval.string = new std::string( yytext );
+[^(){}$" \t\n]+ {
+	yylval.string = new basic_string<uint16_t>( yytext );
 	return WORD;
 }
 
 \"(\\.|[^\\"])*\" {
-	std::string* dst = new std::string();
+	basic_string<uint16_t>* dst = new basic_string<uint16_t>();
 	size_t len = strlen( yytext );
 	for( size_t i = 1; i < len - 1; ++i ) {
 		char c;
@@ -50,7 +52,7 @@ spc	[ \t\n]
 				case '"': c = '"'; break;
 				case '\\': c = '\\'; break;
 				default:
-					throw std::exception();
+					throw exception();
 			}
 		}
 		else {
