@@ -24,8 +24,8 @@ int main( int argc, char** argv ) {
 	HistEvent he;
 
 	history( hs, &he, H_SETSIZE, 4096 );
-	el_set( el, EL_ADDFN, "complete", "", _el_fn_complete );
-	el_set( el, EL_BIND, "\t", "complete" );
+	//el_set( el, EL_ADDFN, "complete", "", _el_fn_complete );
+	//el_set( el, EL_BIND, "\t", "complete" );
 	el_set( el, EL_HIST, history, hs );
 	el_set( el, EL_PROMPT, prompt );
 
