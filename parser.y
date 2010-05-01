@@ -1,6 +1,7 @@
 %{
 	#include <exception>
 	#include <fcntl.h>
+	#include "misc.hpp"
 	#include "ast.hpp"
 
 	using namespace std;
@@ -21,12 +22,12 @@
 %}
 
 %union {
-	std::string* string;
+	MetaString* string;
 	ast::Expr* expr;
 	ast::Statement* statement;
 	std::deque< std::pair<ast::Expr*, int> >* redir_to;
 	ast::VarLhs* var_lhs;
-	std::deque<std::string*>* var_list;
+	std::deque<MetaString*>* var_list;
 }
 
 %type<string> WORD
@@ -105,7 +106,7 @@ var_lhs
 
 var_list
 	: var_list WORD				{ $1->push_back( $2 ); }
-	| /* empty */				{ $$ = new deque<string*>(); }
+	| /* empty */				{ $$ = new deque<MetaString*>(); }
 
 arg_list0
 	: arg_list0 arg_concat		{ $$ = new List( $1, $2 ); }

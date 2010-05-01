@@ -8,6 +8,7 @@
 #include "ast.hpp"
 #include "command.hpp"
 #include "misc.hpp"
+#include "glob.hpp"
 
 
 template<class DstIter>
@@ -27,12 +28,12 @@ void evalValue( DstIter dst, ast::Expr* e /* , Environment* env */ ) {
 		}
 		MATCH( Expr::tConcat ) {
 			Concat* c = static_cast<Concat*>( e );
-			deque<string> lhs;
-			deque<string> rhs;
+			deque<MetaString> lhs;
+			deque<MetaString> rhs;
 			evalValue( back_inserter( lhs ), c->lhs );
 			evalValue( back_inserter( rhs ), c->rhs );
-			for( deque<string>::const_iterator i = lhs.begin(); i != lhs.end(); ++i ) {
-				for( deque<string>::const_iterator j = rhs.begin(); j != rhs.end(); ++j ) {
+			for( deque<MetaString>::const_iterator i = lhs.begin(); i != lhs.end(); ++i ) {
+				for( deque<MetaString>::const_iterator j = rhs.begin(); j != rhs.end(); ++j ) {
 					*dst++ = *i + *j;
 				}
 			}
@@ -75,8 +76,10 @@ void evalStatement( ast::Statement* s ) {
 		}
 		MATCH( Statement::tCommand ) {
 			Command* c = static_cast<Command*>( s );
+			deque<MetaString> vals;
 			deque<string> args;
-			evalValue( back_inserter( args ), c->args );
+			evalValue( back_inserter( vals ), c->args );
+			expandGlob( back_inserter( args ), vals.begin(), vals.end() );
 			runCommand( args );
 		}
 		MATCH( Statement::tNone ) {
