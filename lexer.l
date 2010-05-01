@@ -1,6 +1,7 @@
 %{
 	#include <exception>
 	#include <string.h>
+	#include "misc.hpp"
 	#include "ast.hpp"
 	#include "tokens.hpp"
 
@@ -31,12 +32,12 @@ spc	[ \t\n]
 "|>>"	{ return RDT2; }
 
 [^(){}$" \t\n]+ {
-	yylval.string = new basic_string<uint16_t>( yytext );
+	yylval.string = new MetaString( yytext, yytext + strlen( yytext ) );
 	return WORD;
 }
 
 \"(\\.|[^\\"])*\" {
-	basic_string<uint16_t>* dst = new basic_string<uint16_t>();
+	MetaString* dst = new MetaString();
 	size_t len = strlen( yytext );
 	for( size_t i = 1; i < len - 1; ++i ) {
 		char c;

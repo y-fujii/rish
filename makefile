@@ -3,7 +3,7 @@ YACC = byacc
 CXX = g++ -g -pedantic -Wall -Wextra \
 	  -I$(HOME)/usr/include -L$(HOME)/usr/lib
 
-SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp wildcard.hpp main.cpp
+SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp glob.hpp main.cpp
 
 rish: $(SRCS)
 	$(YACC) -dv parser.y; \

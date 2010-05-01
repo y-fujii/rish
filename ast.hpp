@@ -2,7 +2,7 @@
 
 #include <utility>
 #include <deque>
-#include <string>
+#include "misc.hpp"
 
 namespace ast {
 
@@ -48,8 +48,8 @@ struct Statement {
 };
 
 struct Word: Expr {
-	Word( std::string* w ): Expr( tWord ), word( w ) {}
-	std::string* word;
+	Word( MetaString* w ): Expr( tWord ), word( w ) {}
+	MetaString* word;
 };
 
 struct Subst: Expr {
@@ -58,8 +58,8 @@ struct Subst: Expr {
 };
 
 struct Var: Expr {
-	Var( std::string* n ): Expr( tVar ), name( n ) {}
-	std::string* name;
+	Var( MetaString* n ): Expr( tVar ), name( n ) {}
+	MetaString* name;
 };
 
 struct List: Expr {
@@ -90,16 +90,16 @@ struct VarLhs {
 };
 
 struct VarList: VarLhs {
-	VarList( std::deque<std::string*>* v ): VarLhs( tVarList ), vars( v ) {}
-	std::deque<std::string*>* vars;
+	VarList( std::deque<MetaString*>* v ): VarLhs( tVarList ), vars( v ) {}
+	std::deque<MetaString*>* vars;
 };
 
 struct VarStar: VarLhs {
-	VarStar( std::deque<std::string*>* h, std::string* s, std::deque<std::string*>* t ):
+	VarStar( std::deque<MetaString*>* h, MetaString* s, std::deque<MetaString*>* t ):
 		VarLhs( tVarStar ), head( h ), star( s ), tail( t ) {}
-	std::deque<std::string*>* head;
-	std::string* star;
-	std::deque<std::string*>* tail;
+	std::deque<MetaString*>* head;
+	MetaString* star;
+	std::deque<MetaString*>* tail;
 };
 
 struct If: Statement {
@@ -137,8 +137,8 @@ struct Break: Statement {
 };
 
 struct For: Statement {
-	For( std::string* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {}
-	std::string* var;
+	For( MetaString* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {}
+	MetaString* var;
 	Statement* body;
 	Statement* elze;
 };
@@ -168,9 +168,9 @@ struct And: Statement {
 };
 
 struct Bg: Statement {
-	Bg( Statement* b, std::string* p ): Statement( tBg ), body( b ), pid( p ) {}
+	Bg( Statement* b, MetaString* p ): Statement( tBg ), body( b ), pid( p ) {}
 	Statement* body;
-	std::string* pid;
+	MetaString* pid;
 };
 
 struct Sequence: Statement {

@@ -12,34 +12,38 @@ inline bool isMeta( uint16_t m ) {
 }
 
 template<class PatIter, class SrcIter>
-bool matchWildcard( PatIter patIt, PatIter patEnd, SrcIter srcIt, SrcIter srcEnd ) {
+bool matchGlob( PatIter patIt, PatIter patEnd, SrcIter srcIt, SrcIter srcEnd ) {
 	if( patIt == patEnd ) {
 		return srcIt == srcEnd;
 	}
 
 	switch( *patIt ) {
-		MATCH( metaChar( '*' ) ) {
+		MATCH( '*' | 0xff00 ) {
 			++patIt;
 			do {
-				if( matchWildcard( patIt, patEnd, srcIt, srcEnd ) ) {
+				if( matchGlob( patIt, patEnd, srcIt, srcEnd ) ) {
 					return true;
 				}
 			} while( srcIt++ != srcEnd );
 
 			return false;
 		}
-		MATCH( metaChar( '?' ) ) {
+		MATCH( '?' | 0xff00 ) {
 			return (
 				srcIt != srcEnd &&
-				matchWildcard( ++patIt, patEnd, ++srcIt, srcEnd )
+				matchGlob( ++patIt, patEnd, ++srcIt, srcEnd )
 			);
 		}
 		OTHERWISE {
 			return (
 				srcIt != srcEnd &&
 				*srcIt == *patIt &&
-				matchWildcard( ++patIt, patEnd, ++srcIt, srcEnd )
+				matchGlob( ++patIt, patEnd, ++srcIt, srcEnd )
 			);
 		}
 	}
+}
+
+template<class DstIter, class SrcIter>
+void expandGlob( DstIter dst, SrcIter bgn, SrcIter end ) {
 }
