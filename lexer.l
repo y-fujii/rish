@@ -33,6 +33,11 @@ spc	[ \t\n]
 
 [^(){}$" \t\n]+ {
 	yylval.string = new MetaString( yytext, yytext + strlen( yytext ) );
+	for( MetaString::iterator it = yylval.string->begin(); it != yylval.string->end(); ++it ) {
+		if( *it == '*' || *it == '?' ) {
+			*it |= 0xff00;
+		}
+	}
 	return WORD;
 }
 
