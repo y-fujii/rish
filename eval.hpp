@@ -79,7 +79,9 @@ void evalStatement( ast::Statement* s ) {
 			deque<MetaString> vals;
 			deque<string> args;
 			evalValue( back_inserter( vals ), c->args );
-			expandGlob( back_inserter( args ), vals.begin(), vals.end() );
+			for( deque<MetaString>::const_iterator it = vals.begin(); it != vals.end(); ++it ) {
+				expandGlob( back_inserter( args ), *it );
+			}
 			runCommand( args );
 		}
 		MATCH( Statement::tNone ) {
