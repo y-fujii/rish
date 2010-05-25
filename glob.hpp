@@ -10,30 +10,21 @@ inline uint16_t metaChar( char c ) {
 	return c | 0xff00;
 }
 
-inline bool isMeta( uint16_t m ) {
+inline bool isMetaChar( uint16_t m ) {
 	return (m & 0xff00) != 0;
 }
 
-inline bool includeMetaChar( MetaString const& str ) {
-	for( MetaString::const_iterator it = str.begin(); it != str.end(); ++it ) {
-		if( isMeta( *it ) ) {
-			return true;
-		}
-	}
-	return false;
-}
-
 template<class PatIter, class SrcIter>
-bool matchGlob( PatIter patIt, PatIter patEnd, SrcIter srcIt, SrcIter srcEnd ) {
-	if( patIt == patEnd ) {
+bool matchGlob( PatIter ptnIt, PatIter ptnEnd, SrcIter srcIt, SrcIter srcEnd ) {
+	if( ptnIt == ptnEnd ) {
 		return srcIt == srcEnd;
 	}
 
-	switch( *patIt ) {
+	switch( *ptnIt ) {
 		MATCH( '*' | 0xff00 ) {
-			++patIt;
+			++ptnIt;
 			do {
-				if( matchGlob( patIt, patEnd, srcIt, srcEnd ) ) {
+				if( matchGlob( ptnIt, ptnEnd, srcIt, srcEnd ) ) {
 					return true;
 				}
 			} while( srcIt++ != srcEnd );
@@ -43,24 +34,24 @@ bool matchGlob( PatIter patIt, PatIter patEnd, SrcIter srcIt, SrcIter srcEnd ) {
 		MATCH( '?' | 0xff00 ) {
 			return (
 				srcIt != srcEnd &&
-				matchGlob( ++patIt, patEnd, ++srcIt, srcEnd )
+				matchGlob( ++ptnIt, ptnEnd, ++srcIt, srcEnd )
 			);
 		}
 		OTHERWISE {
 			return (
 				srcIt != srcEnd &&
-				*srcIt == *patIt &&
-				matchGlob( ++patIt, patEnd, ++srcIt, srcEnd )
+				*srcIt == *ptnIt &&
+				matchGlob( ++ptnIt, ptnEnd, ++srcIt, srcEnd )
 			);
 		}
 	}
 }
 
 template<class DstIter, class PatIter>
-DstIter expandGlobInner( DstIter dst, PatIter patBgn, PatIter patEnd, std::string const& dirName ) {
+DstIter expandGlobInner( DstIter dst, PatIter ptnBgn, PatIter ptnEnd, std::string const& dirName ) {
 	using namespace std;
 
-	PatIter patSlash = std::find( patBgn, patEnd, '/' );
+	PatIter ptnSlash = find( ptnBgn, ptnEnd, '/' );
 
 	DIR* dir = opendir( dirName.c_str() );
 	dirent entry;
@@ -69,24 +60,24 @@ DstIter expandGlobInner( DstIter dst, PatIter patBgn, PatIter patEnd, std::strin
 		if( readdir_r( dir, &entry, &result ) != 0 ) throw exception();
 		if( result == NULL ) break;
 
-		if( strcmp( entry.d_name, "." ) == 0 && string( patBgn, patSlash ) == "." ) {
+		if( strcmp( entry.d_name, "." ) == 0 && string( ptnBgn, ptnSlash ) == "." ) {
 			continue;
 		}
-		if( strcmp( entry.d_name, ".." ) == 0 && string( patBgn, patSlash ) == ".." ) {
+		if( strcmp( entry.d_name, ".." ) == 0 && string( ptnBgn, ptnSlash ) == ".." ) {
 			continue;
 		}
 
-		if( patSlash == patEnd ) {
-			if( matchGlob( patBgn, patEnd, entry.d_name, entry.d_name + strlen( entry.d_name ) ) ) {
+		if( ptnSlash == ptnEnd ) {
+			if( matchGlob( ptnBgn, ptnEnd, entry.d_name, entry.d_name + strlen( entry.d_name ) ) ) {
 				*dst++ = dirName + entry.d_name;
 			}
 		}
 		else {
 			if(
 				entry.d_type == DT_DIR &&
-				matchGlob( patBgn, patSlash, entry.d_name, entry.d_name + strlen( entry.d_name ) )
+				matchGlob( ptnBgn, ptnSlash, entry.d_name, entry.d_name + strlen( entry.d_name ) )
 			) {
-				dst = expandGlobInner( dst, patSlash + 1, patEnd, dirName + entry.d_name + '/' );
+				dst = expandGlobInner( dst, ptnSlash + 1, ptnEnd, dirName + entry.d_name + '/' );
 			}
 		}
 	}
@@ -95,19 +86,19 @@ DstIter expandGlobInner( DstIter dst, PatIter patBgn, PatIter patEnd, std::strin
 }
 
 template<class DstIter>
-DstIter expandGlob( DstIter dst, MetaString const& pat ) {
+DstIter expandGlob( DstIter dst, MetaString const& ptn ) {
 	using namespace std;
 
-	if( !includeMetaChar( pat ) ) {
-		*dst++ = string( pat.begin(), pat.end() );
+	if( !any( ptn.begin(), ptn.end(), isMetaChar ) ) {
+		*dst++ = string( ptn.begin(), ptn.end() );
 		return dst;
 	}
 
-	if( pat.find( '/' ) == 0 ) {
-		expandGlobInner( dst, pat.begin() + 1, pat.end(), "/" );
+	if( ptn.size() >= 1 && ptn[0] == '/' ) {
+		expandGlobInner( dst, ptn.begin() + 1, ptn.end(), "/" );
 	}
 	else {
-		expandGlobInner( dst, pat.begin(), pat.end(), "./" );
+		expandGlobInner( dst, ptn.begin(), ptn.end(), "./" );
 	}
 
 	return dst;
