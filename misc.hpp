@@ -1,6 +1,7 @@
 #pragma once
 
 #include <typeinfo>
+#include <algorithm>
 #include <string>
 #include <stdint.h>
 
@@ -21,4 +22,14 @@ inline TypeId typeIdFast() {
 template<class T>
 inline TypeId typeIdFast( T& t ) {
 	return reinterpret_cast<uintptr_t>( &typeid( t ) );
+}
+
+template<class Iter, class Func>
+inline bool any( Iter bgn, Iter end, Func f ) {
+	return std::find_if( bgn, end, f ) != end;
+}
+
+template<class Iter, class Func>
+inline bool all( Iter bgn, Iter end, Func f ) {
+	return std::find_if( bgn, end, std::not1( f ) ) == end;
 }
