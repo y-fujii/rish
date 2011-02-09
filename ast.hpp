@@ -3,6 +3,7 @@
 #include <utility>
 #include <deque>
 #include "misc.hpp"
+#include "glob.hpp"
 
 namespace ast {
 
@@ -18,8 +19,11 @@ struct Expr {
 	};
 	Tag const tag;
 
-	protected: Expr( Tag t ): tag( t ) {}
-	private: Expr();
+	protected:
+		Expr( Tag t ): tag( t ) {}
+
+	private:
+		Expr();
 };
 
 struct Statement {
@@ -42,9 +46,13 @@ struct Statement {
 		tNone
 	};
 	Tag const tag;
+	Statement* parent;
 
-	protected: Statement( Tag t ): tag( t ) {}
-	private: Statement();
+	protected:
+		Statement( Tag t, Statement* p = NULL ): tag( t ), parent( p ) {}
+
+	private:
+		Statement();
 };
 
 struct Word: Expr {
@@ -85,25 +93,30 @@ struct VarLhs {
 	};
 	Tag const tag;
 
-	protected: VarLhs( Tag t ): tag( t ) {}
-	private: VarLhs();
+	protected:
+		VarLhs( Tag t ): tag( t ) {}
+
+	private:
+		VarLhs();
 };
 
 struct VarList: VarLhs {
-	VarList( std::deque<MetaString*>* v ): VarLhs( tVarList ), vars( v ) {}
-	std::deque<MetaString*>* vars;
+	VarList( std::deque<Expr*>* v ): VarLhs( tVarList ), vars( v ) {}
+	std::deque<Expr*>* vars;
 };
 
 struct VarStar: VarLhs {
-	VarStar( std::deque<MetaString*>* h, MetaString* s, std::deque<MetaString*>* t ):
+	VarStar( std::deque<Expr*>* h, MetaString* s, std::deque<Expr*>* t ):
 		VarLhs( tVarStar ), head( h ), star( s ), tail( t ) {}
-	std::deque<MetaString*>* head;
+	std::deque<Expr*>* head;
 	MetaString* star;
-	std::deque<MetaString*>* tail;
+	std::deque<Expr*>* tail;
 };
 
 struct If: Statement {
-	If( Statement* c, Statement* t, Statement* e ): Statement( tIf ), cond( c ), then( t ), elze( e ) {}
+	If( Statement* c, Statement* t, Statement* e ): Statement( tIf ), cond( c ), then( t ), elze( e ) {
+		c->parent = t->parent = e->parent = this;
+	}
 	Statement* cond;
 	Statement* then;
 	Statement* elze;
@@ -115,7 +128,8 @@ struct Command: Statement {
 };
 
 struct Fun: Statement {
-	Fun( VarLhs* a, Statement* b ): Statement( tFun ), args( a ), body( b ) {}
+	Fun( MetaString* n, VarLhs* a, Statement* b ): Statement( tFun ), name( n ), args( a ), body( b ) {}
+	MetaString* name;
 	VarLhs* args;
 	Statement* body;
 };
@@ -137,7 +151,9 @@ struct Break: Statement {
 };
 
 struct For: Statement {
-	For( MetaString* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {}
+	For( MetaString* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {
+		b->parent = e->parent = this;
+	}
 	MetaString* var;
 	Statement* body;
 	Statement* elze;
@@ -168,9 +184,8 @@ struct And: Statement {
 };
 
 struct Bg: Statement {
-	Bg( Statement* b, MetaString* p ): Statement( tBg ), body( b ), pid( p ) {}
+	Bg( Statement* b ): Statement( tBg ), body( b ) {}
 	Statement* body;
-	MetaString* pid;
 };
 
 struct Sequence: Statement {

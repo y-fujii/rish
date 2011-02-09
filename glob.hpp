@@ -1,104 +1,201 @@
 #pragma once
 
 #include <algorithm>
+#include <utility>
+#include <iterator>
+#include <deque>
 #include <string>
+#include <string.h>
 #include <dirent.h>
 #include "misc.hpp"
+#include "exception.hpp"
+
+using namespace std;
 
 
-inline uint16_t metaChar( char c ) {
-	return c | 0xff00;
+struct MetaString: basic_string<uint16_t> {
+	MetaString(): basic_string<uint16_t>() {}
+	MetaString( MetaString const& s ): basic_string<uint16_t>( s ) {}
+	MetaString( basic_string<uint16_t> const& s ): basic_string<uint16_t>( s ) {}
+	MetaString( string const& s ): basic_string<uint16_t>( s.begin(), s.end() ) {}
+	MetaString( char const* s ): basic_string<uint16_t>( s, s + strlen( s ) ) {}
+	template<class Iter>
+	MetaString( Iter bgn, Iter end ): basic_string<uint16_t>( bgn, end ) {}
+};
+
+inline string toString( MetaString const& src ) {
+	return string( src.begin(), src.end() );
 }
 
-inline bool isMetaChar( uint16_t m ) {
-	return (m & 0xff00) != 0;
+inline bool operator==( MetaString const& lhs, string const& rhs ) {
+	return lhs == MetaString( rhs );
 }
 
-template<class PatIter, class SrcIter>
-bool matchGlob( PatIter ptnIt, PatIter ptnEnd, SrcIter srcIt, SrcIter srcEnd ) {
-	if( ptnIt == ptnEnd ) {
-		return srcIt == srcEnd;
+inline bool operator!=( MetaString const& lhs, string const& rhs ) {
+	return lhs != MetaString( rhs );
+}
+
+/*
+inline MetaString operator+( MetaString const& lhs, string const& rhs ) {
+	return lhs + MetaString( rhs );
+}
+
+inline MetaString operator+( string const& lhs, MetaString const& rhs ) {
+	return MetaString( lhs ) + rhs;
+}
+*/
+
+MetaString::value_type const metaMask = 1 << 15;
+MetaString::value_type const star = '*' | metaMask;
+MetaString::value_type const any1 = '?' | metaMask;
+
+template<class String>
+String pathJoin( String const& x, String const& y ) {
+	if( y.size() > 0 && y[0] == '/' ) {
+		return y;
 	}
-
-	switch( *ptnIt ) {
-		MATCH( '*' | 0xff00 ) {
-			++ptnIt;
-			do {
-				if( matchGlob( ptnIt, ptnEnd, srcIt, srcEnd ) ) {
-					return true;
-				}
-			} while( srcIt++ != srcEnd );
-
-			return false;
-		}
-		MATCH( '?' | 0xff00 ) {
-			return (
-				srcIt != srcEnd &&
-				matchGlob( ++ptnIt, ptnEnd, ++srcIt, srcEnd )
-			);
-		}
-		OTHERWISE {
-			return (
-				srcIt != srcEnd &&
-				*srcIt == *ptnIt &&
-				matchGlob( ++ptnIt, ptnEnd, ++srcIt, srcEnd )
-			);
-		}
-	}
-}
-
-template<class DstIter, class PatIter>
-DstIter expandGlobInner( DstIter dst, PatIter ptnBgn, PatIter ptnEnd, std::string const& dirName ) {
-	using namespace std;
-
-	PatIter ptnSlash = find( ptnBgn, ptnEnd, '/' );
-
-	DIR* dir = opendir( dirName.c_str() );
-	dirent entry;
-	dirent* result;
-	while( true ) {
-		if( readdir_r( dir, &entry, &result ) != 0 ) throw exception();
-		if( result == NULL ) break;
-
-		if( strcmp( entry.d_name, "." ) == 0 && string( ptnBgn, ptnSlash ) == "." ) {
-			continue;
-		}
-		if( strcmp( entry.d_name, ".." ) == 0 && string( ptnBgn, ptnSlash ) == ".." ) {
-			continue;
-		}
-
-		if( ptnSlash == ptnEnd ) {
-			if( matchGlob( ptnBgn, ptnEnd, entry.d_name, entry.d_name + strlen( entry.d_name ) ) ) {
-				*dst++ = dirName + entry.d_name;
-			}
+	else {
+		if( x.size() > 0 && x[x.size() - 1] == '/' ) {
+			return x + y;
 		}
 		else {
-			if(
-				entry.d_type == DT_DIR &&
-				matchGlob( ptnBgn, ptnSlash, entry.d_name, entry.d_name + strlen( entry.d_name ) )
-			) {
-				dst = expandGlobInner( dst, ptnSlash + 1, ptnEnd, dirName + entry.d_name + '/' );
+			return x + "/" + y;
+		}
+	}
+}
+
+// O(#pattern) space, O(#pattern * #src) time wildcard matcher
+template<class SrcIter>
+bool matchGlob( MetaString const& pattern, SrcIter srcBgn, SrcIter srcEnd ) {
+	deque<bool> mark( pattern.size() );
+	bool prev = true;
+
+	for( size_t i = 0; i < pattern.size(); ++i ) {
+		mark[i] = prev;
+		prev &= pattern[i] == star;
+	}
+
+	for( SrcIter srcIt = srcBgn; srcIt != srcEnd; ++srcIt ) {
+		prev = false;
+		for( size_t i = 0; i < pattern.size(); ++i ) {
+			bool curr;
+			if( pattern[i] == star ) {
+				curr = prev | mark[i];
+				prev = curr;
 			}
+			else if( pattern[i] == any1 || pattern[i] == *srcIt ) {
+				curr = prev;
+				prev = mark[i];
+			}
+			else {
+				curr = prev;
+				prev = false;
+			}
+			mark[i] = curr;
 		}
 	}
 
-	return dst;
+	return prev;
 }
 
 template<class DstIter>
-DstIter expandGlob( DstIter dst, MetaString const& ptn ) {
-	using namespace std;
-
-	if( !any( ptn.begin(), ptn.end(), isMetaChar ) ) {
-		*dst++ = string( ptn.begin(), ptn.end() );
-		return dst;
+DstIter listDir( string const& root, DstIter dstIt ) {
+	DIR* dir = opendir( root.c_str() );
+	if( dir == NULL ) {
+		throw IOError();
+	}
+	try {
+		while( true ) {
+			dirent entry;
+			dirent* result;
+			if( readdir_r( dir, &entry, &result ) != 0 ) {
+				throw IOError();
+			}
+			if( result == NULL ) {
+				break;
+			}
+			*dstIt++ = make_pair( entry.d_type, entry.d_name );
+		}
+	}
+	catch( ... ) {
+		closedir( dir );
+		throw;
+	}
+	if( closedir( dir ) < 0 ) {
+		throw IOError();
 	}
 
-	if( ptn.size() >= 1 && ptn[0] == '/' ) {
-		expandGlobInner( dst, ptn.begin() + 1, ptn.end(), "/" );
+	return dstIt;
+}
+
+template<class DstIter>
+DstIter walkDir( string const& root, DstIter dstIt ) {
+	deque< pair<int, string> > tmp;
+	listDir( root, back_inserter( tmp ) );
+
+	for( deque< pair<int, string> >::const_iterator it = tmp.begin(); it != tmp.end(); ++it ) {
+		if( it->second == "." || it->second == ".." ) {
+			continue;
+		}
+		if( it->first & DT_DIR ) {
+			string name = root + it->second + "/";
+			*dstIt++ = make_pair( it->first, name );
+			dstIt = walkDir( name, dstIt );
+		}
+		else {
+			string name = root + it->second;
+			*dstIt++ = make_pair( it->first, name );
+		}
+	}
+
+	return dstIt;
+}
+
+template<class DstIter>
+DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst ) {
+	size_t slash = pattern.find( '/' );
+	if( slash == MetaString::npos ) {
+		deque< pair<int, string> > dirs;
+		listDir( root, back_inserter( dirs ) );
+		for( deque< pair<int, string> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+			if( it->first & DT_DIR ) {
+				continue;
+			}
+			if( matchGlob( pattern, it->second.begin(), it->second.end() ) ) {
+				*dst++ = root + it->second;
+			}
+		}
 	}
 	else {
-		expandGlobInner( dst, ptn.begin(), ptn.end(), "./" );
+		MetaString base = pattern.substr( 0, slash );
+		MetaString rest = pattern.substr( slash + 1 );
+
+		if( base == "." || base == ".." ) {
+			dst = expandGlob( root + string( base.begin(), base.end() ) + "/", rest, dst );
+		}
+		else {
+			deque< pair<int, string> > dirs;
+			string root2;
+			if( base == "" ) {
+				root2 = "/";
+			} else {
+				root2 = root;
+			}
+			listDir( root2, back_inserter( dirs ) );
+			for( deque< pair<int, string> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+				if( !(it->first & DT_DIR) || it->second == "." || it->second == ".." ) {
+					continue;
+				}
+				if( matchGlob( base, it->second.begin(), it->second.end() ) ) {
+					if( rest != "" ) {
+						dst = expandGlob( root2 + it->second + "/", rest, dst );
+					}
+					else {
+						*dst++ = root2 + it->second;
+					}
+				}
+			}
+		}
 	}
 
 	return dst;
