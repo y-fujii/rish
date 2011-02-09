@@ -2,6 +2,7 @@
 	#include <exception>
 	#include <string.h>
 	#include "misc.hpp"
+	#include "glob.hpp"
 	#include "ast.hpp"
 	#include "tokens.hpp"
 
@@ -30,12 +31,24 @@ spc	[ \t\n]
 ">|"	{ return RDFR; }
 "|>"	{ return RDT1; }
 "|>>"	{ return RDT2; }
+"|[0-9]+|"	{ return '|'; }
+"|[0-9]+>"	{ return RDT1; }
+"|[0-9]+>>"	{ return RDT2; }
+
+"if"		{ return IF; }
+"else"		{ return ELSE; }
+"while"		{ return WHILE; }
+"for"		{ return FOR; }
+"break"		{ return BREAK; }
+"return"	{ return TK_RETURN; }
+"let"		{ return LET; }
+"fun"		{ return FUN; }
 
 [^(){}$" \t\n]+ {
-	yylval.string = new MetaString( yytext, yytext + strlen( yytext ) );
+	yylval.string = new MetaString( yytext );
 	for( MetaString::iterator it = yylval.string->begin(); it != yylval.string->end(); ++it ) {
 		if( *it == '*' || *it == '?' ) {
-			*it |= 0xff00;
+			*it |= metaMask;
 		}
 	}
 	return WORD;
@@ -71,6 +84,6 @@ spc	[ \t\n]
 	return WORD;
 }
 
-[\t\n ]
+[ \t\n]+
 
 %%
