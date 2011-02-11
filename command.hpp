@@ -1,28 +1,38 @@
 #pragma once
 
 #include <deque>
-#include <iostream>
 #include <cassert>
+#include <sstream>
 #include <unistd.h>
 #include "misc.hpp"
 #include "glob.hpp"
 
 
-int runCommand( std::deque<std::string> const& args ) {
+int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 	using namespace std;
 
 	assert( args.size() > 0 );
 
 	if( args[0] == "cd" ) {
-		if( args.size() != 2 ) {
-			throw exception();
+		if( args.size() != 2 || args[1].size() == 0 ) {
+			return 1;
 		}
-		return chdir( args[1].c_str() ) < 0 ? 1 : 0;
+
+		string dir;
+		if( args[1][0] == '~' ) {
+			dir = getenv( "HOME" ) + args[1].substr( 1 );
+		}
+		else {
+			dir = args[1];
+		}
+		return chdir( dir.c_str() ) < 0 ? 1 : 0;
 	}
 	else if( args[0] == "send" || args[0] == "yield" ) {
+		ostringstream buf;
 		for( deque<string>::const_iterator it = args.begin() + 1; it != args.end(); ++it ) {
-			cout << *it << '\n';
+			buf << *it << '\n';
 		}
+		write( ofd, buf.str().data(), buf.str().size() );
 		return 0;
 	}
 	else {
@@ -34,16 +44,24 @@ int runCommand( std::deque<std::string> const& args ) {
 
 		pid_t pid = fork();
 		if( pid < 0 ) {
-			return 1;
+			throw IOError();
 		}
 		else if( pid == 0 ) {
-			// XXX
+			if( ifd != 0 ) {
+				dup2( ifd, 0 );
+				close( ifd );
+			}
+			if( ofd != 1 ) {
+				dup2( ofd, 1 );
+				close( ofd );
+			}
 			execvp( args_raw[0], const_cast<char* const*>( args_raw ) );
-			return 1;
+			throw IOError();
 		}
+
 		int status;
 		if( waitpid( pid, &status, 0 ) < 0 ) {
-			return 1;
+			throw IOError();
 		}
 		return WEXITSTATUS( status );
 	}

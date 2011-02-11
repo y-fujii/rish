@@ -3,6 +3,9 @@
 #include <iterator>
 #include <deque>
 #include <map>
+#include <functional>
+#include <tr1/functional>
+#include <algorithm>
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -37,45 +40,6 @@ struct ReturnException {
 	int const retv;
 };
 
-template<class RhsIter>
-bool unify( ast::VarLhs* lhsb, RhsIter rhsBgn, RhsIter rhsEnd, Global* global ) {
-	using namespace ast;
-	assert( distance( rhsBgn, rhsEnd ) >= 0 );
-
-	switch( lhsb->tag ) {
-		MATCH( VarLhs::tVarList ) {
-			VarList* lhs = static_cast<VarList*>( lhsb );
-			if( lhs->vars->size() != size_t( distance( rhsBgn, rhsEnd ) ) ) {
-				return false;
-			}
-
-			RhsIter rit = rhsBgn;
-			deque<Expr*>::iterator lit = lhs->vars->begin();
-			while( rit != rhsEnd ) {
-				if( (*lit)->tag == Expr::tVar ) {
-					Var* e = static_cast<Var*>( *lit );
-					global->vars[toString( *e->name )].clear();
-					global->vars[toString( *e->name )].push_back( toString( *rit ) );
-				}
-				++rit;
-				++lit;
-			}
-			return true;
-		}
-		MATCH( VarLhs::tVarStar ) {
-			VarStar* lhs = static_cast<VarStar*>( lhsb );
-			if( lhs->head->size() + lhs->tail->size() < size_t( distance( rhsBgn, rhsEnd ) ) ) {
-				return false;
-			}
-			return true;
-		}
-		OTHERWISE {
-			assert( false );
-			return false;
-		}
-	}
-}
-
 template<class DstIter>
 DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 	using namespace std;
@@ -91,6 +55,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			evalExpr( e->lhs, global, dst );
 			evalExpr( e->rhs, global, dst );
 		}
+		MATCH( Expr::tNull ) {
+		}
 		MATCH( Expr::tConcat ) {
 			Concat* e = static_cast<Concat*>( eb );
 			deque<MetaString> lhs;
@@ -105,48 +71,45 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 		}
 		MATCH( Expr::tVar ) {
 			Var* e = static_cast<Var*>( eb );
-			map<string, deque<string> >::const_iterator it = global->vars.find( toString( *e->name ) );
+			map<string, deque<string> >::const_iterator it = global->vars.find( *e->name );
 			if( it == global->vars.end() ) {
-				throw runtime_error( "The variable " + toString( *e->name )+ " is not defined." );
+				throw runtime_error( "Variable " + *e->name + " is not defined." );
 			}
 			dst = copy( it->second.begin(), it->second.end(), dst );
 		}
 		MATCH( Expr::tSubst ) {
 		}
-		MATCH( Expr::tNull ) {
-		}
-		/*
 		OTHERWISE {
 			assert( false );
 		}
-		*/
 	}
 	return dst;
 }
 
-int evalStatement( ast::Statement* sb, Global* global ) {
+int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 	using namespace std;
 	using namespace ast;
 
 	switch( sb->tag ) {
 		MATCH( Statement::tSequence ) {
 			Sequence* s = static_cast<Sequence*>( sb );
-			evalStatement( s->lhs, global );
-			return evalStatement( s->rhs, global );
+			evalStatement( s->lhs, global, ifd, ofd );
+			return evalStatement( s->rhs, global, ifd, ofd );
 		}
 		MATCH( Statement::tRedir ) {
 			Redir* s = static_cast<Redir*>( sb );
-			return evalStatement( s->body, global );
+			return evalStatement( s->body, global, ifd, ofd );
 		}
 		MATCH( Statement::tCommand ) {
+			/*
+			using namespace tr1;
+			*/
+			using namespace tr1::placeholders;
 			Command* s = static_cast<Command*>( sb );
 			deque<MetaString> vals;
 			deque<string> args;
 			evalExpr( s->args, global, back_inserter( vals ) );
-			for( deque<MetaString>::const_iterator it = vals.begin(); it != vals.end(); ++it ) {
-				//expandGlob( "./", *it, back_inserter( args ) );
-				args.push_back( toString( *it ) );
-			}
+			expandGlobs( vals.begin(), vals.end(), back_inserter( args ) );
 			
 			/*
 			assert( args.size() > 0 );
@@ -154,13 +117,13 @@ int evalStatement( ast::Statement* sb, Global* global ) {
 			if( it != env->funcs.end() ) {
 				scope_ptr<Local> local = new Local();
 				unify( *local, it->args, args.begin(), args.end() );
-				evalStatement( it->body, *local );
+				evalStatement( it->body, *local, ifd, ofd );
 			}
 			else {
 				runCommand( args );
 			}
 			*/
-			return runCommand( args );
+			return runCommand( args, ifd, ofd );
 		}
 		/*
 		MATCH( Statement::tFun ) {
@@ -170,40 +133,109 @@ int evalStatement( ast::Statement* sb, Global* global ) {
 		*/
 		MATCH( Statement::tIf ) {
 			If* s = static_cast<If*>( sb );
-			if( evalStatement( s->cond, global ) == 0 ) {
-				return evalStatement( s->then, global );
+			if( evalStatement( s->cond, global, ifd, ofd ) == 0 ) {
+				return evalStatement( s->then, global, ifd, ofd );
 			}
 			else {
-				return evalStatement( s->elze, global );
+				return evalStatement( s->elze, global, ifd, ofd );
 			}
 		}
 		MATCH( Statement::tWhile ) {
 			While* s = static_cast<While*>( sb );
 			try {
-				while( evalStatement( s->cond, global ) == 0 ) {
-					evalStatement( s->body, global );
+				while( evalStatement( s->cond, global, ifd, ofd ) == 0 ) {
+					evalStatement( s->body, global, ifd, ofd );
 				}
 			}
 			catch( BreakException const& br ) {
 				return br.retv;
 			}
-			return evalStatement( s->elze, global );
+			return evalStatement( s->elze, global, ifd, ofd );
 		}
 		MATCH( Statement::tBreak ) {
 			Break* s = static_cast<Break*>( sb );
-			deque<MetaString> tmp;
-			evalExpr( s->retv, global, back_inserter( tmp ) );
+			deque<MetaString> vals;
+			deque<string> args;
+			evalExpr( s->retv, global, back_inserter( vals ) );
+			expandGlobs( vals.begin(), vals.end(), back_inserter( args ) );
 			int retv;
-			if( (istringstream( toString( tmp.back() ) ) >> retv).fail() ) {
+			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
 			}
 			throw BreakException( retv ) ;
 		}
-		MATCH( Statement::tLet ) {
-			Let* s = static_cast<Let*>( sb );
-			deque<MetaString> rhs;
-			evalExpr( s->rhs, global, back_inserter( rhs ) );
-			return unify( s->lhs, rhs.begin(), rhs.end(), global ) ? 0 : 1;
+		MATCH( Statement::tLetFix ) {
+			LetFix* s = static_cast<LetFix*>( sb );
+			deque<MetaString> vals;
+			deque<string> args;
+			evalExpr( s->rhs, global, back_inserter( vals ) );
+			expandGlobs( vals.begin(), vals.end(), back_inserter( args ) );
+
+			Expr* lit = s->lhs;
+			for( deque<string>::const_iterator rit = args.begin(); rit != args.end(); ++rit ) {
+				if( lit->tag == Expr::tNull ) {
+					return 1;
+				}
+				assert( lit->tag == Expr::tList );
+
+				List* l = static_cast<List*>( lit );
+				if( l->lhs->tag == Expr::tVar ) {
+					Var* e = static_cast<Var*>( l->lhs );
+					global->vars[*e->name].clear();
+					global->vars[*e->name].push_back( *rit );
+				}
+
+				lit = l->rhs;
+			}
+
+			return lit->tag != Expr::tNull ? 1 : 0;
+		}
+		MATCH( Statement::tPipe ) {
+			Pipe* s = static_cast<Pipe*>( sb );
+			int fds[2];
+			if( pipe( fds ) < 0 ) {
+				throw IOError();
+			}
+
+			pid_t pid = fork();
+			if( pid < 0 ) {
+				throw IOError();
+			}
+			if( pid == 0 ) {
+				close( fds[0] );
+				evalStatement( s->lhs, global, ifd, fds[1] );
+				exit( 0 );
+			}
+			else {
+				close( fds[1] );
+				evalStatement( s->rhs, global, fds[0], ofd );
+			}
+			waitpid( pid, NULL, 0 );
+
+			return 0;
+		}
+		MATCH( Statement::tFor ) {
+			For* s = static_cast<For*>( sb );
+			// XXX
+			char c;
+			string buf;
+			while( read( ifd, &c, 1 ) != 0 ) {
+				if( c == '\n' ) {
+					global->vars[*s->var].clear();
+					global->vars[*s->var].push_back( buf );
+					evalStatement( s->body, global, ifd, ofd );
+					buf.clear();
+				}
+				else {
+					buf += c;
+				}
+			}
+			if( buf.size() > 0 ) {
+				global->vars[*s->var].clear();
+				global->vars[*s->var].push_back( buf );
+				evalStatement( s->body, global, ifd, ofd );
+			}
+			return 0;
 		}
 		MATCH( Statement::tNone ) {
 			return 0;
@@ -213,5 +245,4 @@ int evalStatement( ast::Statement* sb, Global* global ) {
 		}
 	}
 	assert( false );
-	return 1;
 }
