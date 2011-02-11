@@ -14,11 +14,7 @@ int main( int argc, char** ) {
 	// XXX
 	assert( argc == 1 );
 
-	deque<string> val;
-	val.push_back( "aaa" );
-	val.push_back( "bbb" );
 	Global global;
-	global.vars.insert( make_pair( "TEST", val ) );
 	while( true ) {
 		char* line = readline( "| " );
 		if( line == NULL ) break;

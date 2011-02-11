@@ -112,9 +112,10 @@ struct LetFix: Statement {
 };
 
 struct LetVar: Statement {
-	LetVar( Expr* ll, MetaString* lm, Expr* lr, Expr* r ): Statement( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
+	LetVar( Expr* ll, std::string* lm, Expr* lr, Expr* r ):
+		Statement( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
 	Expr* lhsl;
-	MetaString* lhsm;
+	std::string* lhsm;
 	Expr* lhsr;
 	Expr* rhs;
 };

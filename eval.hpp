@@ -41,6 +41,31 @@ struct ReturnException {
 };
 
 template<class DstIter>
+DstIter evalExpr( ast::Expr*, Global*, DstIter );
+
+int evalStatement( ast::Statement*, Global*, int, int );
+
+// XXX
+template<class DstIter>
+DstIter readList( int ifd, DstIter dst ) {
+	char c;
+	string buf;
+	while( read( ifd, &c, 1 ) != 0 ) {
+		if( c == '\n' ) {
+			*dst++ = buf;
+			buf.clear();
+		}
+		else {
+			buf += c;
+		}
+	}
+	if( buf.size() > 0 ) {
+		*dst++ = buf;
+	}
+	return dst;
+}
+
+template<class DstIter>
 DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 	using namespace std;
 	using namespace ast;
@@ -78,6 +103,27 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			dst = copy( it->second.begin(), it->second.end(), dst );
 		}
 		MATCH( Expr::tSubst ) {
+			Subst* e = static_cast<Subst*>( eb );
+
+			int fds[2];
+			if( pipe( fds ) < 0 ) {
+				throw IOError();
+			}
+			pid_t pid = fork();
+			if( pid < 0 ) {
+				throw IOError();
+			}
+			if( pid == 0 ) {
+				close( 0 );
+				close( fds[0] );
+				evalStatement( e->body, global, 0, fds[1] );
+				exit( 0 );
+			}
+			else {
+				close( fds[1] );
+				readList( fds[0], dst );
+			}
+			waitpid( pid, NULL, 0 );
 		}
 		OTHERWISE {
 			assert( false );

@@ -27,27 +27,27 @@ spc	[ \t\n]
 "^"		{ return '^'; }
 "@"		{ return '@'; }
 
-"&&"	{ return AND2; }
-"||"	{ return OR2; }
-">|"	{ return RDFR; }
-"|>"	{ return RDT1; }
-"|>>"	{ return RDT2; }
+"&&"	{ return TK_AND2; }
+"||"	{ return TK_OR2; }
+">|"	{ return TK_RDFR; }
+"|>"	{ return TK_RDT1; }
+"|>>"	{ return TK_RDT2; }
 "|[0-9]+|"	{ return '|'; }
-"|[0-9]+>"	{ return RDT1; }
-"|[0-9]+>>"	{ return RDT2; }
+"|[0-9]+>"	{ return TK_RDT1; }
+"|[0-9]+>>"	{ return TK_RDT2; }
 
-"if"		{ return IF; }
-"else"		{ return ELSE; }
-"while"		{ return WHILE; }
-"for"		{ return FOR; }
-"break"		{ return BREAK; }
+"if"		{ return TK_IF; }
+"else"		{ return TK_ELSE; }
+"while"		{ return TK_WHILE; }
+"for"		{ return TK_FOR; }
+"break"		{ return TK_BREAK; }
 "return"	{ return TK_RETURN; }
-"let"		{ return LET; }
-"fun"		{ return FUN; }
+"let"		{ return TK_LET; }
+"fun"		{ return TK_FUN; }
 
 \$[a-zA-Z0-9_]+ {
 	yylval.var = new std::string( yytext + 1 );
-	return VAR;
+	return TK_VAR;
 }
 
 [^(){}$" \t\n]+ {
@@ -57,7 +57,7 @@ spc	[ \t\n]
 			*it |= metaMask;
 		}
 	}
-	return WORD;
+	return TK_WORD;
 }
 
 \"(\\.|[^\\"])*\" {
@@ -87,7 +87,7 @@ spc	[ \t\n]
 	}
 
 	yylval.string = dst;
-	return WORD;
+	return TK_WORD;
 }
 
 [ \t\n]+
