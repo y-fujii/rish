@@ -3,7 +3,7 @@ LEX = flex -X
 #CXX = g++ -g -pedantic -Wall -Wextra
 CXX = clang++ -g -pedantic -Wall -Wextra
 
-SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp glob.hpp main_readline.cpp
+SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp glob.hpp main.cpp
 
 rish: $(SRCS)
 	$(YACC) -dv parser.y; \
@@ -11,7 +11,7 @@ rish: $(SRCS)
 	mv y.tab.c parser.cpp; \
 	mv y.output parser.out
 	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
-	$(CXX) -o rish main_readline.cpp lexer.cpp parser.cpp -lreadline -lcurses
+	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline -lcurses
 
 test: rish
 	wc $(SRCS)
