@@ -1,0 +1,33 @@
+
+## Wildcard
+
+Examples:
+	a*
+	a*/
+	**
+	**/
+
+
+## Variables
+
+All variables in rish are associated arrays which have multiple values like STL
+multimap<string, string>.
+
+Examples:
+	let $var = ()
+	let $var:0 = aaa
+	let $var:1 = bbb ccc
+	let $var:2 = $var:0 $var:1
+	# $var == (aaa:0 bbb:1 ccc:1 aaa:2 bbb:2 ccc:2)
+
+## Pattern match
+
+Examples:
+	let $x = 1
+	let *x = 1 2 3
+	let $x:1 = 1
+	let 3 *x = 3 4 5 6
+	let opAdd $lhs $rhs = (opAdd 1 2)
+
+## Pipe & redirection
+	src >| cmd | cmd |> dst
