@@ -29,5 +29,14 @@ Examples:
 	let 3 *x = 3 4 5 6
 	let opAdd $lhs $rhs = (opAdd 1 2)
 
+	if let opAdd $x $y = $args {
+	}
+
 ## Pipe & redirection
 	src >| cmd | cmd |> dst
+
+
+## Control structures
+	yield 0 1 2 | for $i {
+		yield 
+	}

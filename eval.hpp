@@ -3,9 +3,8 @@
 #include <iterator>
 #include <deque>
 #include <map>
-#include <functional>
-#include <tr1/functional>
 #include <algorithm>
+#include <functional>
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -147,10 +146,6 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			return evalStatement( s->body, global, ifd, ofd );
 		}
 		MATCH( Statement::tCommand ) {
-			/*
-			using namespace tr1;
-			*/
-			using namespace tr1::placeholders;
 			Command* s = static_cast<Command*>( sb );
 			deque<MetaString> vals;
 			deque<string> args;

@@ -20,6 +20,7 @@ spc	[ \t\n]
 "$"		{ return '$'; }
 
 ";"		{ return ';'; }
+"\n"	{ return ';'; }
 "&"		{ return '&'; }
 "!"		{ return '!'; }
 "|"		{ return '|'; }
@@ -46,16 +47,22 @@ spc	[ \t\n]
 "fun"		{ return TK_FUN; }
 
 \$[a-zA-Z0-9_]+ {
-	yylval.var = new std::string( yytext + 1 );
+	yylval.var = new string( yytext + 1 );
 	return TK_VAR;
 }
 
 [^(){}$" \t\n]+ {
-	yylval.string = new MetaString( yytext );
-	for( MetaString::iterator it = yylval.string->begin(); it != yylval.string->end(); ++it ) {
+	yylval.word = new MetaString( yytext );
+	MetaString::iterator it = yylval.word->begin();
+	assert( it != yylval.word->end() );
+	if( *it == '~' ) {
+		*it |= metaMask;
+	}
+	while( it != yylval.word->end() ) {
 		if( *it == '*' || *it == '?' ) {
 			*it |= metaMask;
 		}
+		++it;
 	}
 	return TK_WORD;
 }
@@ -67,29 +74,32 @@ spc	[ \t\n]
 		char c;
 		if( yytext[i] == '\\' ) {
 			++i;
-			switch( yytext[i] ) {
-				case 'a': c = '\a'; break;
-				case 'b': c = '\b'; break;
-				case 'f': c = '\f'; break;
-				case 'n': c = '\n'; break;
-				case 'r': c = '\r'; break;
-				case 't': c = '\t'; break;
-				case '"': c = '"'; break;
-				case '\\': c = '\\'; break;
-				default:
-					throw exception();
+			if( isalnum( yytext[i] ) ) {
+				switch( yytext[i] ) {
+					MATCH( 'a' ) { c = '\a'; }
+					MATCH( 'b' ) { c = '\b'; }
+					MATCH( 'f' ) { c = '\f'; }
+					MATCH( 'n' ) { c = '\n'; }
+					MATCH( 'r' ) { c = '\r'; }
+					MATCH( 't' ) { c = '\t'; }
+					MATCH( '0' ) { c = '\0'; }
+					OTHERWISE { throw SyntaxError(); }
+				}
+			}
+			else {
+				c = yytext[i];
 			}
 		}
 		else {
 			c = yytext[i];
 		}
-		dst->insert( dst->end(), c );
+		dst->push_back( c );
 	}
 
-	yylval.string = dst;
+	yylval.word = dst;
 	return TK_WORD;
 }
 
-[ \t\n]+
+[ \t]+
 
 %%

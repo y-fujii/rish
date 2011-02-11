@@ -1,7 +1,5 @@
 LEX = flex -X
-#YACC = byacc
-#CXX = g++ -g -pedantic -Wall -Wextra
-CXX = clang++ -g -pedantic -Wall -Wextra
+CXX = clang++ -s -pedantic -Wall -Wextra -Os
 
 SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp glob.hpp main.cpp
 
