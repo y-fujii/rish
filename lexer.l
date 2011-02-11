@@ -76,13 +76,14 @@ spc	[ \t\n]
 			++i;
 			if( isalnum( yytext[i] ) ) {
 				switch( yytext[i] ) {
+					MATCH( '0' ) { c = '\0'; }
 					MATCH( 'a' ) { c = '\a'; }
 					MATCH( 'b' ) { c = '\b'; }
 					MATCH( 'f' ) { c = '\f'; }
 					MATCH( 'n' ) { c = '\n'; }
 					MATCH( 'r' ) { c = '\r'; }
 					MATCH( 't' ) { c = '\t'; }
-					MATCH( '0' ) { c = '\0'; }
+					MATCH( 'v' ) { c = '\v'; }
 					OTHERWISE { throw SyntaxError(); }
 				}
 			}
