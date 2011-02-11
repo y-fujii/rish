@@ -25,6 +25,7 @@ spc	[ \t\n]
 "|"		{ return '|'; }
 "="		{ return '='; }
 "^"		{ return '^'; }
+"@"		{ return '@'; }
 
 "&&"	{ return AND2; }
 "||"	{ return OR2; }
@@ -43,6 +44,11 @@ spc	[ \t\n]
 "return"	{ return TK_RETURN; }
 "let"		{ return LET; }
 "fun"		{ return FUN; }
+
+\$[a-zA-Z0-9_]+ {
+	yylval.var = new std::string( yytext + 1 );
+	return VAR;
+}
 
 [^(){}$" \t\n]+ {
 	yylval.string = new MetaString( yytext );

@@ -24,26 +24,20 @@
 
 %union {
 	MetaString* string;
+	std::string* var;
 	ast::Expr* expr;
 	ast::Statement* statement;
 	std::deque< std::pair<ast::Expr*, int> >* redir_to;
-	/*
-	ast::VarLhs* var_lhs;
-	std::deque<ast::Expr*>* var_list;
-	*/
 }
 
 %type<string> WORD
-%type<expr> arg arg_concat arg_list0 arg_list1
+%type<var> VAR
+%type<expr> arg arg_concat args0 args1
 %type<statement> command_seq command_bg command_andor command_not
 %type<statement> command_redir command_pipe command_stat if_ else_
 %type<redir_to> redir_to
-/*
-%type<var_lhs> var_lhs
-%type<var_list> var_list
-*/
 
-%token AND2 OR2 RDT1 RDT2 RDFR WORD
+%token AND2 OR2 RDT1 RDT2 RDFR WORD VAR
 %token IF ELSE WHILE FOR BREAK TK_RETURN LET FUN
 
 %start top
@@ -91,17 +85,14 @@ command_pipe
 command_stat
 	: if_
 	| WHILE command_andor '{' command_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
-	| FOR WORD            '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
-	| BREAK arg										{ $$ = new Break( $2 ); }
-	| TK_RETURN arg									{ $$ = new Return( $2 ); }
-	/*
-	| LET var_lhs '=' arg_list0						{ $$ = new Let( $2, $4 ); }
-	*/
-	| LET arg_list0 '=' arg_list0					{ $$ = new LetFix( $2, $4 ); }
-	| LET arg_list0 '*' WORD arg_list0 '=' arg_list0	{ $$ = new LetVar( $2, $5, $7 ); }
-	| FUN WORD arg_list0 '{' command_seq '}'			{ $$ = new Fun( $2, $3, $5 ); }
+	| FOR VAR             '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
+	| BREAK arg_concat								{ $$ = new Break( $2 ); }
+	| TK_RETURN arg_concat							{ $$ = new Return( $2 ); }
+	| LET args0 '=' args0							{ $$ = new LetFix( $2, $4 ); }
+	| LET args0 '@' WORD args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }
+	| FUN WORD args0 '{' command_seq '}'			{ $$ = new Fun( $2, $3, $5 ); }
 	| '{' command_seq '}'							{ $$ = $2; };
-	| arg_list1										{ $$ = new Command( $1 ); }
+	| args1											{ $$ = new Command( $1 ); }
 
 if_
 	: IF command_andor '{' command_seq '}' else_	{ $$ = new If( $2, $4, $6 ); }
@@ -112,22 +103,20 @@ else_
 	| /* empty */				{ $$ = new None(); }
 
 /*
-var_lhs
-	: var_list '*' WORD var_list	{ $$ = new VarStar( $1, $3, $4 ); }
-	| var_list						{ $$ = new VarList( $1 ); }
+args0
+	: args0 arg_concat			{ $$ = new List( $2, $1 ); }
+	| 							{ $$ = new Null(); }
 
-var_list
-	: var_list '$' WORD			{ $1->push_back( new Var( $3 ) ); }
-	| var_list WORD				{ $1->push_back( new Word( $2 ) ); }
-	| 							{ $$ = new deque<Expr*>(); }
+args1
+	: args1 arg_concat			{ $$ = new List( $2, $1 ); }
+	| arg_concat				{ $$ = new List( $1, new Null() ); }
 */
+args0
+	: arg_concat args0			{ $$ = new List( $1, $2 ); }
+	| 							{ $$ = new Null(); }
 
-arg_list0
-	: arg_list0 arg_concat		{ $$ = new List( $1, $2 ); }
-	| /* empty */				{ $$ = new Null(); }
-
-arg_list1
-	: arg_list1 arg_concat		{ $$ = new List( $1, $2 ); }
+args1
+	: arg_concat args1			{ $$ = new List( $1, $2 ); }
 	| arg_concat				{ $$ = new List( $1, new Null() ); }
 
 arg_concat
@@ -137,12 +126,12 @@ arg_concat
 arg
 	: WORD						{ $$ = new Word( $1 ); }
 	| '$' '{' command_seq '}'	{ $$ = new Subst( $3 ); }
-	| '$' WORD					{ $$ = new Var( $2 ); }
+	| VAR						{ $$ = new Var( $1 ); }
 	/*
-	| arg '[' arg ']'			{ $$ = new Index( $1, $2 ); }
-	| arg '[' arg arg ']'		{ $$ = new Slice( $1, $2, $3 ); }
+	| arg '[' arg ']'			{ $$ = new Index( $1, $3 ); }
+	| arg '[' arg ':' arg ']'	{ $$ = new Slice( $1, $3, $5 ); }
 	*/
-	| '(' arg_list0 ')'			{ $$ = $2; }
+	| '(' args0 ')'				{ $$ = $2; }
 
 /*
 word_wr

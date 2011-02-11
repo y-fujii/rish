@@ -31,7 +31,8 @@ struct Statement {
 		tIf,
 		tCommand,
 		tFun,
-		tLet,
+		tLetFix,
+		tLetVar,
 		tReturn,
 		tBreak,
 		tFor,
@@ -46,10 +47,9 @@ struct Statement {
 		tNone
 	};
 	Tag const tag;
-	Statement* parent;
 
 	protected:
-		Statement( Tag t, Statement* p = NULL ): tag( t ), parent( p ) {}
+		Statement( Tag t ): tag( t ) {}
 
 	private:
 		Statement();
@@ -66,8 +66,8 @@ struct Subst: Expr {
 };
 
 struct Var: Expr {
-	Var( MetaString* n ): Expr( tVar ), name( n ) {}
-	MetaString* name;
+	Var( std::string* n ): Expr( tVar ), name( n ) {}
+	std::string* name;
 };
 
 struct List: Expr {
@@ -86,37 +86,8 @@ struct Concat: Expr {
 	Expr* rhs;
 };
 
-struct VarLhs {
-	enum Tag {
-		tVarList,
-		tVarStar
-	};
-	Tag const tag;
-
-	protected:
-		VarLhs( Tag t ): tag( t ) {}
-
-	private:
-		VarLhs();
-};
-
-struct VarList: VarLhs {
-	VarList( std::deque<Expr*>* v ): VarLhs( tVarList ), vars( v ) {}
-	std::deque<Expr*>* vars;
-};
-
-struct VarStar: VarLhs {
-	VarStar( std::deque<Expr*>* h, MetaString* s, std::deque<Expr*>* t ):
-		VarLhs( tVarStar ), head( h ), star( s ), tail( t ) {}
-	std::deque<Expr*>* head;
-	MetaString* star;
-	std::deque<Expr*>* tail;
-};
-
 struct If: Statement {
-	If( Statement* c, Statement* t, Statement* e ): Statement( tIf ), cond( c ), then( t ), elze( e ) {
-		c->parent = t->parent = e->parent = this;
-	}
+	If( Statement* c, Statement* t, Statement* e ): Statement( tIf ), cond( c ), then( t ), elze( e ) {}
 	Statement* cond;
 	Statement* then;
 	Statement* elze;
@@ -128,15 +99,23 @@ struct Command: Statement {
 };
 
 struct Fun: Statement {
-	Fun( MetaString* n, VarLhs* a, Statement* b ): Statement( tFun ), name( n ), args( a ), body( b ) {}
+	Fun( MetaString* n, Expr* a, Statement* b ): Statement( tFun ), name( n ), args( a ), body( b ) {}
 	MetaString* name;
-	VarLhs* args;
+	Expr* args;
 	Statement* body;
 };
 
-struct Let: Statement {
-	Let( VarLhs* l, Expr* r ): Statement( tLet ), lhs( l ), rhs( r ) {}
-	VarLhs* lhs;
+struct LetFix: Statement {
+	LetFix( Expr* l, Expr* r ): Statement( tLetFix ), lhs( l ), rhs( r ) {}
+	Expr* lhs;
+	Expr* rhs;
+};
+
+struct LetVar: Statement {
+	LetVar( Expr* ll, MetaString* lm, Expr* lr, Expr* r ): Statement( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
+	Expr* lhsl;
+	MetaString* lhsm;
+	Expr* lhsr;
 	Expr* rhs;
 };
 
@@ -151,10 +130,8 @@ struct Break: Statement {
 };
 
 struct For: Statement {
-	For( MetaString* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {
-		b->parent = e->parent = this;
-	}
-	MetaString* var;
+	For( std::string* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {}
+	std::string* var;
 	Statement* body;
 	Statement* elze;
 };

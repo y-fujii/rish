@@ -1,8 +1,7 @@
 LEX = flex -X
 #YACC = byacc
-CXX = g++ -g -pedantic -Wall -Wextra
-#CXX = clang++ -g -pedantic -Wall -Wextra \
-#	  -I$(HOME)/usr/include -L$(HOME)/usr/lib
+#CXX = g++ -g -pedantic -Wall -Wextra
+CXX = clang++ -g -pedantic -Wall -Wextra
 
 SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp glob.hpp main_readline.cpp
 

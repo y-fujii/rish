@@ -23,10 +23,6 @@ struct MetaString: basic_string<uint16_t> {
 	MetaString( Iter bgn, Iter end ): basic_string<uint16_t>( bgn, end ) {}
 };
 
-inline string toString( MetaString const& src ) {
-	return string( src.begin(), src.end() );
-}
-
 inline bool operator==( MetaString const& lhs, string const& rhs ) {
 	return lhs == MetaString( rhs );
 }
@@ -151,6 +147,7 @@ DstIter walkDir( string const& root, DstIter dstIt ) {
 	return dstIt;
 }
 
+/*
 template<class DstIter>
 DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst ) {
 	size_t slash = pattern.find( '/' );
@@ -198,5 +195,14 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 		}
 	}
 
+	return dst;
+}
+*/
+
+template<class SrcIter, class DstIter>
+DstIter expandGlobs( SrcIter bgn, SrcIter end, DstIter dst ) {
+	for( typename SrcIter::const_iterator it = bgn; it != end; ++it ) {
+		dst++ = string( it->begin(), it->end() );
+	}
 	return dst;
 }

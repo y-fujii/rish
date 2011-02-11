@@ -28,7 +28,7 @@ int main( int argc, char** ) {
 		try {
 			ast::Statement* ast = parse( line, line + strlen( line ) );
 			assert( ast != NULL );
-			int retv = evalStatement( ast, &global );
+			int retv = evalStatement( ast, &global, 0, 1 );
 			if( retv != 0 ) {
 				cerr << "The command returned " << retv << "." << endl;
 			}
