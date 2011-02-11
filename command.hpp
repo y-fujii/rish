@@ -14,18 +14,10 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 	assert( args.size() > 0 );
 
 	if( args[0] == "cd" ) {
-		if( args.size() != 2 || args[1].size() == 0 ) {
+		if( args.size() != 2 ) {
 			return 1;
 		}
-
-		string dir;
-		if( args[1][0] == '~' ) {
-			dir = getenv( "HOME" ) + args[1].substr( 1 );
-		}
-		else {
-			dir = args[1];
-		}
-		return chdir( dir.c_str() ) < 0 ? 1 : 0;
+		return chdir( args[1].c_str() ) < 0 ? 1 : 0;
 	}
 	else if( args[0] == "send" || args[0] == "yield" ) {
 		ostringstream buf;

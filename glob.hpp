@@ -44,6 +44,7 @@ inline MetaString operator+( string const& lhs, MetaString const& rhs ) {
 MetaString::value_type const metaMask = 1 << 15;
 MetaString::value_type const star = '*' | metaMask;
 MetaString::value_type const any1 = '?' | metaMask;
+MetaString::value_type const home = '~' | metaMask;
 
 template<class String>
 String pathJoin( String const& x, String const& y ) {
@@ -202,7 +203,13 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 template<class SrcIter, class DstIter>
 DstIter expandGlobs( SrcIter bgn, SrcIter end, DstIter dst ) {
 	for( typename SrcIter::const_iterator it = bgn; it != end; ++it ) {
-		dst++ = string( it->begin(), it->end() );
+		string dir;
+		if( it->size() > 0 && (*it)[0] == home ) {
+			*dst++ = getenv( "HOME" ) + string( it->begin() + 1, it->end() );
+		}
+		else {
+			*dst++ = string( it->begin(), it->end() );
+		}
 	}
 	return dst;
 }

@@ -23,14 +23,14 @@
 %}
 
 %union {
-	MetaString* string;
+	MetaString* word;
 	std::string* var;
 	ast::Expr* expr;
 	ast::Statement* statement;
 	std::deque< std::pair<ast::Expr*, int> >* redir_to;
 }
 
-%type<string> TK_WORD
+%type<word> TK_WORD
 %type<var> TK_VAR
 %type<expr> arg arg_concat args0 args1
 %type<statement> command_seq command_bg command_andor command_not
