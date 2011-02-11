@@ -40,3 +40,11 @@ Examples:
 	yield 0 1 2 | for $i {
 		yield 
 	}
+
+	while true {
+	}
+	else {
+	}
+
+	for $i when $i == 1
+
