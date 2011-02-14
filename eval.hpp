@@ -2,24 +2,24 @@
 
 #include "config.hpp"
 #include <iterator>
-#include <deque>
-#include <map>
 #include <algorithm>
 #include <functional>
+#include <tr1/functional>
+#include <numeric>
+#include <deque>
+#include <map>
 #include <string>
 #include <sstream>
 #include <stdexcept>
-#include <numeric>
-#include <tr1/functional>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include "ast.hpp"
 #include "command.hpp"
-#include "misc.hpp"
 #include "glob.hpp"
+#include "misc.hpp"
 
 
 struct Global {
@@ -90,6 +90,7 @@ struct EvalStmtRunner {
 		bool _oclose;
 };
 
+/*
 // XXX
 template<class DstIter>
 DstIter readList( int ifd, DstIter dst ) {
@@ -109,6 +110,7 @@ DstIter readList( int ifd, DstIter dst ) {
 	}
 	return dst;
 }
+*/
 
 template<class DstIter>
 DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
@@ -172,7 +174,12 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			waitpid( pid, NULL, 0 );
 			*/
 			EvalStmtRunner evalThread( e->body, global, 0, fds[1], false, true );
-			readList( fds[0], dst );
+			UnixIStream ifs( fds[0] );
+			while( !ifs.eof() ) {
+				string buf;
+				getline( ifs, buf );
+				*dst++ = buf;
+			}
 			close( fds[0] );
 			evalThread.join();
 		}
@@ -348,6 +355,17 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		}
 		MATCH( Stmt::tFor ) {
 			For* s = static_cast<For*>( sb );
+
+			UnixIStream ifs( ifd );
+
+			while( !ifs.eof() ) {
+				string line;
+				getline( ifs, line );
+				global->vars[*s->var].clear();
+				global->vars[*s->var].push_back( line );
+				evalStmt( s->body, global, ifd, ofd );
+			}
+			/*
 			// XXX
 			char c;
 			string buf;
@@ -367,6 +385,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 				global->vars[*s->var].push_back( buf );
 				evalStmt( s->body, global, ifd, ofd );
 			}
+			*/
 			return 0;
 		}
 		MATCH( Stmt::tNone ) {

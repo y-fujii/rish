@@ -6,16 +6,12 @@
 #include <deque>
 #include <string>
 #include <numeric>
-#include <tr1/functional>
-#include <tr1/tuple>
 #include <string.h>
 #include <dirent.h>
 #include "misc.hpp"
 #include "exception.hpp"
 
 using namespace std;
-using namespace std::tr1;
-using namespace std::tr1::placeholders;
 
 
 struct MetaString: basic_string<uint16_t> {
