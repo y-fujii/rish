@@ -6,10 +6,10 @@
 #include "lexer.hpp"
 
 
-extern ast::Statement* parseResult;
+extern ast::Stmt* parseResult;
 int yyparse();
 
-ast::Statement* parse( char const* bgn, char const* end ) {
+ast::Stmt* parse( char const* bgn, char const* end ) {
 	parseResult = NULL;
 	yy_scan_bytes( const_cast<char*>( bgn ), end - bgn );
 	yyparse();
