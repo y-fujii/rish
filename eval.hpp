@@ -90,28 +90,6 @@ struct EvalStmtRunner {
 		bool _oclose;
 };
 
-/*
-// XXX
-template<class DstIter>
-DstIter readList( int ifd, DstIter dst ) {
-	char c;
-	string buf;
-	while( read( ifd, &c, 1 ) != 0 ) {
-		if( c == '\n' ) {
-			*dst++ = buf;
-			buf.clear();
-		}
-		else {
-			buf += c;
-		}
-	}
-	if( buf.size() > 0 ) {
-		*dst++ = buf;
-	}
-	return dst;
-}
-*/
-
 template<class DstIter>
 DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 	using namespace std;
@@ -156,23 +134,6 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
-			/*
-			pid_t pid = fork();
-			if( pid < 0 ) {
-				throw IOError();
-			}
-			if( pid == 0 ) {
-				close( 0 );
-				close( fds[0] );
-				evalStmt( e->body, global, 0, fds[1] );
-				exit( 0 );
-			}
-			else {
-				close( fds[1] );
-				readList( fds[0], dst );
-			}
-			waitpid( pid, NULL, 0 );
-			*/
 			EvalStmtRunner evalThread( e->body, global, 0, fds[1], false, true );
 			UnixIStream ifs( fds[0] );
 			while( !ifs.eof() ) {
@@ -325,27 +286,11 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		}
 		MATCH( Stmt::tPipe ) {
 			Pipe* s = static_cast<Pipe*>( sb );
+
 			int fds[2];
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
-
-			/*
-			pid_t pid = fork();
-			if( pid < 0 ) {
-				throw IOError();
-			}
-			if( pid == 0 ) {
-				close( fds[0] );
-				evalStmt( s->lhs, global, ifd, fds[1] );
-				exit( 0 );
-			}
-			else {
-				close( fds[1] );
-				evalStmt( s->rhs, global, fds[0], ofd );
-			}
-			waitpid( pid, NULL, 0 );
-			*/
 			EvalStmtRunner evalThread( s->lhs, global, ifd, fds[1], false, true );
 			evalStmt( s->rhs, global, fds[0], ofd );
 			close( fds[0] );
@@ -357,7 +302,6 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			For* s = static_cast<For*>( sb );
 
 			UnixIStream ifs( ifd );
-
 			while( !ifs.eof() ) {
 				string line;
 				getline( ifs, line );
@@ -365,27 +309,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 				global->vars[*s->var].push_back( line );
 				evalStmt( s->body, global, ifd, ofd );
 			}
-			/*
-			// XXX
-			char c;
-			string buf;
-			while( read( ifd, &c, 1 ) != 0 ) {
-				if( c == '\n' ) {
-					global->vars[*s->var].clear();
-					global->vars[*s->var].push_back( buf );
-					evalStmt( s->body, global, ifd, ofd );
-					buf.clear();
-				}
-				else {
-					buf += c;
-				}
-			}
-			if( buf.size() > 0 ) {
-				global->vars[*s->var].clear();
-				global->vars[*s->var].push_back( buf );
-				evalStmt( s->body, global, ifd, ofd );
-			}
-			*/
+
 			return 0;
 		}
 		MATCH( Stmt::tNone ) {
