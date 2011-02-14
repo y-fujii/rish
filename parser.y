@@ -27,7 +27,6 @@
 	std::string* var;
 	ast::Expr* expr;
 	ast::Statement* statement;
-	std::deque< std::pair<ast::Expr*, int> >* redir_to;
 }
 
 %type<word> TK_WORD
@@ -35,7 +34,6 @@
 %type<expr> arg arg_concat args0 args1
 %type<statement> command_seq command_bg command_andor command_not
 %type<statement> command_redir command_pipe command_stat if_ else_
-%type<redir_to> redir_to
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR
 %token TK_IF TK_ELSE TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN
@@ -67,32 +65,26 @@ command_not
 	| command_redir
 
 command_redir
-	/*
-	: arg RDFR command_pipe redir_to	{ $$ = new Redir( $3, $1, $4 ); }
-	| command_pipe redir_to				{ $$ = new Redir( $1, NULL, $2 ); }
-	*/
-	: command_pipe
-
-redir_to
-	: redir_to TK_RDT1 arg				{ $1->push_back( make_pair( $3, O_CREAT ) ); }
-	| redir_to TK_RDT2 arg				{ $1->push_back( make_pair( $3, O_APPEND ) ); }
-	| 									{ $$ = new deque< pair<Expr*, int> >(); }
+	: command_pipe TK_RDT1 arg			{ $$ = new RedirTo( $1, $3 ); }
+	| command_pipe TK_RDT2 arg			{ $$ = new RedirTo( $1, $3 ); }
+	| command_pipe
 
 command_pipe
 	: command_pipe '|' command_stat		{ $$ = new Pipe( $1, $3 ); }
+	| arg_concat TK_RDFR command_stat	{ $$ = new RedirFr( $3, $1 ); }
 	| command_stat
 
 command_stat
 	: if_
-	| TK_WHILE command_andor '{' command_seq '}' else_		{ $$ = new While( $2, $4, $6 ); }
-	| TK_FOR TK_VAR             '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
-	| TK_BREAK arg_concat									{ $$ = new Break( $2 ); }
-	| TK_RETURN arg_concat									{ $$ = new Return( $2 ); }
-	| TK_LET args0 '=' args0								{ $$ = new LetFix( $2, $4 ); }
-	| TK_LET args0 '@' TK_VAR args0 '=' args0				{ $$ = new LetVar( $2, $4, $5, $7 ); }
-	| TK_FUN TK_WORD args0 '{' command_seq '}'				{ $$ = new Fun( $2, $3, $5 ); }
-	| '{' command_seq '}'									{ $$ = $2; };
-	| args1													{ $$ = new Command( $1 ); }
+	| TK_WHILE command_andor '{' command_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
+	| TK_FOR TK_VAR          '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
+	| TK_BREAK arg_concat								{ $$ = new Break( $2 ); }
+	| TK_RETURN arg_concat								{ $$ = new Return( $2 ); }
+	| TK_LET args0 '=' args0							{ $$ = new LetFix( $2, $4 ); }
+	| TK_LET args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }
+	| TK_FUN TK_WORD args0 '{' command_seq '}'			{ $$ = new Fun( $2, $3, $5 ); }
+	| '{' command_seq '}'								{ $$ = $2; };
+	| args1												{ $$ = new Command( $1 ); }
 
 if_
 	: TK_IF command_andor '{' command_seq '}' else_	{ $$ = new If( $2, $4, $6 ); }

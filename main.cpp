@@ -26,10 +26,15 @@ int main( int argc, char** ) {
 				add_history( line.get() );
 			}
 
-			ast::Statement* ast = parse( line.get(), line.get() + len );
-			int retv = evalStatement( ast, &global, 0, 1 );
-			if( retv != 0 ) {
-				cerr << "The command returned " << retv << "." << endl;
+			try {
+				ast::Statement* ast = parse( line.get(), line.get() + len );
+				int retv = evalStatement( ast, &global, 0, 1 );
+				if( retv != 0 ) {
+					cerr << "The command returned " << retv << "." << endl;
+				}
+			}
+			catch( SyntaxError const& ) {
+				cerr << "Syntax error." << endl;
 			}
 		}
 	}

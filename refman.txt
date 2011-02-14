@@ -48,3 +48,11 @@ Examples:
 
 	for $i when $i == 1
 
+## File descriptor
+	fd --null 0 --null 1 xinit
+	--close FD
+	--link FD FD
+	--null FD
+	--redir-to FD FILE
+	--redir-from FD FILE
+	fd --null 2

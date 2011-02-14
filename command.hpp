@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.hpp"
 #include <deque>
 #include <cassert>
 #include <sstream>
@@ -19,7 +20,7 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 		}
 		return chdir( args[1].c_str() ) < 0 ? 1 : 0;
 	}
-	else if( args[0] == "send" || args[0] == "yield" ) {
+	else if( args[0] == "yield" ) {
 		ostringstream buf;
 		for( deque<string>::const_iterator it = args.begin() + 1; it != args.end(); ++it ) {
 			buf << *it << '\n';
@@ -39,6 +40,7 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 			throw IOError();
 		}
 		else if( pid == 0 ) {
+			/*
 			if( ifd != 0 ) {
 				dup2( ifd, 0 );
 				close( ifd );
@@ -47,8 +49,12 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 				dup2( ofd, 1 );
 				close( ofd );
 			}
+			*/
+			dup2( ifd, 0 );
+			dup2( ofd, 1 );
+			closefrom( 3 );
 			execvp( args_raw[0], const_cast<char* const*>( args_raw ) );
-			throw IOError();
+			_exit( 1 );
 		}
 
 		int status;

@@ -9,8 +9,6 @@
 	using namespace std;
 %}
 
-spc	[ \t\n]
-
 %%
 
 "("		{ return '('; }
@@ -33,9 +31,6 @@ spc	[ \t\n]
 ">|"	{ return TK_RDFR; }
 "|>"	{ return TK_RDT1; }
 "|>>"	{ return TK_RDT2; }
-"|[0-9]+|"	{ return '|'; }
-"|[0-9]+>"	{ return TK_RDT1; }
-"|[0-9]+>>"	{ return TK_RDT2; }
 
 "if"		{ return TK_IF; }
 "else"		{ return TK_ELSE; }
@@ -70,10 +65,12 @@ spc	[ \t\n]
 \"(\\.|[^\\"])*\" {
 	MetaString* dst = new MetaString();
 	size_t len = strlen( yytext );
+	assert( len >= 2 );
 	for( size_t i = 1; i < len - 1; ++i ) {
 		char c;
 		if( yytext[i] == '\\' ) {
 			++i;
+			assert( yytext[i] != '\0' );
 			if( isalnum( yytext[i] ) ) {
 				switch( yytext[i] ) {
 					MATCH( '0' ) { c = '\0'; }

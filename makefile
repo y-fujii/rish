@@ -1,9 +1,14 @@
 LEX = flex -X
-CXX = clang++ -s -pedantic -Wall -Wextra -Os
+CXX = clang++ -g -pedantic -Wall -Wextra -Os -I/usr/include/boost/tr1
+#CXX = g++ -pedantic -Wall -Wextra -Os
 
-SRCS = lexer.l parser.y parser.hpp misc.hpp ast.hpp eval.hpp command.hpp glob.hpp main.cpp
+SRCS = \
+	lexer.l parser.y \
+	config.hpp misc.hpp exception.hpp \
+	parser.hpp ast.hpp eval.hpp command.hpp glob.hpp \
+	main.cpp
 
-rish: $(SRCS)
+rish: $(SRCS) makefile
 	$(YACC) -dv parser.y; \
 	mv y.tab.h tokens.hpp; \
 	mv y.tab.c parser.cpp; \
