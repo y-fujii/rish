@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.hpp"
 #include <iterator>
 #include <deque>
 #include <map>
@@ -8,8 +9,13 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <numeric>
+#include <tr1/functional>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "ast.hpp"
 #include "command.hpp"
 #include "misc.hpp"
@@ -38,9 +44,6 @@ struct ReturnException {
 
 	int const retv;
 };
-
-template<class DstIter>
-DstIter evalExpr( ast::Expr*, Global*, DstIter );
 
 int evalStatement( ast::Statement*, Global*, int, int );
 
@@ -131,6 +134,48 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 	return dst;
 }
 
+template<class DstIter>
+DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt ) {
+	using namespace std;
+	using namespace std::tr1;
+	using namespace std::tr1::placeholders;
+
+	deque<MetaString> tmp;
+	evalExpr( expr, global, back_inserter( tmp ) );
+	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
+}
+
+struct EvalStatmentRunner {
+	EvalStatmentRunner( ast::Statement* s, Global* g, int i, int o ):
+		_statement( s ), _global( g ), _ifd( i ), _ofd( o ) {
+		if( pthread_create( &_thread, NULL, callback, this ) != 0 ) {
+			throw IOError();
+		}
+	}
+
+	int join() {
+		void* retv;
+		if( pthread_join( _thread, &retv ) == 0 ) {
+			throw IOError();
+		}
+		return int( reinterpret_cast<uintptr_t>( retv ) );
+	}
+
+	private:
+		static void* callback( void* arg ) {
+			EvalStatmentRunner* self = reinterpret_cast<EvalStatmentRunner*>( arg );
+			return reinterpret_cast<void*>(
+				evalStatement( self->_statement, self->_global, self->_ifd, self->_ofd )
+			);
+		}
+
+		pthread_t _thread;
+		ast::Statement* _statement;
+		Global* _global;
+		int _ifd;
+		int _ofd;
+};
+
 int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 	using namespace std;
 	using namespace ast;
@@ -141,16 +186,42 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			evalStatement( s->lhs, global, ifd, ofd );
 			return evalStatement( s->rhs, global, ifd, ofd );
 		}
-		MATCH( Statement::tRedir ) {
-			Redir* s = static_cast<Redir*>( sb );
-			return evalStatement( s->body, global, ifd, ofd );
+		MATCH( Statement::tRedirFr ) {
+			RedirFr* s = static_cast<RedirFr*>( sb );
+			deque<string> args;
+			evalArgs( s->file, global, back_inserter( args ) );
+			int fd = open( args.back().c_str(), O_RDONLY );
+			int retv;
+			try {
+				retv = evalStatement( s->body, global, fd, ofd );
+			}
+			catch( ... ) {
+				close( fd );
+				throw;
+			}
+			close( fd );
+			return retv;
+		}
+		MATCH( Statement::tRedirTo ) {
+			RedirFr* s = static_cast<RedirFr*>( sb );
+			deque<string> args;
+			evalArgs( s->file, global, back_inserter( args ) );
+			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
+			int retv;
+			try {
+				retv = evalStatement( s->body, global, ifd, fd );
+			}
+			catch( ... ) {
+				close( fd );
+				throw;
+			}
+			close( fd );
+			return retv;
 		}
 		MATCH( Statement::tCommand ) {
 			Command* s = static_cast<Command*>( sb );
-			deque<MetaString> vals;
 			deque<string> args;
-			evalExpr( s->args, global, back_inserter( vals ) );
-			expandGlobs( vals.begin(), vals.end(), back_inserter( args ) );
+			evalArgs( s->args, global, back_inserter( args ) );
 			
 			/*
 			assert( args.size() > 0 );
@@ -195,10 +266,8 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 		}
 		MATCH( Statement::tBreak ) {
 			Break* s = static_cast<Break*>( sb );
-			deque<MetaString> vals;
 			deque<string> args;
-			evalExpr( s->retv, global, back_inserter( vals ) );
-			expandGlobs( vals.begin(), vals.end(), back_inserter( args ) );
+			evalArgs( s->retv, global, back_inserter( args ) );
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -207,10 +276,8 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 		}
 		MATCH( Statement::tLetFix ) {
 			LetFix* s = static_cast<LetFix*>( sb );
-			deque<MetaString> vals;
 			deque<string> args;
-			evalExpr( s->rhs, global, back_inserter( vals ) );
-			expandGlobs( vals.begin(), vals.end(), back_inserter( args ) );
+			evalArgs( s->rhs, global, back_inserter( args ) );
 
 			Expr* lit = s->lhs;
 			for( deque<string>::const_iterator rit = args.begin(); rit != args.end(); ++rit ) {

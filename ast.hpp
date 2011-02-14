@@ -42,7 +42,8 @@ struct Statement {
 		tAnd,
 		tBg,
 		tSequence,
-		tRedir,
+		tRedirFr,
+		tRedirTo,
 		tPipe,
 		tNone
 	};
@@ -172,12 +173,16 @@ struct Sequence: Statement {
 	Statement* rhs;
 };
 
-struct Redir: Statement {
-	Redir( Statement* b, Expr* f, std::deque< std::pair<Expr*, int> >* t ):
-		Statement( tRedir ), body( b ), from( f ), to( t ) {}
+struct RedirFr: Statement {
+	RedirFr( Statement* b, Expr* f ): Statement( tRedirFr ), body( b ), file( f ) {}
 	Statement* body;
-	Expr* from;
-	std::deque< std::pair<Expr*, int> >* to;
+	Expr* file;
+};
+
+struct RedirTo: Statement {
+	RedirTo( Statement* b, Expr* f ): Statement( tRedirTo ), body( b ), file( f ) {}
+	Statement* body;
+	Expr* file;
 };
 
 struct Pipe: Statement {

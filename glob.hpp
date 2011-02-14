@@ -5,41 +5,27 @@
 #include <iterator>
 #include <deque>
 #include <string>
+#include <numeric>
+#include <tr1/functional>
+#include <tr1/tuple>
 #include <string.h>
 #include <dirent.h>
 #include "misc.hpp"
 #include "exception.hpp"
 
 using namespace std;
+using namespace std::tr1;
+using namespace std::tr1::placeholders;
 
 
 struct MetaString: basic_string<uint16_t> {
-	MetaString(): basic_string<uint16_t>() {}
-	MetaString( MetaString const& s ): basic_string<uint16_t>( s ) {}
-	MetaString( basic_string<uint16_t> const& s ): basic_string<uint16_t>( s ) {}
-	MetaString( string const& s ): basic_string<uint16_t>( s.begin(), s.end() ) {}
-	MetaString( char const* s ): basic_string<uint16_t>( s, s + strlen( s ) ) {}
+	MetaString()                                  : basic_string() {}
+	MetaString( MetaString const& s )             : basic_string( s ) {}
+	MetaString( basic_string<uint16_t> const& s ) : basic_string( s ) {}
+	MetaString( string const& s )                 : basic_string( s.begin(), s.end() ) {}
 	template<class Iter>
-	MetaString( Iter bgn, Iter end ): basic_string<uint16_t>( bgn, end ) {}
+	MetaString( Iter bgn, Iter end )              : basic_string( bgn, end ) {}
 };
-
-inline bool operator==( MetaString const& lhs, string const& rhs ) {
-	return lhs == MetaString( rhs );
-}
-
-inline bool operator!=( MetaString const& lhs, string const& rhs ) {
-	return lhs != MetaString( rhs );
-}
-
-/*
-inline MetaString operator+( MetaString const& lhs, string const& rhs ) {
-	return lhs + MetaString( rhs );
-}
-
-inline MetaString operator+( string const& lhs, MetaString const& rhs ) {
-	return MetaString( lhs ) + rhs;
-}
-*/
 
 MetaString::value_type const metaMask = 1 << 15;
 MetaString::value_type const star = '*' | metaMask;
@@ -200,16 +186,13 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 }
 */
 
-template<class SrcIter, class DstIter>
-DstIter expandGlobs( SrcIter bgn, SrcIter end, DstIter dst ) {
-	for( typename SrcIter::const_iterator it = bgn; it != end; ++it ) {
-		string dir;
-		if( it->size() > 0 && (*it)[0] == home ) {
-			*dst++ = getenv( "HOME" ) + string( it->begin() + 1, it->end() );
-		}
-		else {
-			*dst++ = string( it->begin(), it->end() );
-		}
+template<class DstIter>
+DstIter expandGlob( MetaString const& src, DstIter dst ) {
+	if( src.size() > 0 && src[0] == home ) {
+		*dst++ = getenv( "HOME" ) + string( src.begin() + 1, src.end() );
+	}
+	else {
+		*dst++ = string( src.begin(), src.end() );
 	}
 	return dst;
 }
