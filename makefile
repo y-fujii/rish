@@ -4,20 +4,17 @@ CXX = clang++ -g -pedantic -Wall -Wextra -pthread -Os -I/usr/include/boost/tr1
 
 SRCS = \
 	lexer.l parser.y \
-	config.hpp misc.hpp exception.hpp fdstream.hpp \
+	config.hpp misc.hpp exception.hpp \
 	parser.hpp ast.hpp eval.hpp command.hpp glob.hpp \
 	main.cpp
 
-rish: $(SRCS) makefile
+rish: $(SRCS)
 	$(YACC) -dv parser.y; \
 	mv y.tab.h tokens.hpp; \
 	mv y.tab.c parser.cpp; \
 	mv y.output parser.out
 	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
 	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline -lcurses
-
-wc:
-	wc $(SRCS)
 
 test: rish
 	wc $(SRCS)
