@@ -19,21 +19,21 @@
 		return 1;
 	}
 
-	ast::Statement* parseResult = NULL;
+	ast::Stmt* parseResult = NULL;
 %}
 
 %union {
 	MetaString* word;
 	std::string* var;
 	ast::Expr* expr;
-	ast::Statement* statement;
+	ast::Stmt* stmt;
 }
 
 %type<word> TK_WORD
 %type<var> TK_VAR
 %type<expr> arg arg_concat args0 args1
-%type<statement> command_seq command_bg command_andor command_not
-%type<statement> command_redir command_pipe command_stat if_ else_
+%type<stmt> command_seq command_bg command_andor command_not
+%type<stmt> command_redir command_pipe command_stat if_ else_
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR
 %token TK_IF TK_ELSE TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN

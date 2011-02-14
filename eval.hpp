@@ -45,7 +45,50 @@ struct ReturnException {
 	int const retv;
 };
 
-int evalStatement( ast::Statement*, Global*, int, int );
+int evalStmt( ast::Stmt*, Global*, int, int );
+
+struct EvalStmtRunner {
+	EvalStmtRunner( ast::Stmt* s, Global* g, int ifd, int ofd, bool ic = false, bool oc = false ):
+		_stmt( s ), _global( g ), _ifd( ifd ), _ofd( ofd ), _iclose( ic ), _oclose( oc ) {
+		if( pthread_create( &_thread, NULL, callback, this ) != 0 ) {
+			throw IOError();
+		}
+	}
+
+	int join() {
+		void* retv;
+		if( pthread_join( _thread, &retv ) != 0 ) {
+			throw IOError();
+		}
+		return int( reinterpret_cast<uintptr_t>( retv ) );
+	}
+
+	private:
+		static void* callback( void* arg ) {
+			EvalStmtRunner* self = reinterpret_cast<EvalStmtRunner*>( arg );
+			try {
+				int retv = evalStmt( self->_stmt, self->_global, self->_ifd, self->_ofd );
+				if( self->_iclose ) {
+					close( self->_ifd );
+				}
+				if( self->_oclose ) {
+					close( self->_ofd );
+				}
+				return reinterpret_cast<void*>( retv );
+			}
+			catch( ... ) {
+				return reinterpret_cast<void*>( 1 );
+			}
+		}
+
+		pthread_t _thread;
+		ast::Stmt* _stmt;
+		Global* _global;
+		int _ifd;
+		int _ofd;
+		bool _iclose;
+		bool _oclose;
+};
 
 // XXX
 template<class DstIter>
@@ -111,6 +154,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
+			/*
 			pid_t pid = fork();
 			if( pid < 0 ) {
 				throw IOError();
@@ -118,7 +162,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			if( pid == 0 ) {
 				close( 0 );
 				close( fds[0] );
-				evalStatement( e->body, global, 0, fds[1] );
+				evalStmt( e->body, global, 0, fds[1] );
 				exit( 0 );
 			}
 			else {
@@ -126,6 +170,11 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 				readList( fds[0], dst );
 			}
 			waitpid( pid, NULL, 0 );
+			*/
+			EvalStmtRunner evalThread( e->body, global, 0, fds[1], false, true );
+			readList( fds[0], dst );
+			close( fds[0] );
+			evalThread.join();
 		}
 		OTHERWISE {
 			assert( false );
@@ -145,55 +194,24 @@ DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt ) {
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-struct EvalStatmentRunner {
-	EvalStatmentRunner( ast::Statement* s, Global* g, int i, int o ):
-		_statement( s ), _global( g ), _ifd( i ), _ofd( o ) {
-		if( pthread_create( &_thread, NULL, callback, this ) != 0 ) {
-			throw IOError();
-		}
-	}
-
-	int join() {
-		void* retv;
-		if( pthread_join( _thread, &retv ) == 0 ) {
-			throw IOError();
-		}
-		return int( reinterpret_cast<uintptr_t>( retv ) );
-	}
-
-	private:
-		static void* callback( void* arg ) {
-			EvalStatmentRunner* self = reinterpret_cast<EvalStatmentRunner*>( arg );
-			return reinterpret_cast<void*>(
-				evalStatement( self->_statement, self->_global, self->_ifd, self->_ofd )
-			);
-		}
-
-		pthread_t _thread;
-		ast::Statement* _statement;
-		Global* _global;
-		int _ifd;
-		int _ofd;
-};
-
-int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
+int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 	using namespace std;
 	using namespace ast;
 
 	switch( sb->tag ) {
-		MATCH( Statement::tSequence ) {
+		MATCH( Stmt::tSequence ) {
 			Sequence* s = static_cast<Sequence*>( sb );
-			evalStatement( s->lhs, global, ifd, ofd );
-			return evalStatement( s->rhs, global, ifd, ofd );
+			evalStmt( s->lhs, global, ifd, ofd );
+			return evalStmt( s->rhs, global, ifd, ofd );
 		}
-		MATCH( Statement::tRedirFr ) {
+		MATCH( Stmt::tRedirFr ) {
 			RedirFr* s = static_cast<RedirFr*>( sb );
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			int retv;
 			try {
-				retv = evalStatement( s->body, global, fd, ofd );
+				retv = evalStmt( s->body, global, fd, ofd );
 			}
 			catch( ... ) {
 				close( fd );
@@ -202,14 +220,14 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			close( fd );
 			return retv;
 		}
-		MATCH( Statement::tRedirTo ) {
+		MATCH( Stmt::tRedirTo ) {
 			RedirFr* s = static_cast<RedirFr*>( sb );
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			int retv;
 			try {
-				retv = evalStatement( s->body, global, ifd, fd );
+				retv = evalStmt( s->body, global, ifd, fd );
 			}
 			catch( ... ) {
 				close( fd );
@@ -218,7 +236,7 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			close( fd );
 			return retv;
 		}
-		MATCH( Statement::tCommand ) {
+		MATCH( Stmt::tCommand ) {
 			Command* s = static_cast<Command*>( sb );
 			deque<string> args;
 			evalArgs( s->args, global, back_inserter( args ) );
@@ -229,7 +247,7 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			if( it != env->funcs.end() ) {
 				scope_ptr<Local> local = new Local();
 				unify( *local, it->args, args.begin(), args.end() );
-				evalStatement( it->body, *local, ifd, ofd );
+				evalStmt( it->body, *local, ifd, ofd );
 			}
 			else {
 				runCommand( args );
@@ -238,33 +256,33 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			return runCommand( args, ifd, ofd );
 		}
 		/*
-		MATCH( Statement::tFun ) {
+		MATCH( Stmt::tFun ) {
 			Fun* s = static_cast<Fun*>( sb );
 			env->funcs[*f->name] = s;
 		}
 		*/
-		MATCH( Statement::tIf ) {
+		MATCH( Stmt::tIf ) {
 			If* s = static_cast<If*>( sb );
-			if( evalStatement( s->cond, global, ifd, ofd ) == 0 ) {
-				return evalStatement( s->then, global, ifd, ofd );
+			if( evalStmt( s->cond, global, ifd, ofd ) == 0 ) {
+				return evalStmt( s->then, global, ifd, ofd );
 			}
 			else {
-				return evalStatement( s->elze, global, ifd, ofd );
+				return evalStmt( s->elze, global, ifd, ofd );
 			}
 		}
-		MATCH( Statement::tWhile ) {
+		MATCH( Stmt::tWhile ) {
 			While* s = static_cast<While*>( sb );
 			try {
-				while( evalStatement( s->cond, global, ifd, ofd ) == 0 ) {
-					evalStatement( s->body, global, ifd, ofd );
+				while( evalStmt( s->cond, global, ifd, ofd ) == 0 ) {
+					evalStmt( s->body, global, ifd, ofd );
 				}
 			}
 			catch( BreakException const& br ) {
 				return br.retv;
 			}
-			return evalStatement( s->elze, global, ifd, ofd );
+			return evalStmt( s->elze, global, ifd, ofd );
 		}
-		MATCH( Statement::tBreak ) {
+		MATCH( Stmt::tBreak ) {
 			Break* s = static_cast<Break*>( sb );
 			deque<string> args;
 			evalArgs( s->retv, global, back_inserter( args ) );
@@ -274,7 +292,7 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			}
 			throw BreakException( retv ) ;
 		}
-		MATCH( Statement::tLetFix ) {
+		MATCH( Stmt::tLetFix ) {
 			LetFix* s = static_cast<LetFix*>( sb );
 			deque<string> args;
 			evalArgs( s->rhs, global, back_inserter( args ) );
@@ -298,31 +316,37 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 
 			return lit->tag != Expr::tNull ? 1 : 0;
 		}
-		MATCH( Statement::tPipe ) {
+		MATCH( Stmt::tPipe ) {
 			Pipe* s = static_cast<Pipe*>( sb );
 			int fds[2];
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
 
+			/*
 			pid_t pid = fork();
 			if( pid < 0 ) {
 				throw IOError();
 			}
 			if( pid == 0 ) {
 				close( fds[0] );
-				evalStatement( s->lhs, global, ifd, fds[1] );
+				evalStmt( s->lhs, global, ifd, fds[1] );
 				exit( 0 );
 			}
 			else {
 				close( fds[1] );
-				evalStatement( s->rhs, global, fds[0], ofd );
+				evalStmt( s->rhs, global, fds[0], ofd );
 			}
 			waitpid( pid, NULL, 0 );
+			*/
+			EvalStmtRunner evalThread( s->lhs, global, ifd, fds[1], false, true );
+			evalStmt( s->rhs, global, fds[0], ofd );
+			close( fds[0] );
+			evalThread.join();
 
 			return 0;
 		}
-		MATCH( Statement::tFor ) {
+		MATCH( Stmt::tFor ) {
 			For* s = static_cast<For*>( sb );
 			// XXX
 			char c;
@@ -331,7 +355,7 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 				if( c == '\n' ) {
 					global->vars[*s->var].clear();
 					global->vars[*s->var].push_back( buf );
-					evalStatement( s->body, global, ifd, ofd );
+					evalStmt( s->body, global, ifd, ofd );
 					buf.clear();
 				}
 				else {
@@ -341,11 +365,11 @@ int evalStatement( ast::Statement* sb, Global* global, int ifd, int ofd ) {
 			if( buf.size() > 0 ) {
 				global->vars[*s->var].clear();
 				global->vars[*s->var].push_back( buf );
-				evalStatement( s->body, global, ifd, ofd );
+				evalStmt( s->body, global, ifd, ofd );
 			}
 			return 0;
 		}
-		MATCH( Statement::tNone ) {
+		MATCH( Stmt::tNone ) {
 			return 0;
 		}
 		OTHERWISE {

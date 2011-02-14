@@ -27,8 +27,8 @@ int main( int argc, char** ) {
 			}
 
 			try {
-				ast::Statement* ast = parse( line.get(), line.get() + len );
-				int retv = evalStatement( ast, &global, 0, 1 );
+				ast::Stmt* ast = parse( line.get(), line.get() + len );
+				int retv = evalStmt( ast, &global, 0, 1 );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
@@ -44,10 +44,10 @@ int main( int argc, char** ) {
 			(istreambuf_iterator<char>())
 		);
 
-		ast::Statement* ast = parse( buf.data(), buf.data() + buf.size() );
+		ast::Stmt* ast = parse( buf.data(), buf.data() + buf.size() );
 
 		Global global;
-		evalStatement( ast, &global, 0, 1 );
+		evalStmt( ast, &global, 0, 1 );
 	}
 
 	return 0;

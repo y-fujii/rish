@@ -26,7 +26,7 @@ struct Expr {
 		Expr();
 };
 
-struct Statement {
+struct Stmt {
 	enum Tag {
 		tIf,
 		tCommand,
@@ -50,10 +50,10 @@ struct Statement {
 	Tag const tag;
 
 	protected:
-		Statement( Tag t ): tag( t ) {}
+		Stmt( Tag t ): tag( t ) {}
 
 	private:
-		Statement();
+		Stmt();
 };
 
 struct Word: Expr {
@@ -62,8 +62,8 @@ struct Word: Expr {
 };
 
 struct Subst: Expr {
-	Subst( Statement* b ): Expr( tSubst ), body( b ) {}
-	Statement* body;
+	Subst( Stmt* b ): Expr( tSubst ), body( b ) {}
+	Stmt* body;
 };
 
 struct Var: Expr {
@@ -87,112 +87,112 @@ struct Concat: Expr {
 	Expr* rhs;
 };
 
-struct If: Statement {
-	If( Statement* c, Statement* t, Statement* e ): Statement( tIf ), cond( c ), then( t ), elze( e ) {}
-	Statement* cond;
-	Statement* then;
-	Statement* elze;
+struct If: Stmt {
+	If( Stmt* c, Stmt* t, Stmt* e ): Stmt( tIf ), cond( c ), then( t ), elze( e ) {}
+	Stmt* cond;
+	Stmt* then;
+	Stmt* elze;
 };
 
-struct Command: Statement {
-	Command( Expr* a ): Statement( tCommand ), args( a ) {}
+struct Command: Stmt {
+	Command( Expr* a ): Stmt( tCommand ), args( a ) {}
 	Expr* args;
 };
 
-struct Fun: Statement {
-	Fun( MetaString* n, Expr* a, Statement* b ): Statement( tFun ), name( n ), args( a ), body( b ) {}
+struct Fun: Stmt {
+	Fun( MetaString* n, Expr* a, Stmt* b ): Stmt( tFun ), name( n ), args( a ), body( b ) {}
 	MetaString* name;
 	Expr* args;
-	Statement* body;
+	Stmt* body;
 };
 
-struct LetFix: Statement {
-	LetFix( Expr* l, Expr* r ): Statement( tLetFix ), lhs( l ), rhs( r ) {}
+struct LetFix: Stmt {
+	LetFix( Expr* l, Expr* r ): Stmt( tLetFix ), lhs( l ), rhs( r ) {}
 	Expr* lhs;
 	Expr* rhs;
 };
 
-struct LetVar: Statement {
+struct LetVar: Stmt {
 	LetVar( Expr* ll, std::string* lm, Expr* lr, Expr* r ):
-		Statement( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
+		Stmt( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
 	Expr* lhsl;
 	std::string* lhsm;
 	Expr* lhsr;
 	Expr* rhs;
 };
 
-struct Return: Statement {
-	Return( Expr* r ): Statement( tReturn ), retv( r ) {}
+struct Return: Stmt {
+	Return( Expr* r ): Stmt( tReturn ), retv( r ) {}
 	Expr* retv;
 };
 
-struct Break: Statement {
-	Break( Expr* r ): Statement( tBreak ), retv( r ) {}
+struct Break: Stmt {
+	Break( Expr* r ): Stmt( tBreak ), retv( r ) {}
 	Expr* retv;
 };
 
-struct For: Statement {
-	For( std::string* v, Statement* b, Statement* e ): Statement( tFor ), var( v ), body( b ), elze( e ) {}
+struct For: Stmt {
+	For( std::string* v, Stmt* b, Stmt* e ): Stmt( tFor ), var( v ), body( b ), elze( e ) {}
 	std::string* var;
-	Statement* body;
-	Statement* elze;
+	Stmt* body;
+	Stmt* elze;
 };
 
-struct While: Statement {
-	While( Statement* c, Statement* b, Statement* e ): Statement( tWhile ), cond( c ), body( b ), elze( e ) {}
-	Statement* cond;
-	Statement* body;
-	Statement* elze;
+struct While: Stmt {
+	While( Stmt* c, Stmt* b, Stmt* e ): Stmt( tWhile ), cond( c ), body( b ), elze( e ) {}
+	Stmt* cond;
+	Stmt* body;
+	Stmt* elze;
 };
 
-struct Not: Statement {
-	Not( Statement* b ): Statement( tNot ), body( b ) {}
-	Statement* body;
+struct Not: Stmt {
+	Not( Stmt* b ): Stmt( tNot ), body( b ) {}
+	Stmt* body;
 };
 
-struct Or: Statement {
-	Or( Statement* l, Statement* r ): Statement( tOr ), lhs( l ), rhs( r ) {}
-	Statement* lhs;
-	Statement* rhs;
+struct Or: Stmt {
+	Or( Stmt* l, Stmt* r ): Stmt( tOr ), lhs( l ), rhs( r ) {}
+	Stmt* lhs;
+	Stmt* rhs;
 };
 
-struct And: Statement {
-	And( Statement* l, Statement* r ): Statement( tAnd ), lhs( l ), rhs( r ) {}
-	Statement* lhs;
-	Statement* rhs;
+struct And: Stmt {
+	And( Stmt* l, Stmt* r ): Stmt( tAnd ), lhs( l ), rhs( r ) {}
+	Stmt* lhs;
+	Stmt* rhs;
 };
 
-struct Bg: Statement {
-	Bg( Statement* b ): Statement( tBg ), body( b ) {}
-	Statement* body;
+struct Bg: Stmt {
+	Bg( Stmt* b ): Stmt( tBg ), body( b ) {}
+	Stmt* body;
 };
 
-struct Sequence: Statement {
-	Sequence( Statement* l, Statement* r ): Statement( tSequence ), lhs( l ), rhs( r ) {}
-	Statement* lhs;
-	Statement* rhs;
+struct Sequence: Stmt {
+	Sequence( Stmt* l, Stmt* r ): Stmt( tSequence ), lhs( l ), rhs( r ) {}
+	Stmt* lhs;
+	Stmt* rhs;
 };
 
-struct RedirFr: Statement {
-	RedirFr( Statement* b, Expr* f ): Statement( tRedirFr ), body( b ), file( f ) {}
-	Statement* body;
+struct RedirFr: Stmt {
+	RedirFr( Stmt* b, Expr* f ): Stmt( tRedirFr ), body( b ), file( f ) {}
+	Stmt* body;
 	Expr* file;
 };
 
-struct RedirTo: Statement {
-	RedirTo( Statement* b, Expr* f ): Statement( tRedirTo ), body( b ), file( f ) {}
-	Statement* body;
+struct RedirTo: Stmt {
+	RedirTo( Stmt* b, Expr* f ): Stmt( tRedirTo ), body( b ), file( f ) {}
+	Stmt* body;
 	Expr* file;
 };
 
-struct Pipe: Statement {
-	Pipe( Statement* l, Statement* r ): Statement( tPipe ), lhs( l ), rhs( r ) {}
-	Statement* lhs;
-	Statement* rhs;
+struct Pipe: Stmt {
+	Pipe( Stmt* l, Stmt* r ): Stmt( tPipe ), lhs( l ), rhs( r ) {}
+	Stmt* lhs;
+	Stmt* rhs;
 };
 
-struct None: Statement {
-	None(): Statement( tNone ) {}
+struct None: Stmt {
+	None(): Stmt( tNone ) {}
 };
 
 
