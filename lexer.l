@@ -1,5 +1,6 @@
 %{
 	#include <exception>
+	#include <cassert>
 	#include <string.h>
 	#include "misc.hpp"
 	#include "glob.hpp"

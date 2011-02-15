@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.hpp"
-#include <iterator>
 #include <algorithm>
 #include <functional>
 #include <tr1/functional>
@@ -14,8 +13,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "ast.hpp"
 #include "command.hpp"
 #include "glob.hpp"
@@ -47,48 +44,15 @@ struct ReturnException {
 
 int evalStmt( ast::Stmt*, Global*, int, int );
 
-struct EvalStmtRunner {
-	EvalStmtRunner( ast::Stmt* s, Global* g, int ifd, int ofd, bool ic = false, bool oc = false ):
-		_stmt( s ), _global( g ), _ifd( ifd ), _ofd( ofd ), _iclose( ic ), _oclose( oc ) {
-		if( pthread_create( &_thread, NULL, callback, this ) != 0 ) {
-			throw IOError();
-		}
+void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, bool ic = false, bool oc = false ) {
+	evalStmt( stmt, global, ifd, ofd );
+	if( ic ) {
+		close( ifd );
 	}
-
-	int join() {
-		void* retv;
-		if( pthread_join( _thread, &retv ) != 0 ) {
-			throw IOError();
-		}
-		return int( reinterpret_cast<uintptr_t>( retv ) );
+	if( oc ) {
+		close( ofd );
 	}
-
-	private:
-		static void* callback( void* arg ) {
-			EvalStmtRunner* self = reinterpret_cast<EvalStmtRunner*>( arg );
-			try {
-				int retv = evalStmt( self->_stmt, self->_global, self->_ifd, self->_ofd );
-				if( self->_iclose ) {
-					close( self->_ifd );
-				}
-				if( self->_oclose ) {
-					close( self->_ofd );
-				}
-				return reinterpret_cast<void*>( retv );
-			}
-			catch( ... ) {
-				return reinterpret_cast<void*>( 1 );
-			}
-		}
-
-		pthread_t _thread;
-		ast::Stmt* _stmt;
-		Global* _global;
-		int _ifd;
-		int _ofd;
-		bool _iclose;
-		bool _oclose;
-};
+}
 
 template<class DstIter>
 DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
@@ -134,15 +98,17 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
-			EvalStmtRunner evalThread( e->body, global, 0, fds[1], false, true );
-			UnixIStream ifs( fds[0] );
-			while( !ifs.eof() ) {
-				string buf;
-				getline( ifs, buf );
-				*dst++ = buf;
+			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], false, true ) );
+			{
+				UnixIStream ifs( fds[0] );
+				while( !ifs.eof() ) {
+					string buf;
+					getline( ifs, buf );
+					*dst++ = buf;
+				}
 			}
 			close( fds[0] );
-			evalThread.join();
+			thread.join();
 		}
 		OTHERWISE {
 			assert( false );
@@ -154,8 +120,6 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 template<class DstIter>
 DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt ) {
 	using namespace std;
-	using namespace std::tr1;
-	using namespace std::tr1::placeholders;
 
 	deque<MetaString> tmp;
 	evalExpr( expr, global, back_inserter( tmp ) );
@@ -275,8 +239,9 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 				List* l = static_cast<List*>( lit );
 				if( l->lhs->tag == Expr::tVar ) {
 					Var* e = static_cast<Var*>( l->lhs );
-					global->vars[*e->name].clear();
-					global->vars[*e->name].push_back( *rit );
+					deque<string>& var = global->vars[*e->name];
+					var.clear();
+					var.push_back( *rit );
 				}
 
 				lit = l->rhs;
@@ -291,22 +256,22 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
-			EvalStmtRunner evalThread( s->lhs, global, ifd, fds[1], false, true );
-			evalStmt( s->rhs, global, fds[0], ofd );
-			close( fds[0] );
-			evalThread.join();
+			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], false, true ) );
+			evalStmtClose( s->rhs, global, fds[0], ofd, true, false );
+			thread.join();
 
 			return 0;
 		}
 		MATCH( Stmt::tFor ) {
 			For* s = static_cast<For*>( sb );
 
+			deque<string>& var = global->vars[*s->var];
 			UnixIStream ifs( ifd );
 			while( !ifs.eof() ) {
 				string line;
 				getline( ifs, line );
-				global->vars[*s->var].clear();
-				global->vars[*s->var].push_back( line );
+				var.clear();
+				var.push_back( line );
 				evalStmt( s->body, global, ifd, ofd );
 			}
 

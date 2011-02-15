@@ -1,10 +1,7 @@
 
-#include <iterator>
 #include <memory>
-#include <exception>
 #include <iostream>
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "ast.hpp"

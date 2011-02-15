@@ -2,14 +2,20 @@
 
 #include <algorithm>
 #include <iostream>
-#include <string>
+#include <tr1/functional>
 #include <cassert>
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/uio.h>
 #include <unistd.h>
+#include <pthread.h>
+
+
+#define ARR_SIZE( arr ) (sizeof( (arr) ) / sizeof( (arr)[0] ))
+#define MATCH( c ) break; case (c):
+#define OTHERWISE break; default:
 
 namespace std {
+	using namespace tr1;
+	using namespace tr1::placeholders;
+
 	template<class SrcIter, class DstIter, class Pred>
 	inline DstIter copy_if( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt, Pred pred ) {
 		while( srcIt != srcEnd ) {
@@ -32,54 +38,21 @@ namespace std {
 	}
 }
 
-#define ARR_SIZE( arr ) (sizeof( (arr) ) / sizeof( (arr)[0] ))
-#define MATCH( c ) break; case (c):
-#define OTHERWISE break; default:
-#define RANGE( c ) (c).begin(), (c).end()
-
-template<class Value, class Callee>
-struct call_iterator {
-	explicit call_iterator( Callee const& c ): _callee( c ) {
-	}
-
-	call_iterator<Value, Callee>& operator=( Value& val ) {
-		_callee( val );
-		return *this;
-	}
-
-	call_iterator<Value, Callee>& operator*() {
-		return *this;
-	}
-
-	call_iterator<Value, Callee>& operator++() {
-		return *this;
-	}
-
-	call_iterator<Value, Callee> operator++( int ) {
-		return *this;
-	}
-
-	private:
-		Callee const& _callee;
-};
-
-template<class Value, class Callee>
-call_iterator<Value, Callee> caller( Callee const& c ) {
-	return call_iterator<Value, Callee>( c );
-}
-
-struct UnixIStreamBuf: std::streambuf {
+struct UnixStreamBuf: std::streambuf {
 	static int const bufSize = 4096;
 
-	UnixIStreamBuf( int fd ): _fd( fd ) {
+	UnixStreamBuf( int fd ): _fd( fd ) {
 	}
 
 	virtual int underflow() {
-		int n = read( _fd, _buf, bufSize );
-		if( n == 0 ) {
+		ssize_t n = read( _fd, _buf, bufSize );
+		if( n < 0 ) {
+			throw std::ios_base::failure( "read()" );
+		}
+		else if( n == 0 ) {
 			return traits_type::eof();
 		}
-		else {
+		else /* n > 0 */ {
 			setg( _buf, _buf, _buf + n );
 			return _buf[0];
 		}
@@ -91,10 +64,34 @@ struct UnixIStreamBuf: std::streambuf {
 };
 
 struct UnixIStream: std::istream {
-	UnixIStream( int fd ): std::istream( new UnixIStreamBuf( fd ) ) {
+	UnixIStream( int fd ): std::istream( new UnixStreamBuf( fd ) ) {
 	}
 
 	~UnixIStream() {
 		delete rdbuf();
 	}
+};
+
+struct Thread {
+	Thread( std::function<void ()> const& cb ):
+		_callback( cb ) {
+		if( pthread_create( &_thread, NULL, _wrap, this ) != 0 ) {
+			throw std::exception();
+		}
+	}
+
+	void join() {
+		if( pthread_join( _thread, NULL ) != 0 ) {
+			throw std::exception();
+		}
+	}
+
+	private:
+		static void* _wrap( void* self ) {
+			reinterpret_cast<Thread*>( self )->_callback();
+			return 0;
+		}
+
+		pthread_t _thread;
+		std::function<void ()> /* const& */ _callback;
 };

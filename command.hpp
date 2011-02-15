@@ -40,16 +40,6 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 			throw IOError();
 		}
 		else if( pid == 0 ) {
-			/*
-			if( ifd != 0 ) {
-				dup2( ifd, 0 );
-				close( ifd );
-			}
-			if( ofd != 1 ) {
-				dup2( ofd, 1 );
-				close( ofd );
-			}
-			*/
 			dup2( ifd, 0 );
 			dup2( ofd, 1 );
 			closefrom( 3 );

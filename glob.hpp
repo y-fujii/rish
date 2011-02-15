@@ -1,12 +1,8 @@
 #pragma once
 
-#include <algorithm>
-#include <utility>
-#include <iterator>
 #include <deque>
 #include <string>
-#include <numeric>
-#include <string.h>
+#include <stdint.h>
 #include <dirent.h>
 #include "misc.hpp"
 #include "exception.hpp"
