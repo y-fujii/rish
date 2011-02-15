@@ -33,6 +33,12 @@ int main( int argc, char** ) {
 			catch( SyntaxError const& ) {
 				cerr << "Syntax error." << endl;
 			}
+			catch( IOError const& ) {
+				cerr << "I/O error." << endl;
+			}
+			catch( ios_base::failure const& ) {
+				cerr << "I/O error." << endl;
+			}
 		}
 	}
 	else {

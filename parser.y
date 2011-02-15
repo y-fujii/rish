@@ -80,8 +80,12 @@ command_stat
 	| TK_FOR TK_VAR          '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
 	| TK_BREAK arg_concat								{ $$ = new Break( $2 ); }
 	| TK_RETURN arg_concat								{ $$ = new Return( $2 ); }
+	/*
 	| TK_LET args0 '=' args0							{ $$ = new LetFix( $2, $4 ); }
 	| TK_LET args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }
+	*/
+	| args0 '=' args0							{ $$ = new LetFix( $1, $3 ); }
+	| args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $1, $3, $4, $6 ); }
 	| TK_FUN TK_WORD args0 '{' command_seq '}'			{ $$ = new Fun( $2, $3, $5 ); }
 	| '{' command_seq '}'								{ $$ = $2; };
 	| args1												{ $$ = new Command( $1 ); }

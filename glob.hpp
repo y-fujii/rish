@@ -11,12 +11,12 @@ using namespace std;
 
 
 struct MetaString: basic_string<uint16_t> {
-	MetaString()                                  : basic_string() {}
-	MetaString( MetaString const& s )             : basic_string( s ) {}
-	MetaString( basic_string<uint16_t> const& s ) : basic_string( s ) {}
-	MetaString( string const& s )                 : basic_string( s.begin(), s.end() ) {}
+	MetaString()                                  : basic_string<uint16_t>() {}
+	MetaString( MetaString const& s )             : basic_string<uint16_t>( s ) {}
+	MetaString( basic_string<uint16_t> const& s ) : basic_string<uint16_t>( s ) {}
+	MetaString( string const& s )                 : basic_string<uint16_t>( s.begin(), s.end() ) {}
 	template<class Iter>
-	MetaString( Iter bgn, Iter end )              : basic_string( bgn, end ) {}
+	MetaString( Iter bgn, Iter end )              : basic_string<uint16_t>( bgn, end ) {}
 };
 
 MetaString::value_type const metaMask = 1 << 15;

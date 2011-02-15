@@ -99,6 +99,7 @@
 	return TK_WORD;
 }
 
+#.*\n
 [ \t]+
 
 %%
