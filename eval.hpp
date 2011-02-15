@@ -10,6 +10,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <cassert>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -141,6 +142,9 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
+			if( fd < 0 ) {
+				throw IOError();
+			}
 			int retv;
 			try {
 				retv = evalStmt( s->body, global, fd, ofd );
@@ -157,6 +161,9 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
+			if( fd < 0 ) {
+				throw IOError();
+			}
 			int retv;
 			try {
 				retv = evalStmt( s->body, global, ifd, fd );
