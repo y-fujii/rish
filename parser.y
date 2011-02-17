@@ -26,12 +26,14 @@
 	MetaString* word;
 	std::string* var;
 	ast::Expr* expr;
+	ast::List* list;
 	ast::Stmt* stmt;
 }
 
 %type<word> TK_WORD
 %type<var> TK_VAR
-%type<expr> arg arg_concat args0 args1
+%type<expr> arg arg_concat
+%type<list> args0 args1
 %type<stmt> command_seq command_bg command_andor command_not
 %type<stmt> command_redir command_pipe command_stat if_ else_
 
@@ -77,7 +79,7 @@ command_pipe
 command_stat
 	: if_
 	| TK_WHILE command_andor '{' command_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
-	| TK_FOR TK_VAR          '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
+	| TK_FOR args1           '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
 	| TK_BREAK arg_concat								{ $$ = new Break( $2 ); }
 	| TK_RETURN arg_concat								{ $$ = new Return( $2 ); }
 	/*
@@ -109,11 +111,11 @@ args1
 */
 args0
 	: arg_concat args0				{ $$ = new List( $1, $2 ); }
-	| 								{ $$ = new Null(); }
+	| 								{ $$ = NULL; }
 
 args1
 	: arg_concat args1				{ $$ = new List( $1, $2 ); }
-	| arg_concat					{ $$ = new List( $1, new Null() ); }
+	| arg_concat					{ $$ = new List( $1, NULL ); }
 
 arg_concat
 	: arg_concat '^' arg			{ $$ = new Concat( $1, $3 ); }
