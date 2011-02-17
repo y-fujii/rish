@@ -1,6 +1,8 @@
 #pragma once
 
+#include "config.hpp"
 #include <algorithm>
+#include <vector>
 #include <iostream>
 #include <tr1/functional>
 #include <cassert>
@@ -8,7 +10,7 @@
 #include <pthread.h>
 
 
-#define ARR_SIZE( arr ) (sizeof( (arr) ) / sizeof( (arr)[0] ))
+#define ARR_SIZE( arr ) (sizeof( arr ) / sizeof( (arr)[0] ))
 #define MATCH( c ) break; case (c):
 #define OTHERWISE break; default:
 
@@ -39,13 +41,13 @@ namespace std {
 }
 
 struct UnixStreamBuf: std::streambuf {
-	static int const bufSize = 4096;
-
-	UnixStreamBuf( int fd ): _fd( fd ) {
+	UnixStreamBuf( int fd, size_t bs ):
+		_fd( fd ),
+		_buf( bs ) {
 	}
 
 	virtual int underflow() {
-		ssize_t n = read( _fd, _buf, bufSize );
+		ssize_t n = read( _fd, &_buf[0], _buf.size() );
 		if( n < 0 ) {
 			throw std::ios_base::failure( "read()" );
 		}
@@ -53,18 +55,19 @@ struct UnixStreamBuf: std::streambuf {
 			return traits_type::eof();
 		}
 		else /* n > 0 */ {
-			setg( _buf, _buf, _buf + n );
+			setg( &_buf[0], &_buf[0], &_buf[0] + _buf.size() );
 			return _buf[0];
 		}
 	}
 
 	private:
-		int _fd;
-		char _buf[bufSize];
+		int const _fd;
+		std::vector<char> _buf;
 };
 
 struct UnixIStream: std::istream {
-	UnixIStream( int fd ): std::istream( new UnixStreamBuf( fd ) ) {
+	UnixIStream( int fd, size_t bs = 4096 ):
+		std::istream( new UnixStreamBuf( fd, bs ) ) {
 	}
 
 	~UnixIStream() {
@@ -93,5 +96,5 @@ struct Thread {
 		}
 
 		pthread_t _thread;
-		std::function<void ()> /* const& */ _callback;
+		std::function<void ()> const _callback;
 };

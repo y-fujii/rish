@@ -68,10 +68,14 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 		MATCH( Expr::tList ) {
 			List* e = static_cast<List*>( eb );
 			evalExpr( e->lhs, global, dst );
-			evalExpr( e->rhs, global, dst );
+			if( e->rhs != NULL ) {
+				evalExpr( e->rhs, global, dst );
+			}
 		}
+		/*
 		MATCH( Expr::tNull ) {
 		}
+		*/
 		MATCH( Expr::tConcat ) {
 			Concat* e = static_cast<Concat*>( eb );
 			deque<MetaString> lhs;
@@ -238,7 +242,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 
 			Expr* lit = s->lhs;
 			for( deque<string>::const_iterator rit = args.begin(); rit != args.end(); ++rit ) {
-				if( lit->tag == Expr::tNull ) {
+				if( lit == NULL ) {
 					return 1;
 				}
 				assert( lit->tag == Expr::tList );
@@ -254,7 +258,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 				lit = l->rhs;
 			}
 
-			return lit->tag != Expr::tNull ? 1 : 0;
+			return lit != NULL ? 1 : 0;
 		}
 		MATCH( Stmt::tPipe ) {
 			Pipe* s = static_cast<Pipe*>( sb );
@@ -272,13 +276,20 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		MATCH( Stmt::tFor ) {
 			For* s = static_cast<For*>( sb );
 
-			deque<string>& var = global->vars[*s->var];
-			UnixIStream ifs( ifd );
+			UnixIStream ifs( ifd, 1 ); // XXX
 			while( !ifs.eof() ) {
-				string line;
-				getline( ifs, line );
-				var.clear();
-				var.push_back( line );
+				List* it = s->vars;
+				while( it != NULL ) {
+					if( it->lhs->tag == Expr::tVar ) {
+						Var* var = static_cast<Var*>( it->lhs );
+						string lhs;
+						getline( ifs, lhs );
+						deque<string>& rhs = global->vars[*var->name];
+						rhs.clear();
+						rhs.push_back( lhs );
+					}
+					it = it->rhs;
+				}
 				evalStmt( s->body, global, ifd, ofd );
 			}
 
