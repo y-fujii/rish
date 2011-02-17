@@ -22,10 +22,11 @@
 
 struct Global {
 	std::map<std::string, std::deque<std::string> > vars;
-	//std::map<std::string, Fun*> funs;
+	std::map<MetaString, ast::Fun*> funs;
 };
 
 struct Local {
+	Local* outer;
 	std::map<std::string, std::deque<std::string> > vars;
 };
 
@@ -68,14 +69,10 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 		MATCH( Expr::tList ) {
 			List* e = static_cast<List*>( eb );
 			evalExpr( e->lhs, global, dst );
-			if( e->rhs != NULL ) {
-				evalExpr( e->rhs, global, dst );
-			}
+			evalExpr( e->rhs, global, dst );
 		}
-		/*
 		MATCH( Expr::tNull ) {
 		}
-		*/
 		MATCH( Expr::tConcat ) {
 			Concat* e = static_cast<Concat*>( eb );
 			deque<MetaString> lhs;
@@ -184,26 +181,20 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			deque<string> args;
 			evalArgs( s->args, global, back_inserter( args ) );
 			
-			/*
 			assert( args.size() > 0 );
-			Env::iterator it = env->funcs.find( c->name );
-			if( it != env->funcs.end() ) {
-				scope_ptr<Local> local = new Local();
-				unify( *local, it->args, args.begin(), args.end() );
-				evalStmt( it->body, *local, ifd, ofd );
+			map<MetaString, Fun*>::const_iterator it = global->funs.find( args[0] );
+			if( it != global->funs.end() ) {
+				return evalStmt( it->second->body, global, ifd, ofd );
 			}
 			else {
-				runCommand( args );
+				return runCommand( args, ifd, ofd );
 			}
-			*/
-			return runCommand( args, ifd, ofd );
 		}
-		/*
 		MATCH( Stmt::tFun ) {
 			Fun* s = static_cast<Fun*>( sb );
-			env->funcs[*f->name] = s;
+			global->funs[s->name] = s;
+			return 0;
 		}
-		*/
 		MATCH( Stmt::tIf ) {
 			If* s = static_cast<If*>( sb );
 			if( evalStmt( s->cond, global, ifd, ofd ) == 0 ) {
@@ -278,17 +269,18 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 
 			UnixIStream ifs( ifd, 1 ); // XXX
 			while( !ifs.eof() ) {
-				List* it = s->vars;
-				while( it != NULL ) {
-					if( it->lhs->tag == Expr::tVar ) {
-						Var* var = static_cast<Var*>( it->lhs );
+				Expr* it = s->vars;
+				while( it->tag == Expr::tList ) {
+					List* list = static_cast<List*>( it );
+					if( list->lhs->tag == Expr::tVar ) {
+						Var* var = static_cast<Var*>( list->lhs );
 						string lhs;
 						getline( ifs, lhs );
-						deque<string>& rhs = global->vars[*var->name];
+						deque<string>& rhs = global->vars[var->name];
 						rhs.clear();
 						rhs.push_back( lhs );
 					}
-					it = it->rhs;
+					it = list->rhs;
 				}
 				evalStmt( s->body, global, ifd, ofd );
 			}
