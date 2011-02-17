@@ -37,9 +37,14 @@ Examples:
 
 
 ## Control structures
-	yield 0 1 2 | for $i {
-		yield 
-	}
+	data.dat >| for $i $j when ($i == $j) { yield ($i + 1) } => $name
+	$var => aaa | bb;
+
+	let 2323
+	let $var = fetch;
+	for EXPR {} => while let EXPR = ${fetch #EXPR} {}
+
+	let x = ${$x => name}
 
 	while true {
 	}

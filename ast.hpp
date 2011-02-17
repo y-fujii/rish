@@ -69,14 +69,16 @@ struct Var: Expr {
 };
 
 struct List: Expr {
-	List( Expr* l, Expr* r ): Expr( tList ), lhs( l ), rhs( r ) {}
+	List( Expr* l, List* r ): Expr( tList ), lhs( l ), rhs( r ) {}
 	Expr* lhs;
-	Expr* rhs;
+	List* rhs;
 };
 
+/*
 struct Null: Expr {
 	Null(): Expr( tNull ) {}
 };
+*/
 
 struct Concat: Expr {
 	Concat( Expr* l, Expr* r ): Expr( tConcat ), lhs( l ), rhs( r ) {}
@@ -129,8 +131,8 @@ struct Break: Stmt {
 };
 
 struct For: Stmt {
-	For( std::string const& v, Stmt* b, Stmt* e ): Stmt( tFor ), var( v ), body( b ), elze( e ) {}
-	std::string var;
+	For( List* v, Stmt* b, Stmt* e ): Stmt( tFor ), vars( v ), body( b ), elze( e ) {}
+	List* vars;
 	Stmt* body;
 	Stmt* elze;
 };
