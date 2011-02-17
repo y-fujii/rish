@@ -69,16 +69,14 @@ struct Var: Expr {
 };
 
 struct List: Expr {
-	List( Expr* l, List* r ): Expr( tList ), lhs( l ), rhs( r ) {}
+	List( Expr* l, Expr* r ): Expr( tList ), lhs( l ), rhs( r ) {}
 	Expr* lhs;
-	List* rhs;
+	Expr* rhs;
 };
 
-/*
 struct Null: Expr {
 	Null(): Expr( tNull ) {}
 };
-*/
 
 struct Concat: Expr {
 	Concat( Expr* l, Expr* r ): Expr( tConcat ), lhs( l ), rhs( r ) {}
@@ -112,10 +110,10 @@ struct LetFix: Stmt {
 };
 
 struct LetVar: Stmt {
-	LetVar( Expr* ll, std::string const& lm, Expr* lr, Expr* r ):
+	LetVar( Expr* ll, Var* lm, Expr* lr, Expr* r ):
 		Stmt( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
 	Expr* lhsl;
-	std::string lhsm;
+	Var* lhsm;
 	Expr* lhsr;
 	Expr* rhs;
 };
@@ -131,8 +129,8 @@ struct Break: Stmt {
 };
 
 struct For: Stmt {
-	For( List* v, Stmt* b, Stmt* e ): Stmt( tFor ), vars( v ), body( b ), elze( e ) {}
-	List* vars;
+	For( Expr* v, Stmt* b, Stmt* e ): Stmt( tFor ), vars( v ), body( b ), elze( e ) {}
+	Expr* vars;
 	Stmt* body;
 	Stmt* elze;
 };

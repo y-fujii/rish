@@ -26,14 +26,12 @@
 	MetaString* word;
 	std::string* var;
 	ast::Expr* expr;
-	ast::List* list;
 	ast::Stmt* stmt;
 }
 
 %type<word> TK_WORD
 %type<var> TK_VAR
-%type<expr> arg arg_concat
-%type<list> args0 args1
+%type<expr> arg arg_concat args0 args1
 %type<stmt> command_seq command_bg command_andor command_not
 %type<stmt> command_redir command_pipe command_stat if_ else_
 
@@ -87,7 +85,7 @@ command_stat
 	| TK_LET args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }
 	*/
 	| args0 '=' args0							{ $$ = new LetFix( $1, $3 ); }
-	| args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $1, *$3, $4, $6 ); delete $3; }
+	| args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $1, new Var( *$3 ), $4, $6 ); delete $3; }
 	| TK_FUN TK_WORD args0 '{' command_seq '}'			{ $$ = new Fun( *$2, $3, $5 ); delete $2; }
 	| '{' command_seq '}'								{ $$ = $2; };
 	| args1												{ $$ = new Command( $1 ); }
@@ -111,11 +109,11 @@ args1
 */
 args0
 	: arg_concat args0				{ $$ = new List( $1, $2 ); }
-	| 								{ $$ = NULL; }
+	| 								{ $$ = new Null(); }
 
 args1
 	: arg_concat args1				{ $$ = new List( $1, $2 ); }
-	| arg_concat					{ $$ = new List( $1, NULL ); }
+	| arg_concat					{ $$ = new List( $1, new Null() ); }
 
 arg_concat
 	: arg_concat '^' arg			{ $$ = new Concat( $1, $3 ); }
