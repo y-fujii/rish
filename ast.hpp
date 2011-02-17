@@ -54,8 +54,8 @@ struct Stmt {
 };
 
 struct Word: Expr {
-	Word( MetaString* w ): Expr( tWord ), word( w ) {}
-	MetaString* word;
+	Word( MetaString const& w ): Expr( tWord ), word( w ) {}
+	MetaString word;
 };
 
 struct Subst: Expr {
@@ -64,8 +64,8 @@ struct Subst: Expr {
 };
 
 struct Var: Expr {
-	Var( std::string* n ): Expr( tVar ), name( n ) {}
-	std::string* name;
+	Var( std::string const& n ): Expr( tVar ), name( n ) {}
+	std::string name;
 };
 
 struct List: Expr {
@@ -97,8 +97,8 @@ struct Command: Stmt {
 };
 
 struct Fun: Stmt {
-	Fun( MetaString* n, Expr* a, Stmt* b ): Stmt( tFun ), name( n ), args( a ), body( b ) {}
-	MetaString* name;
+	Fun( MetaString const& n, Expr* a, Stmt* b ): Stmt( tFun ), name( n ), args( a ), body( b ) {}
+	MetaString name;
 	Expr* args;
 	Stmt* body;
 };
@@ -110,10 +110,10 @@ struct LetFix: Stmt {
 };
 
 struct LetVar: Stmt {
-	LetVar( Expr* ll, std::string* lm, Expr* lr, Expr* r ):
+	LetVar( Expr* ll, std::string const& lm, Expr* lr, Expr* r ):
 		Stmt( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
 	Expr* lhsl;
-	std::string* lhsm;
+	std::string lhsm;
 	Expr* lhsr;
 	Expr* rhs;
 };
@@ -129,8 +129,8 @@ struct Break: Stmt {
 };
 
 struct For: Stmt {
-	For( std::string* v, Stmt* b, Stmt* e ): Stmt( tFor ), var( v ), body( b ), elze( e ) {}
-	std::string* var;
+	For( std::string const& v, Stmt* b, Stmt* e ): Stmt( tFor ), var( v ), body( b ), elze( e ) {}
+	std::string var;
 	Stmt* body;
 	Stmt* elze;
 };

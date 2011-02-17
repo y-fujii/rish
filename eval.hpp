@@ -63,7 +63,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 	switch( eb->tag ) {
 		MATCH( Expr::tWord ) {
 			Word* e = static_cast<Word*>( eb );
-			*dst++ = *e->word;
+			*dst++ = e->word;
 		}
 		MATCH( Expr::tList ) {
 			List* e = static_cast<List*>( eb );
@@ -86,9 +86,9 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 		}
 		MATCH( Expr::tVar ) {
 			Var* e = static_cast<Var*>( eb );
-			map<string, deque<string> >::const_iterator it = global->vars.find( *e->name );
+			map<string, deque<string> >::const_iterator it = global->vars.find( e->name );
 			if( it == global->vars.end() ) {
-				throw runtime_error( "Variable " + *e->name + " is not defined." );
+				throw RuntimeError();
 			}
 			dst = copy( it->second.begin(), it->second.end(), dst );
 		}
@@ -246,7 +246,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 				List* l = static_cast<List*>( lit );
 				if( l->lhs->tag == Expr::tVar ) {
 					Var* e = static_cast<Var*>( l->lhs );
-					deque<string>& var = global->vars[*e->name];
+					deque<string>& var = global->vars[e->name];
 					var.clear();
 					var.push_back( *rit );
 				}
@@ -272,7 +272,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		MATCH( Stmt::tFor ) {
 			For* s = static_cast<For*>( sb );
 
-			deque<string>& var = global->vars[*s->var];
+			deque<string>& var = global->vars[s->var];
 			UnixIStream ifs( ifd );
 			while( !ifs.eof() ) {
 				string line;

@@ -77,7 +77,7 @@ command_pipe
 command_stat
 	: if_
 	| TK_WHILE command_andor '{' command_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
-	| TK_FOR TK_VAR          '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
+	| TK_FOR TK_VAR          '{' command_seq '}' else_	{ $$ = new For( *$2, $4, $6 ); delete $2; }
 	| TK_BREAK arg_concat								{ $$ = new Break( $2 ); }
 	| TK_RETURN arg_concat								{ $$ = new Return( $2 ); }
 	/*
@@ -85,8 +85,8 @@ command_stat
 	| TK_LET args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }
 	*/
 	| args0 '=' args0							{ $$ = new LetFix( $1, $3 ); }
-	| args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $1, $3, $4, $6 ); }
-	| TK_FUN TK_WORD args0 '{' command_seq '}'			{ $$ = new Fun( $2, $3, $5 ); }
+	| args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $1, *$3, $4, $6 ); delete $3; }
+	| TK_FUN TK_WORD args0 '{' command_seq '}'			{ $$ = new Fun( *$2, $3, $5 ); delete $2; }
 	| '{' command_seq '}'								{ $$ = $2; };
 	| args1												{ $$ = new Command( $1 ); }
 
@@ -120,9 +120,9 @@ arg_concat
 	| arg
 
 arg
-	: TK_WORD						{ $$ = new Word( $1 ); }
+	: TK_WORD						{ $$ = new Word( *$1 ); delete $1; }
 	| '$' '{' command_seq '}'		{ $$ = new Subst( $3 ); }
-	| TK_VAR						{ $$ = new Var( $1 ); }
+	| TK_VAR						{ $$ = new Var( *$1 ); delete $1; }
 	/*
 	| arg '[' arg ']'				{ $$ = new Index( $1, $3 ); }
 	| arg '[' arg ':' arg ']'		{ $$ = new Slice( $1, $3, $5 ); }

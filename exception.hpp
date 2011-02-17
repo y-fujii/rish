@@ -3,8 +3,11 @@
 #include <exception>
 
 
-struct IOError: std::exception {
+struct SyntaxError: std::exception {
 };
 
-struct SyntaxError: std::exception {
+struct RuntimeError: std::exception {
+};
+
+struct IOError: std::exception {
 };

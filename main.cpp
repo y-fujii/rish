@@ -33,6 +33,9 @@ int main( int argc, char** ) {
 			catch( SyntaxError const& ) {
 				cerr << "Syntax error." << endl;
 			}
+			catch( RuntimeError const& ) {
+				cerr << "Runtime error." << endl;
+			}
 			catch( IOError const& ) {
 				cerr << "I/O error." << endl;
 			}
