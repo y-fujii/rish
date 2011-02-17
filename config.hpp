@@ -6,6 +6,7 @@
 #endif
 
 #if !defined( HAVE_CLOSEFROM )
+#include <unistd.h>
 inline void closefrom( int fd ) {
 	int end = getdtablesize();
 	while( fd < end ) {
