@@ -84,8 +84,8 @@ command_stat
 	| TK_LET args0 '=' args0							{ $$ = new LetFix( $2, $4 ); }
 	| TK_LET args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }
 	*/
-	| args0 '=' args0							{ $$ = new LetFix( $1, $3 ); }
-	| args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $1, new Var( *$3 ), $4, $6 ); delete $3; }
+	| args0 '=' args0									{ $$ = new LetFix( $1, $3 ); }
+	| args0 '@' TK_VAR args0 '=' args0					{ $$ = new LetVar( $1, new Var( *$3 ), $4, $6 ); delete $3; }
 	| TK_FUN TK_WORD args0 '{' command_seq '}'			{ $$ = new Fun( *$2, $3, $5 ); delete $2; }
 	| '{' command_seq '}'								{ $$ = $2; };
 	| args1												{ $$ = new Command( $1 ); }

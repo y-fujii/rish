@@ -184,11 +184,26 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			assert( args.size() > 0 );
 			map<MetaString, Fun*>::const_iterator it = global->funs.find( args[0] );
 			if( it != global->funs.end() ) {
-				return evalStmt( it->second->body, global, ifd, ofd );
+				try {
+					return evalStmt( it->second->body, global, ifd, ofd );
+				}
+				catch( ReturnException const& e ) {
+					return e.retv;
+				}
 			}
 			else {
 				return runCommand( args, ifd, ofd );
 			}
+		}
+		MATCH( Stmt::tReturn ) {
+			Return* s = static_cast<Return*>( sb );
+			deque<string> args;
+			evalArgs( s->retv, global, back_inserter( args ) );
+			int retv;
+			if( (istringstream( args.back() ) >> retv).fail() ) {
+				return 1;
+			}
+			throw ReturnException( retv ) ;
 		}
 		MATCH( Stmt::tFun ) {
 			Fun* s = static_cast<Fun*>( sb );
@@ -211,8 +226,8 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 					evalStmt( s->body, global, ifd, ofd );
 				}
 			}
-			catch( BreakException const& br ) {
-				return br.retv;
+			catch( BreakException const& e ) {
+				return e.retv;
 			}
 			return evalStmt( s->elze, global, ifd, ofd );
 		}
@@ -268,14 +283,16 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			For* s = static_cast<For*>( sb );
 
 			UnixIStream ifs( ifd, 1 ); // XXX
-			while( !ifs.eof() ) {
+			while( true ) {
 				Expr* it = s->vars;
 				while( it->tag == Expr::tList ) {
 					List* list = static_cast<List*>( it );
 					if( list->lhs->tag == Expr::tVar ) {
 						Var* var = static_cast<Var*>( list->lhs );
 						string lhs;
-						getline( ifs, lhs );
+						if( !getline( ifs, lhs ) ) {
+							return 0;
+						}
 						deque<string>& rhs = global->vars[var->name];
 						rhs.clear();
 						rhs.push_back( lhs );
