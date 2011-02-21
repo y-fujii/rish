@@ -53,6 +53,16 @@ Examples:
 
 	for $i when $i == 1
 
+## Anonymous functions
+	x = & a b c {
+		XXXX
+	}
+
+	for & a b c {
+		break
+	}
+	a b c : [ $x == 1 ]
+
 ## File descriptor
 	fd --null 0 --null 1 xinit
 	--close FD

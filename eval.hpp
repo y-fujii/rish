@@ -26,6 +26,8 @@ struct Global {
 };
 
 struct Local {
+	Local( Local* o = NULL ): outer( o ) {}
+
 	Local* outer;
 	std::map<std::string, std::deque<std::string> > vars;
 };

@@ -38,6 +38,13 @@ namespace std {
 	inline bool all_of( Iter bgn, Iter end, Func f ) {
 		return std::find_if( bgn, end, std::not1( f ) ) == end;
 	}
+
+	struct {
+		template<class T>
+		operator T*() const {
+			return 0;
+		}
+	} const nullptr = {};
 }
 
 struct UnixStreamBuf: std::streambuf {
