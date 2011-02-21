@@ -4,6 +4,7 @@
 #include <string>
 #include <stdint.h>
 #include <dirent.h>
+#include <sys/param.h>
 #include "misc.hpp"
 #include "exception.hpp"
 
@@ -146,13 +147,13 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 		MetaString base = pattern.substr( 0, slash );
 		MetaString rest = pattern.substr( slash + 1 );
 
-		if( base == "." || base == ".." ) {
+		if( base == MetaString( "." ) || base == MetaString( ".." ) ) {
 			dst = expandGlob( root + string( base.begin(), base.end() ) + "/", rest, dst );
 		}
 		else {
 			deque< pair<int, string> > dirs;
 			string root2;
-			if( base == "" ) {
+			if( base == MetaString( "" ) ) {
 				root2 = "/";
 			} else {
 				root2 = root;
@@ -163,7 +164,7 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 					continue;
 				}
 				if( matchGlob( base, it->second.begin(), it->second.end() ) ) {
-					if( rest != "" ) {
+					if( rest != MetaString( "" ) ) {
 						dst = expandGlob( root2 + it->second + "/", rest, dst );
 					}
 					else {
@@ -175,6 +176,24 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 	}
 
 	return dst;
+}
+
+template<class DstIter>
+DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
+	MetaString root;
+	if( src.size() > 0 && src[0] == home ) {
+		root = MetaString( getenv( "HOME" ) ) + src.substr( 1 );
+	}
+	else if( src.size() > 0 && src[0] == '/' ) {
+		root = src;
+	}
+	else {
+		char buf[MAXPATHLEN];
+		getcwd( buf, MAXPATHLEN );
+		root = MetaString( buf ) + MetaString( "/" ) + src;
+	}
+	// expandGlob( root, src, dstIt );
+	return dstIt;
 }
 */
 

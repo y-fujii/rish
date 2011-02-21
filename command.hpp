@@ -50,6 +50,19 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 		}
 		return 0;
 	}
+	else if( args[0] == "syscall" ) {
+		if( args.size() < 2 ) {
+			return 1;
+		}
+
+		if( args[1] == "tcgetpgrp" ) {
+			ostringstream buf;
+			buf << tcgetpgrp( 0 ) << endl;
+			write( ofd, buf.str().data(), buf.str().size() );
+			return 0;
+		}
+		return 1;
+	}
 	else {
 		char const** args_raw = new char const*[args.size() + 1];
 		for( size_t i = 0; i < args.size(); ++i ) {
