@@ -46,10 +46,13 @@ struct ReturnException {
 	int const retv;
 };
 
-int evalStmt( ast::Stmt*, Global*, int, int );
+struct StopException {
+};
 
-void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, bool ic = false, bool oc = false ) {
-	evalStmt( stmt, global, ifd, ofd );
+int evalStmt( ast::Stmt*, Global*, int, int, AtomicBool& );
+
+void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, AtomicBool& stop, bool ic = false, bool oc = false ) {
+	evalStmt( stmt, global, ifd, ofd, stop );
 	if( ic ) {
 		close( ifd );
 	}
@@ -59,9 +62,13 @@ void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, bool ic =
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
+DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, AtomicBool& stop ) {
 	using namespace std;
 	using namespace ast;
+
+	if( stop ) {
+		throw StopException();
+	}
 
 	switch( eb->tag ) {
 		MATCH( Expr::tWord ) {
@@ -70,8 +77,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 		}
 		MATCH( Expr::tList ) {
 			List* e = static_cast<List*>( eb );
-			evalExpr( e->lhs, global, dst );
-			evalExpr( e->rhs, global, dst );
+			evalExpr( e->lhs, global, dst, stop );
+			evalExpr( e->rhs, global, dst, stop );
 		}
 		MATCH( Expr::tNull ) {
 		}
@@ -79,8 +86,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			Concat* e = static_cast<Concat*>( eb );
 			deque<MetaString> lhs;
 			deque<MetaString> rhs;
-			evalExpr( e->lhs, global, back_inserter( lhs ) );
-			evalExpr( e->rhs, global, back_inserter( rhs ) );
+			evalExpr( e->lhs, global, back_inserter( lhs ), stop );
+			evalExpr( e->rhs, global, back_inserter( rhs ), stop );
 			for( deque<MetaString>::const_iterator i = lhs.begin(); i != lhs.end(); ++i ) {
 				for( deque<MetaString>::const_iterator j = rhs.begin(); j != rhs.end(); ++j ) {
 					*dst++ = *i + *j;
@@ -102,7 +109,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
-			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], false, true ) );
+			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], stop, false, true ) );
 			{
 				UnixIStream ifs( fds[0] );
 				while( !ifs.eof() ) {
@@ -122,35 +129,39 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst ) {
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt ) {
+DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, AtomicBool& stop ) {
 	using namespace std;
 
 	deque<MetaString> tmp;
-	evalExpr( expr, global, back_inserter( tmp ) );
+	evalExpr( expr, global, back_inserter( tmp ), stop );
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
+int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, AtomicBool& stop ) {
 	using namespace std;
 	using namespace ast;
+
+	if( stop ) {
+		throw StopException();
+	}
 
 	switch( sb->tag ) {
 		MATCH( Stmt::tSequence ) {
 			Sequence* s = static_cast<Sequence*>( sb );
-			evalStmt( s->lhs, global, ifd, ofd );
-			return evalStmt( s->rhs, global, ifd, ofd );
+			evalStmt( s->lhs, global, ifd, ofd, stop );
+			return evalStmt( s->rhs, global, ifd, ofd, stop );
 		}
 		MATCH( Stmt::tRedirFr ) {
 			RedirFr* s = static_cast<RedirFr*>( sb );
 			deque<string> args;
-			evalArgs( s->file, global, back_inserter( args ) );
+			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			if( fd < 0 ) {
 				throw IOError();
 			}
 			int retv;
 			try {
-				retv = evalStmt( s->body, global, fd, ofd );
+				retv = evalStmt( s->body, global, fd, ofd, stop );
 			}
 			catch( ... ) {
 				close( fd );
@@ -162,14 +173,14 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		MATCH( Stmt::tRedirTo ) {
 			RedirFr* s = static_cast<RedirFr*>( sb );
 			deque<string> args;
-			evalArgs( s->file, global, back_inserter( args ) );
+			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			if( fd < 0 ) {
 				throw IOError();
 			}
 			int retv;
 			try {
-				retv = evalStmt( s->body, global, ifd, fd );
+				retv = evalStmt( s->body, global, ifd, fd, stop );
 			}
 			catch( ... ) {
 				close( fd );
@@ -181,13 +192,13 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		MATCH( Stmt::tCommand ) {
 			Command* s = static_cast<Command*>( sb );
 			deque<string> args;
-			evalArgs( s->args, global, back_inserter( args ) );
+			evalArgs( s->args, global, back_inserter( args ), stop );
 			
 			assert( args.size() > 0 );
 			map<MetaString, Fun*>::const_iterator it = global->funs.find( args[0] );
 			if( it != global->funs.end() ) {
 				try {
-					return evalStmt( it->second->body, global, ifd, ofd );
+					return evalStmt( it->second->body, global, ifd, ofd, stop );
 				}
 				catch( ReturnException const& e ) {
 					return e.retv;
@@ -200,7 +211,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		MATCH( Stmt::tReturn ) {
 			Return* s = static_cast<Return*>( sb );
 			deque<string> args;
-			evalArgs( s->retv, global, back_inserter( args ) );
+			evalArgs( s->retv, global, back_inserter( args ), stop );
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -214,29 +225,29 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		}
 		MATCH( Stmt::tIf ) {
 			If* s = static_cast<If*>( sb );
-			if( evalStmt( s->cond, global, ifd, ofd ) == 0 ) {
-				return evalStmt( s->then, global, ifd, ofd );
+			if( evalStmt( s->cond, global, ifd, ofd, stop ) == 0 ) {
+				return evalStmt( s->then, global, ifd, ofd, stop );
 			}
 			else {
-				return evalStmt( s->elze, global, ifd, ofd );
+				return evalStmt( s->elze, global, ifd, ofd, stop );
 			}
 		}
 		MATCH( Stmt::tWhile ) {
 			While* s = static_cast<While*>( sb );
 			try {
-				while( evalStmt( s->cond, global, ifd, ofd ) == 0 ) {
-					evalStmt( s->body, global, ifd, ofd );
+				while( evalStmt( s->cond, global, ifd, ofd, stop ) == 0 ) {
+					evalStmt( s->body, global, ifd, ofd, stop );
 				}
 			}
 			catch( BreakException const& e ) {
 				return e.retv;
 			}
-			return evalStmt( s->elze, global, ifd, ofd );
+			return evalStmt( s->elze, global, ifd, ofd, stop );
 		}
 		MATCH( Stmt::tBreak ) {
 			Break* s = static_cast<Break*>( sb );
 			deque<string> args;
-			evalArgs( s->retv, global, back_inserter( args ) );
+			evalArgs( s->retv, global, back_inserter( args ), stop );
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -246,7 +257,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 		MATCH( Stmt::tLetFix ) {
 			LetFix* s = static_cast<LetFix*>( sb );
 			deque<string> args;
-			evalArgs( s->rhs, global, back_inserter( args ) );
+			evalArgs( s->rhs, global, back_inserter( args ), stop );
 
 			Expr* lit = s->lhs;
 			for( deque<string>::const_iterator rit = args.begin(); rit != args.end(); ++rit ) {
@@ -275,8 +286,8 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 			if( pipe( fds ) < 0 ) {
 				throw IOError();
 			}
-			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], false, true ) );
-			evalStmtClose( s->rhs, global, fds[0], ofd, true, false );
+			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], stop, false, true ) );
+			evalStmtClose( s->rhs, global, fds[0], ofd, stop, true, false );
 			thread.join();
 
 			return 0;
@@ -301,7 +312,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd ) {
 					}
 					it = list->rhs;
 				}
-				evalStmt( s->body, global, ifd, ofd );
+				evalStmt( s->body, global, ifd, ofd, stop );
 			}
 
 			return 0;

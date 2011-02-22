@@ -10,7 +10,6 @@
 #include <pthread.h>
 
 
-#define ARR_SIZE( arr ) (sizeof( arr ) / sizeof( (arr)[0] ))
 #define MATCH( c ) break; case (c):
 #define OTHERWISE break; default:
 
@@ -39,13 +38,23 @@ namespace std {
 		return std::find_if( bgn, end, std::not1( f ) ) == end;
 	}
 
-	struct {
-		template<class T>
-		operator T*() const {
-			return 0;
-		}
-	} const nullptr = {};
 }
+
+struct {
+	template<class T>
+	operator T*() const {
+		return 0;
+	}
+} const nullptr = {};
+
+template<class T, unsigned N>
+unsigned size( T const (&)[N] ) {
+	return N;
+}
+
+typedef unsigned volatile AtomicUInt; // XXX
+typedef int      volatile AtomicSInt; // XXX
+typedef bool     volatile AtomicBool; // XXX
 
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):

@@ -41,6 +41,8 @@
 "return"	{ return TK_RETURN; }
 "let"		{ return TK_LET; }
 "fun"		{ return TK_FUN; }
+"when"		{ return TK_WHEN; }
+"fetch"		{ return TK_FETCH; }
 
 \$[a-zA-Z0-9_]+ {
 	yylval.var = new string( yytext + 1 );
