@@ -7,6 +7,7 @@
 #include <tr1/functional>
 #include <cassert>
 #include <unistd.h>
+#include <signal.h>
 #include <pthread.h>
 
 
@@ -38,6 +39,23 @@ namespace std {
 		return std::find_if( bgn, end, std::not1( f ) ) == end;
 	}
 
+	// XXX
+	template<class T>
+	struct atomic {
+		explicit atomic( T const& v ): _val( v ) {
+		}
+
+		T load() volatile {
+			return _val;
+		}
+
+		void store( T const& v ) volatile {
+			_val = v;
+		}
+
+		private:
+			T volatile _val;
+	};
 }
 
 struct {
@@ -52,14 +70,9 @@ unsigned size( T const (&)[N] ) {
 	return N;
 }
 
-typedef unsigned volatile AtomicUInt; // XXX
-typedef int      volatile AtomicSInt; // XXX
-typedef bool     volatile AtomicBool; // XXX
-
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
-		_fd( fd ),
-		_buf( bs ) {
+		_fd( fd ), _buf( bs ) {
 	}
 
 	virtual int underflow() {
@@ -82,7 +95,7 @@ struct UnixStreamBuf: std::streambuf {
 };
 
 struct UnixIStream: std::istream {
-	UnixIStream( int fd, size_t bs = 4096 ):
+	explicit UnixIStream( int fd, size_t bs = 4096 ):
 		std::istream( new UnixStreamBuf( fd, bs ) ) {
 	}
 
@@ -92,15 +105,29 @@ struct UnixIStream: std::istream {
 };
 
 struct Thread {
-	Thread( std::function<void ()> const& cb ):
+	template<class T>
+	explicit Thread( T const& cb ):
 		_callback( cb ) {
 		if( pthread_create( &_thread, NULL, _wrap, this ) != 0 ) {
 			throw std::exception();
 		}
 	}
 
+	// XXX
+	// never called from own thread
+	~Thread() {
+		try { kill( SIGINT ); } catch( ... ) {}
+		try { join();         } catch( ... ) {}
+	}
+
 	void join() {
 		if( pthread_join( _thread, NULL ) != 0 ) {
+			throw std::exception();
+		}
+	}
+
+	void kill( int sig ) {
+		if( pthread_kill( _thread, sig ) != 0 ) {
 			throw std::exception();
 		}
 	}

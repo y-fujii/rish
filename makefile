@@ -16,6 +16,9 @@ rish: $(SRCS)
 	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
 	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline -lcurses
 
+wc:
+	wc $(SRCS)
+
 test: rish
 	wc $(SRCS)
 	./rish
