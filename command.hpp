@@ -29,27 +29,6 @@ int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
 		write( ofd, buf.str().data(), buf.str().size() );
 		return 0;
 	}
-	else if( args[0] == "fetch" ) {
-		int n;
-		if( args.size() == 1 ) {
-			n = 1;
-		}
-		else if( args.size() == 2 ) {
-			istringstream( args[1] ) >> n;
-		}
-		else {
-			return 1;
-		}
-
-		for( int i = 0; i < n; ++i ) {
-			// XXX
-			UnixIStream ifs( ifd, 1 );
-			string buf;
-			getline( ifs, buf );
-			write( ofd, buf.data(), buf.size() );
-		}
-		return 0;
-	}
 	else if( args[0] == "syscall" ) {
 		if( args.size() < 2 ) {
 			return 1;

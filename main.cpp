@@ -4,6 +4,8 @@
 #include <tr1/memory>
 #include <iostream>
 #include <cassert>
+#include <unistd.h>
+#include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "misc.hpp"
@@ -18,7 +20,7 @@ struct ReplState {
 	};
 };
 
-AtomicBool stop = false;
+std::atomic<bool> stop( false );
 volatile bool signaled = false;
 volatile ReplState::type replState = ReplState::null;
 
@@ -35,7 +37,7 @@ void handleSigINT( int ) {
 		MATCH( ReplState::read ) {
 		}
 		MATCH( ReplState::eval ) {
-			stop = true;
+			stop.store( true );
 		}
 		OTHERWISE {
 			assert( false );
@@ -50,9 +52,11 @@ int main( int argc, char** ) {
 
 	if( isatty( 0 ) ) {
 		struct sigaction sa = {};
+
 		sa.sa_handler = handleSigTSTP;
 		sa.sa_flags = SA_RESTART;
 		sigaction( SIGTSTP, &sa, NULL );
+
 		sa.sa_handler = handleSigINT;
 		sa.sa_flags = 0;
 		sigaction( SIGINT, &sa, NULL );
@@ -85,7 +89,7 @@ int main( int argc, char** ) {
 			}
 			catch( StopException const& ) {
 				cerr << "Interrupted." << endl;
-				stop = false;
+				stop.store( false );
 			}
 			catch( IOError const& ) {
 				cerr << "I/O error." << endl;
@@ -108,7 +112,7 @@ int main( int argc, char** ) {
 
 		ast::Stmt* ast = parse( buf.data(), buf.data() + buf.size() );
 
-		AtomicBool stop = false;
+		atomic<bool> stop( false );
 		Global global;
 		evalStmt( ast, &global, 0, 1, stop );
 	}

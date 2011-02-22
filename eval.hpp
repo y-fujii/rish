@@ -26,7 +26,7 @@ struct Global {
 };
 
 struct Local {
-	Local( Local* o = NULL ): outer( o ) {}
+	Local( Local* o = nullptr ): outer( o ) {}
 
 	Local* outer;
 	std::map<std::string, std::deque<std::string> > vars;
@@ -49,9 +49,20 @@ struct ReturnException {
 struct StopException {
 };
 
-int evalStmt( ast::Stmt*, Global*, int, int, AtomicBool& );
+inline void checkSyscallResult( int retv ) {
+	if( retv < 0 ) {
+		if( errno == EINTR ) {
+			throw StopException();
+		}
+		else {
+			throw IOError();
+		}
+	}
+}
 
-void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, AtomicBool& stop, bool ic = false, bool oc = false ) {
+int evalStmt( ast::Stmt*, Global*, int, int, std::atomic<bool>& );
+
+void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, std::atomic<bool>& stop, bool ic = false, bool oc = false ) {
 	evalStmt( stmt, global, ifd, ofd, stop );
 	if( ic ) {
 		close( ifd );
@@ -62,11 +73,11 @@ void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, AtomicBoo
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, AtomicBool& stop ) {
+DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, std::atomic<bool>& stop ) {
 	using namespace std;
 	using namespace ast;
 
-	if( stop ) {
+	if( stop.load() ) {
 		throw StopException();
 	}
 
@@ -106,9 +117,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, AtomicBool& stop )
 			Subst* e = static_cast<Subst*>( eb );
 
 			int fds[2];
-			if( pipe( fds ) < 0 ) {
-				throw IOError();
-			}
+			checkSyscallResult( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], stop, false, true ) );
 			{
 				UnixIStream ifs( fds[0] );
@@ -129,7 +138,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, AtomicBool& stop )
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, AtomicBool& stop ) {
+DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, std::atomic<bool>& stop ) {
 	using namespace std;
 
 	deque<MetaString> tmp;
@@ -137,11 +146,11 @@ DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, AtomicBool& st
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, AtomicBool& stop ) {
+int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>& stop ) {
 	using namespace std;
 	using namespace ast;
 
-	if( stop ) {
+	if( stop.load() ) {
 		throw StopException();
 	}
 
@@ -156,9 +165,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, AtomicBool& stop 
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_RDONLY );
-			if( fd < 0 ) {
-				throw IOError();
-			}
+			checkSyscallResult( fd );
 			int retv;
 			try {
 				retv = evalStmt( s->body, global, fd, ofd, stop );
@@ -175,9 +182,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, AtomicBool& stop 
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
-			if( fd < 0 ) {
-				throw IOError();
-			}
+			checkSyscallResult( fd );
 			int retv;
 			try {
 				retv = evalStmt( s->body, global, ifd, fd, stop );
@@ -254,14 +259,14 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, AtomicBool& stop 
 			}
 			throw BreakException( retv ) ;
 		}
-		MATCH( Stmt::tLetFix ) {
-			LetFix* s = static_cast<LetFix*>( sb );
+		MATCH( Stmt::tLet ) {
+			Let* s = static_cast<Let*>( sb );
 			deque<string> args;
 			evalArgs( s->rhs, global, back_inserter( args ), stop );
 
 			Expr* lit = s->lhs;
 			for( deque<string>::const_iterator rit = args.begin(); rit != args.end(); ++rit ) {
-				if( lit == NULL ) {
+				if( lit == nullptr ) {
 					return 1;
 				}
 				assert( lit->tag == Expr::tList );
@@ -277,15 +282,19 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, AtomicBool& stop 
 				lit = l->rhs;
 			}
 
-			return lit != NULL ? 1 : 0;
+			return lit != nullptr ? 1 : 0;
+		}
+		MATCH( Stmt::tFetch ) {
+			Fetch* s = static_cast<Fetch*>( sb );
+			/*
+			switch( s->
+			*/
 		}
 		MATCH( Stmt::tPipe ) {
 			Pipe* s = static_cast<Pipe*>( sb );
 
 			int fds[2];
-			if( pipe( fds ) < 0 ) {
-				throw IOError();
-			}
+			checkSyscallResult( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], stop, false, true ) );
 			evalStmtClose( s->rhs, global, fds[0], ofd, stop, true, false );
 			thread.join();

@@ -29,8 +29,7 @@ struct Stmt {
 		tCommand,
 		tFun,
 		tFetch,
-		tLetFix,
-		tLetVar,
+		tLet,
 		tReturn,
 		tBreak,
 		tFor,
@@ -109,18 +108,9 @@ struct Fetch: Stmt {
 	Expr* lhs;
 };
 
-struct LetFix: Stmt {
-	LetFix( Expr* l, Expr* r ): Stmt( tLetFix ), lhs( l ), rhs( r ) {}
+struct Let: Stmt {
+	Let( Expr* l, Expr* r ): Stmt( tLet ), lhs( l ), rhs( r ) {}
 	Expr* lhs;
-	Expr* rhs;
-};
-
-struct LetVar: Stmt {
-	LetVar( Expr* ll, Var* lm, Expr* lr, Expr* r ):
-		Stmt( tLetVar ), lhsl( ll ), lhsm( lm ), lhsr( lr ), rhs( r ) {}
-	Expr* lhsl;
-	Var* lhsm;
-	Expr* lhsr;
 	Expr* rhs;
 };
 
