@@ -1,4 +1,5 @@
 
+#include "config.hpp"
 #include <memory>
 #include <tr1/memory>
 #include <iostream>
@@ -17,6 +18,7 @@ struct ReplState {
 	};
 };
 
+AtomicBool stop = false;
 volatile bool signaled = false;
 volatile ReplState::type replState = ReplState::null;
 
@@ -27,12 +29,13 @@ void handleSigTSTP( int ) {
 void handleSigINT( int ) {
 	/*
 	char data[] = "\r\x1b[K";
-	write( 0, data, ARR_SIZE( data ) );
+	write( 0, data, size( data ) );
 	*/
 	switch( replState ) {
 		MATCH( ReplState::read ) {
 		}
 		MATCH( ReplState::eval ) {
+			stop = true;
 		}
 		OTHERWISE {
 			assert( false );
@@ -46,8 +49,13 @@ int main( int argc, char** ) {
 	assert( argc == 1 );
 
 	if( isatty( 0 ) ) {
-		signal( SIGTSTP, handleSigTSTP );
-		signal( SIGINT, handleSigINT );
+		struct sigaction sa = {};
+		sa.sa_handler = handleSigTSTP;
+		sa.sa_flags = SA_RESTART;
+		sigaction( SIGTSTP, &sa, NULL );
+		sa.sa_handler = handleSigINT;
+		sa.sa_flags = 0;
+		sigaction( SIGINT, &sa, NULL );
 
 		Global global;
 		while( true ) {
@@ -64,7 +72,7 @@ int main( int argc, char** ) {
 			replState = ReplState::eval;
 			try {
 				ast::Stmt* ast = parse( line.get(), line.get() + len );
-				int retv = evalStmt( ast, &global, 0, 1 );
+				int retv = evalStmt( ast, &global, 0, 1, stop );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
@@ -74,6 +82,10 @@ int main( int argc, char** ) {
 			}
 			catch( RuntimeError const& ) {
 				cerr << "Runtime error." << endl;
+			}
+			catch( StopException const& ) {
+				cerr << "Interrupted." << endl;
+				stop = false;
 			}
 			catch( IOError const& ) {
 				cerr << "I/O error." << endl;
@@ -96,8 +108,9 @@ int main( int argc, char** ) {
 
 		ast::Stmt* ast = parse( buf.data(), buf.data() + buf.size() );
 
+		AtomicBool stop = false;
 		Global global;
-		evalStmt( ast, &global, 0, 1 );
+		evalStmt( ast, &global, 0, 1, stop );
 	}
 
 	return 0;

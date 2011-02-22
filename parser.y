@@ -37,6 +37,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR
 %token TK_IF TK_ELSE TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN
+%token TK_WHEN TK_FETCH
 
 %start top
 
@@ -80,6 +81,8 @@ command_stat
 	| TK_FOR args1           '{' command_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
 	| TK_BREAK arg_concat								{ $$ = new Break( $2 ); }
 	| TK_RETURN arg_concat								{ $$ = new Return( $2 ); }
+	| TK_FETCH args0									{ $$ = new FetchFix( $2 ); }
+	| TK_FETCH args0 '@' TK_VAR args0					{ $$ = new LetVar( $2, new Var( *$4 ), $5 ); delete $4; }
 	/*
 	| TK_LET args0 '=' args0							{ $$ = new LetFix( $2, $4 ); }
 	| TK_LET args0 '@' TK_VAR args0 '=' args0			{ $$ = new LetVar( $2, $4, $5, $7 ); }

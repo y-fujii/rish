@@ -53,6 +53,8 @@ Examples:
 
 	for $i when $i == 1
 
+	lexical scoped break
+
 ## Anonymous functions
 	x = & a b c {
 		XXXX

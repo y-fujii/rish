@@ -28,6 +28,7 @@ struct Stmt {
 		tIf,
 		tCommand,
 		tFun,
+		tFetch,
 		tLetFix,
 		tLetVar,
 		tReturn,
@@ -101,6 +102,11 @@ struct Fun: Stmt {
 	MetaString name;
 	Expr* args;
 	Stmt* body;
+};
+
+struct Fetch: Stmt {
+	Fetch( Expr* l ): Stmt( tFetch ), lhs( l ) {}
+	Expr* lhs;
 };
 
 struct LetFix: Stmt {
