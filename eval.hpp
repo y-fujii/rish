@@ -121,9 +121,11 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, std::atomic<bool>&
 			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], stop, false, true ) );
 			{
 				UnixIStream ifs( fds[0] );
-				while( !ifs.eof() ) {
+				while( true ) {
 					string buf;
-					getline( ifs, buf );
+					if( !getline( ifs, buf ) ) {
+						break;
+					}
 					*dst++ = buf;
 				}
 			}
@@ -259,6 +261,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 			}
 			throw BreakException( retv ) ;
 		}
+		/*
 		MATCH( Stmt::tLet ) {
 			Let* s = static_cast<Let*>( sb );
 			deque<string> args;
@@ -284,11 +287,31 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 
 			return lit != nullptr ? 1 : 0;
 		}
+		*/
 		MATCH( Stmt::tFetch ) {
 			Fetch* s = static_cast<Fetch*>( sb );
-			/*
-			switch( s->
-			*/
+			assert( s->lhs->tag == LeftExpr::tFix );
+			VarFix* lhs = static_cast<VarFix*>( s->lhs );
+
+			UnixIStream ifs( ifd, 1 );
+			deque<string> rhs( lhs->vars.size() );
+			for( deque<string>::iterator it = rhs.begin(); it != rhs.end(); ++it ) {
+				if( !getline( ifs, *it ) ) {
+					return 1;
+				}
+			}
+
+			deque<Var*>::const_iterator lit = lhs->vars.begin();
+			deque<string>::const_iterator rit = rhs.begin();
+			while( lit != lhs->vars.end() ) {
+				deque<string>& var = global->vars[(*lit)->name];
+				var.clear();
+				var.push_back( *rit );
+				++lit;
+				++rit;
+			}
+
+			return 0;
 		}
 		MATCH( Stmt::tPipe ) {
 			Pipe* s = static_cast<Pipe*>( sb );
@@ -301,6 +324,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 
 			return 0;
 		}
+		/*
 		MATCH( Stmt::tFor ) {
 			For* s = static_cast<For*>( sb );
 
@@ -326,6 +350,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 
 			return 0;
 		}
+		*/
 		MATCH( Stmt::tNone ) {
 			return 0;
 		}

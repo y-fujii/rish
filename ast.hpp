@@ -23,6 +23,20 @@ struct Expr {
 		Expr();
 };
 
+struct LeftExpr {
+	enum Tag {
+		tFix,
+		tVar
+	};
+	Tag const tag;
+
+	protected:
+		LeftExpr( Tag t ): tag( t ) {}
+	
+	private:
+		LeftExpr();
+};
+
 struct Stmt {
 	enum Tag {
 		tIf,
@@ -84,6 +98,16 @@ struct Concat: Expr {
 	Expr* rhs;
 };
 
+struct VarFix: LeftExpr {
+	template<class Iter>
+	VarFix( Iter bgn, Iter end ): LeftExpr( tFix ), vars( bgn, end ) {}
+	std::deque<Var*> vars;
+};
+
+struct VarVar: LeftExpr {
+	VarVar(): LeftExpr( tVar ) {}
+};
+
 struct If: Stmt {
 	If( Stmt* c, Stmt* t, Stmt* e ): Stmt( tIf ), cond( c ), then( t ), elze( e ) {}
 	Stmt* cond;
@@ -104,13 +128,13 @@ struct Fun: Stmt {
 };
 
 struct Fetch: Stmt {
-	Fetch( Expr* l ): Stmt( tFetch ), lhs( l ) {}
-	Expr* lhs;
+	Fetch( LeftExpr* l ): Stmt( tFetch ), lhs( l ) {}
+	LeftExpr* lhs;
 };
 
 struct Let: Stmt {
-	Let( Expr* l, Expr* r ): Stmt( tLet ), lhs( l ), rhs( r ) {}
-	Expr* lhs;
+	Let( LeftExpr* l, Expr* r ): Stmt( tLet ), lhs( l ), rhs( r ) {}
+	LeftExpr* lhs;
 	Expr* rhs;
 };
 
