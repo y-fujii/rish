@@ -1,5 +1,6 @@
 %{
 	#include <exception>
+	#include <deque>
 	#include <fcntl.h>
 	#include "misc.hpp"
 	#include "ast.hpp"
@@ -16,7 +17,7 @@
 	}
 
 	extern "C" int yywrap() {
-		assert( false );
+		return 1;
 	}
 
 	ast::Stmt* parseResult = nullptr;
@@ -26,14 +27,18 @@
 	MetaString* word;
 	std::string* var;
 	ast::Expr* expr;
+	ast::LeftExpr* lexpr;
 	ast::Stmt* stmt;
+	std::deque<ast::Var*>* vars;
 }
 
 %type<word> TK_WORD
 %type<var> TK_VAR
-%type<expr> expr_prim expr_concat expr_list lexpr_when lexpr_prim
+%type<expr> expr_prim expr_concat expr_list
+%type<lexpr> lexpr_when lexpr_prim
 %type<stmt> stmt_seq stmt_bg stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
 %type<stmt> if_ else_
+%type<vars> var_list
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH
@@ -77,7 +82,9 @@ stmt_pipe
 stmt_prim
 	: if_
 	| TK_WHILE stmt_andor '{' stmt_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
+	/*
 	| TK_FOR lexpr_when   '{' stmt_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
+	*/
 	| TK_BREAK expr_concat							{ $$ = new Break( $2 ); }
 	| TK_RETURN expr_concat							{ $$ = new Return( $2 ); }
 	| TK_FETCH lexpr_when							{ $$ = new Fetch( $2 ); }
@@ -95,12 +102,25 @@ else_
 	| 									{ $$ = new None(); }
 
 lexpr_when
+	/*
 	: lexpr_prim TK_WHEN stmt_prim
-	| lexpr_prim
+	*/
+	: lexpr_prim
 
+/*
 lexpr_prim
 	: expr_list
 	| expr_list '@' TK_VAR expr_list	{ $$ = new LExpr( $1, $3, $4 ); }
+*/
+lexpr_prim
+	: var_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
+	/*
+	| lexpr_vars '@' TK_VAR expr_vars	{ $$ = new VarVar( $1->begin(), $1->end(), $3, $4->begin(), $4->end() ); }
+	*/
+
+var_list
+	: var_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
+	|									{ $$ = new deque<Var*>(); }
 
 expr_list
 	: expr_concat expr_list				{ $$ = new List( $1, $2 ); }

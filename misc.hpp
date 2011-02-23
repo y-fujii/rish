@@ -39,18 +39,22 @@ namespace std {
 		return std::find_if( bgn, end, std::not1( f ) ) == end;
 	}
 
-	// XXX
 	template<class T>
 	struct atomic {
 		explicit atomic( T const& v ): _val( v ) {
 		}
 
 		T load() volatile {
-			return _val;
+			__sync_synchronize();
+			int volatile v = _val;
+			__sync_synchronize();
+			return v;
 		}
 
 		void store( T const& v ) volatile {
+			__sync_synchronize();
 			_val = v;
+			__sync_synchronize();
 		}
 
 		private:
@@ -116,8 +120,13 @@ struct Thread {
 	// XXX
 	// never called from own thread
 	~Thread() {
-		try { kill( SIGINT ); } catch( ... ) {}
-		try { join();         } catch( ... ) {}
+		try {
+			kill( SIGINT );
+			join(); // XXX
+		}
+		catch( ... ) {
+			try { kill( SIGKILL ); } catch ( ... ) {}
+		}
 	}
 
 	void join() {
