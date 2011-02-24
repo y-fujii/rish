@@ -120,9 +120,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, std::atomic<bool>&
 			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], stop, false, true ) );
 			{
 				UnixIStream ifs( fds[0] );
-				while( !ifs.eof() ) {
-					string buf;
-					getline( ifs, buf );
+				string buf;
+				while( getline( ifs, buf ) ) {
 					*dst++ = buf;
 				}
 			}
@@ -314,10 +313,9 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 					UnixIStream ifs( ifd, 1 );
 					deque<string> rhs( lhs->var.size() );
 					for( deque<string>::iterator it = rhs.begin(); it != rhs.end(); ++it ) {
-						if( ifs.eof() ) {
+						if( !getline( ifs, *it ) ) {
 							return 1;
 						}
-						getline( ifs, *it );
 					}
 
 					for( size_t i = 0; i < rhs.size(); ++i ) {
@@ -331,13 +329,9 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 
 					deque<string> rhs;
 					UnixIStream ifs( ifd );
-					while( !ifs.eof() ) {
-						string buf;
-						getline( ifs, buf );
+					string buf;
+					while( getline( ifs, buf ) ) {
 						rhs.push_back( buf );
-					}
-					if( rhs.back().size() == 0 ) {
-						rhs.pop_back();
 					}
 
 					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
@@ -387,12 +381,10 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 					List* list = static_cast<List*>( it );
 					if( list->lhs->tag == Expr::tVar ) {
 						Var* var = static_cast<Var*>( list->lhs );
-						if( ifs.eof() ) {
+						string lhs;
+						if( getline( ifs, lhs ) ) {
 							return 0;
 						}
-
-						string lhs;
-						getline( ifs, lhs );
 						deque<string>& rhs = global->vars[var->name];
 						rhs.clear();
 						rhs.push_back( lhs );

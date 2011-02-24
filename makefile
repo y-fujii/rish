@@ -1,5 +1,5 @@
 LEX = flex -X
-CXX = clang++ -g -pedantic -Wall -Wextra -pthread -Os -I/usr/include/boost/tr1
+CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
 #CXX = g++ -g -pedantic -Wall -Wextra -pthread -Os
 
 SRCS = \
