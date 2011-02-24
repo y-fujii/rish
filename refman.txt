@@ -43,7 +43,7 @@ Examples:
 
 	let 2323
 	let $var = fetch;
-	for EXPR {} => while true if fetch EXPR {}
+	for EXPR {} => while ! eof if fetch EXPR {}
 
 	let x = ${$x => name}
 	then {

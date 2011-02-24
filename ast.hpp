@@ -25,8 +25,8 @@ struct Expr {
 
 struct LeftExpr {
 	enum Tag {
-		tFix,
-		tVar
+		tVarFix,
+		tVarVar
 	};
 	Tag const tag;
 
@@ -100,12 +100,17 @@ struct Concat: Expr {
 
 struct VarFix: LeftExpr {
 	template<class Iter>
-	VarFix( Iter bgn, Iter end ): LeftExpr( tFix ), vars( bgn, end ) {}
-	std::deque<Var*> vars;
+	VarFix( Iter bgn, Iter end ): LeftExpr( tVarFix ), var( bgn, end ) {}
+	std::deque<Var*> var;
 };
 
 struct VarVar: LeftExpr {
-	VarVar(): LeftExpr( tVar ) {}
+	template<class Iter>
+	VarVar( Iter bgnL, Iter endL, Var* vM, Iter bgnR, Iter endR ):
+		LeftExpr( tVarVar ), varL( bgnL, endL ), varM( vM ), varR( bgnR, endR )  {}
+	std::deque<Var*> varL;
+	Var* varM;
+	std::deque<Var*> varR;
 };
 
 struct If: Stmt {

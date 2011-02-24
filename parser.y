@@ -114,9 +114,7 @@ lexpr_prim
 */
 lexpr_prim
 	: var_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
-	/*
-	| lexpr_vars '@' TK_VAR expr_vars	{ $$ = new VarVar( $1->begin(), $1->end(), $3, $4->begin(), $4->end() ); }
-	*/
+	| var_list '@' TK_VAR var_list	{ $$ = new VarVar( $1->begin(), $1->end(), new Var( *$3 ), $4->begin(), $4->end() ); delete $1; delete $3; delete $4; }
 
 var_list
 	: var_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }

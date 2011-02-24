@@ -49,7 +49,7 @@ struct ReturnException {
 struct StopException {
 };
 
-inline void checkSyscallResult( int retv ) {
+inline void checkSyscall( int retv ) {
 	if( retv < 0 ) {
 		if( errno == EINTR ) {
 			throw StopException();
@@ -108,24 +108,21 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, std::atomic<bool>&
 		MATCH( Expr::tVar ) {
 			Var* e = static_cast<Var*>( eb );
 			map<string, deque<string> >::const_iterator it = global->vars.find( e->name );
-			if( it == global->vars.end() ) {
-				throw RuntimeError();
+			if( it != global->vars.end() ) {
+				dst = copy( it->second.begin(), it->second.end(), dst );
 			}
-			dst = copy( it->second.begin(), it->second.end(), dst );
 		}
 		MATCH( Expr::tSubst ) {
 			Subst* e = static_cast<Subst*>( eb );
 
 			int fds[2];
-			checkSyscallResult( pipe( fds ) );
+			checkSyscall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], stop, false, true ) );
 			{
 				UnixIStream ifs( fds[0] );
-				while( true ) {
+				while( !ifs.eof() ) {
 					string buf;
-					if( !getline( ifs, buf ) ) {
-						break;
-					}
+					getline( ifs, buf );
 					*dst++ = buf;
 				}
 			}
@@ -167,7 +164,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_RDONLY );
-			checkSyscallResult( fd );
+			checkSyscall( fd );
 			int retv;
 			try {
 				retv = evalStmt( s->body, global, fd, ofd, stop );
@@ -184,7 +181,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
-			checkSyscallResult( fd );
+			checkSyscall( fd );
 			int retv;
 			try {
 				retv = evalStmt( s->body, global, ifd, fd, stop );
@@ -261,54 +258,109 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 			}
 			throw BreakException( retv ) ;
 		}
-		/*
 		MATCH( Stmt::tLet ) {
 			Let* s = static_cast<Let*>( sb );
-			deque<string> args;
-			evalArgs( s->rhs, global, back_inserter( args ), stop );
+			deque<string> rhs;
+			evalArgs( s->rhs, global, back_inserter( rhs ), stop );
+			switch( s->lhs->tag ) {
+				MATCH( LeftExpr::tVarFix ) {
+					VarFix* lhs = static_cast<VarFix*>( s->lhs );
+					if( rhs.size() != lhs->var.size() ) {
+						return 1;
+					}
 
-			Expr* lit = s->lhs;
-			for( deque<string>::const_iterator rit = args.begin(); rit != args.end(); ++rit ) {
-				if( lit == nullptr ) {
-					return 1;
+					for( size_t i = 0; i < rhs.size(); ++i ) {
+						deque<string>& var = global->vars[lhs->var[i]->name];
+						var.clear();
+						var.push_back( rhs[i] );
+					}
 				}
-				assert( lit->tag == Expr::tList );
+				MATCH( LeftExpr::tVarVar ) {
+					VarVar* lhs = static_cast<VarVar*>( s->lhs );
+					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
+						return 1;
+					}
 
-				List* l = static_cast<List*>( lit );
-				if( l->lhs->tag == Expr::tVar ) {
-					Var* e = static_cast<Var*>( l->lhs );
-					deque<string>& var = global->vars[e->name];
+					size_t const lBgn = 0;
+					size_t const mBgn = lhs->varL.size();
+					size_t const rBgn = rhs.size() - lhs->varR.size();
+					for( size_t i = 0; i < lhs->varL.size(); ++i ) {
+						deque<string>& var = global->vars[lhs->varL[i]->name];
+						var.clear();
+						var.push_back( rhs[i + lBgn] );
+					}
+					deque<string>& var = global->vars[lhs->varM->name];
 					var.clear();
-					var.push_back( *rit );
+					copy( &rhs[mBgn], &rhs[rBgn], back_inserter( var ) );
+					for( size_t i = 0; i < lhs->varR.size(); ++i ) {
+						deque<string>& var = global->vars[lhs->varR[i]->name];
+						var.clear();
+						var.push_back( rhs[i + rBgn] );
+					}
 				}
-
-				lit = l->rhs;
+				OTHERWISE {
+					assert( false );
+				}
 			}
 
-			return lit != nullptr ? 1 : 0;
+			return 0;
 		}
-		*/
 		MATCH( Stmt::tFetch ) {
 			Fetch* s = static_cast<Fetch*>( sb );
-			assert( s->lhs->tag == LeftExpr::tFix );
-			VarFix* lhs = static_cast<VarFix*>( s->lhs );
+			switch( s->lhs->tag ) {
+				MATCH( LeftExpr::tVarFix ) {
+					VarFix* lhs = static_cast<VarFix*>( s->lhs );
 
-			UnixIStream ifs( ifd, 1 );
-			deque<string> rhs( lhs->vars.size() );
-			for( deque<string>::iterator it = rhs.begin(); it != rhs.end(); ++it ) {
-				if( !getline( ifs, *it ) ) {
-					return 1;
+					UnixIStream ifs( ifd, 1 );
+					deque<string> rhs( lhs->var.size() );
+					for( deque<string>::iterator it = rhs.begin(); it != rhs.end(); ++it ) {
+						if( ifs.eof() ) {
+							return 1;
+						}
+						getline( ifs, *it );
+					}
+
+					for( size_t i = 0; i < rhs.size(); ++i ) {
+						deque<string>& var = global->vars[lhs->var[i]->name];
+						var.clear();
+						var.push_back( rhs[i] );
+					}
 				}
-			}
+				MATCH( LeftExpr::tVarVar ) {
+					VarVar* lhs = static_cast<VarVar*>( s->lhs );
 
-			deque<Var*>::const_iterator lit = lhs->vars.begin();
-			deque<string>::const_iterator rit = rhs.begin();
-			while( lit != lhs->vars.end() ) {
-				deque<string>& var = global->vars[(*lit)->name];
-				var.clear();
-				var.push_back( *rit );
-				++lit;
-				++rit;
+					deque<string> rhs;
+					UnixIStream ifs( ifd );
+					while( !ifs.eof() ) {
+						string buf;
+						getline( ifs, buf );
+						rhs.push_back( buf );
+					}
+					if( rhs.back().size() == 0 ) {
+						rhs.pop_back();
+					}
+
+					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
+						return 1;
+					}
+
+					size_t const lBgn = 0;
+					size_t const mBgn = lhs->varL.size();
+					size_t const rBgn = rhs.size() - lhs->varR.size();
+					for( size_t i = 0; i < lhs->varL.size(); ++i ) {
+						deque<string>& var = global->vars[lhs->varL[i]->name];
+						var.clear();
+						var.push_back( rhs[i + lBgn] );
+					}
+					deque<string>& var = global->vars[lhs->varM->name];
+					var.clear();
+					copy( &rhs[mBgn], &rhs[rBgn], back_inserter( var ) );
+					for( size_t i = 0; i < lhs->varR.size(); ++i ) {
+						deque<string>& var = global->vars[lhs->varR[i]->name];
+						var.clear();
+						var.push_back( rhs[i + rBgn] );
+					}
+				}
 			}
 
 			return 0;
@@ -317,7 +369,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 			Pipe* s = static_cast<Pipe*>( sb );
 
 			int fds[2];
-			checkSyscallResult( pipe( fds ) );
+			checkSyscall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], stop, false, true ) );
 			evalStmtClose( s->rhs, global, fds[0], ofd, stop, true, false );
 			thread.join();
@@ -335,10 +387,12 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 					List* list = static_cast<List*>( it );
 					if( list->lhs->tag == Expr::tVar ) {
 						Var* var = static_cast<Var*>( list->lhs );
-						string lhs;
-						if( !getline( ifs, lhs ) ) {
+						if( ifs.eof() ) {
 							return 0;
 						}
+
+						string lhs;
+						getline( ifs, lhs );
 						deque<string>& rhs = global->vars[var->name];
 						rhs.clear();
 						rhs.push_back( lhs );

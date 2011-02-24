@@ -1,7 +1,7 @@
 #pragma once
 
 
-#if defined( __clang__ )
+#if defined( __clang__ ) && defined( __linux__ )
 #define BOOST_TR1_GCC_INCLUDE_PATH 4.5.2
 #endif
 
@@ -15,3 +15,5 @@ inline void closefrom( int fd ) {
 	}
 }
 #endif
+
+#define MEMORY_BARRIOR __sync_synchronize();
