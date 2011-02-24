@@ -46,7 +46,7 @@ namespace std {
 
 		T load() volatile {
 			__sync_synchronize();
-			int volatile v = _val;
+			T volatile v = _val;
 			__sync_synchronize();
 			return v;
 		}
@@ -85,10 +85,11 @@ struct UnixStreamBuf: std::streambuf {
 			throw std::ios_base::failure( "read()" );
 		}
 		else if( n == 0 ) {
+			setg( nullptr, nullptr, 0 );
 			return traits_type::eof();
 		}
 		else /* n > 0 */ {
-			setg( &_buf[0], &_buf[0], &_buf[0] + _buf.size() );
+			setg( &_buf[0], &_buf[0], &_buf[n] );
 			return _buf[0];
 		}
 	}

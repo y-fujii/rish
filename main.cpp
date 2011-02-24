@@ -4,6 +4,7 @@
 #include <tr1/memory>
 #include <iostream>
 #include <cassert>
+#include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
 #include <readline/readline.h>
@@ -14,18 +15,12 @@
 #include "eval.hpp"
 
 
-struct ReplState {
-	enum type {
-		read, eval, null
-	};
-};
-
 std::atomic<bool> stop( false );
-volatile bool signaled = false;
-volatile ReplState::type replState = ReplState::null;
 
 void handleSigTSTP( int ) {
+	/*
 	setpgid( 0, 0 );
+	*/
 }
 
 void handleSigINT( int ) {
@@ -33,17 +28,7 @@ void handleSigINT( int ) {
 	char data[] = "\r\x1b[K";
 	write( 0, data, size( data ) );
 	*/
-	switch( replState ) {
-		MATCH( ReplState::read ) {
-		}
-		MATCH( ReplState::eval ) {
-			stop.store( true );
-		}
-		OTHERWISE {
-			assert( false );
-		}
-	}
-	signaled = true;
+	stop.store( true );
 }
 
 int main( int argc, char** ) {
@@ -63,45 +48,44 @@ int main( int argc, char** ) {
 
 		Global global;
 		while( true ) {
-			replState = ReplState::read;
-			auto_ptr<char> const line( readline( "| " ) );
-			if( line.get() == NULL ) break;
-			size_t len = strlen( line.get() );
-			if( len > 0 ) {
-				add_history( line.get() );
-			}
-
-			signaled = false;
-
-			replState = ReplState::eval;
+			char* line = readline( "| " );
 			try {
-				ast::Stmt* ast = parse( line.get(), line.get() + len );
-				int retv = evalStmt( ast, &global, 0, 1, stop );
-				if( retv != 0 ) {
-					cerr << "The command returned " << retv << "." << endl;
+				if( line == NULL ) break;
+				size_t len = strlen( line );
+				if( len > 0 ) {
+					add_history( line );
+				}
+
+				try {
+					ast::Stmt* ast = parse( line, line + len );
+
+					stop.store( false );
+					int retv = evalStmt( ast, &global, 0, 1, stop );
+					if( retv != 0 ) {
+						cerr << "The command returned " << retv << "." << endl;
+					}
+				}
+				catch( SyntaxError const& ) {
+					cerr << "Syntax error." << endl;
+				}
+				catch( RuntimeError const& ) {
+					cerr << "Runtime error." << endl;
+				}
+				catch( StopException const& ) {
+					cerr << "\nInterrupted." << endl;
+				}
+				catch( IOError const& ) {
+					cerr << "I/O error." << endl;
+				}
+				catch( ios_base::failure const& ) {
+					cerr << "I/O error." << endl;
 				}
 			}
-			catch( SyntaxError const& ) {
-				cerr << "Syntax error." << endl;
+			catch( ... ) {
+				free( line );
+				throw;
 			}
-			catch( RuntimeError const& ) {
-				cerr << "Runtime error." << endl;
-			}
-			catch( StopException const& ) {
-				cerr << "Interrupted." << endl;
-				stop.store( false );
-			}
-			catch( IOError const& ) {
-				cerr << "I/O error." << endl;
-			}
-			catch( ios_base::failure const& ) {
-				cerr << "I/O error." << endl;
-			}
-			
-			if( signaled ) {
-				signaled = false;
-				write( 0, "\n", 1 );
-			}
+			free( line );
 		}
 	}
 	else {
@@ -112,8 +96,8 @@ int main( int argc, char** ) {
 
 		ast::Stmt* ast = parse( buf.data(), buf.data() + buf.size() );
 
-		atomic<bool> stop( false );
 		Global global;
+		stop.store( false );
 		evalStmt( ast, &global, 0, 1, stop );
 	}
 
