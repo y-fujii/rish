@@ -87,3 +87,21 @@ Examples:
 	--redir-to FD FILE
 	--redir-from FD FILE
 	fd --null 2
+
+
+## PATTERN MATCH
+
+	def with_index {
+		$i = 0 
+		while fetch $e {
+			yield $i $e
+				$i = ${expr $i + 1}
+		}
+	}
+	yield a b c | with_index | 
+
+	def @lhs '||' @rhs {
+		if $lhs {
+			$rhs
+		}
+	}

@@ -1,3 +1,5 @@
+/* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
+
 %{
 	#include <exception>
 	#include <cassert>
@@ -8,8 +10,13 @@
 	#include "tokens.hpp"
 
 	using namespace std;
+
+	extern "C" int yywrap() {
+		return 1;
+	}
 %}
 
+%s state1
 %%
 
 "("		{ return '('; }
@@ -84,7 +91,11 @@
 					MATCH( 'r' ) { c = '\r'; }
 					MATCH( 't' ) { c = '\t'; }
 					MATCH( 'v' ) { c = '\v'; }
-					OTHERWISE { throw SyntaxError(); }
+					MATCH( 'e' ) { c = '\x1b'; }
+					OTHERWISE {
+						delete dst;
+						throw SyntaxError();
+					}
 				}
 			}
 			else {

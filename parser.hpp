@@ -1,3 +1,4 @@
+// (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
 #include "ast.hpp"
