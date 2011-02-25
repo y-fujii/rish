@@ -3,12 +3,14 @@
 
 #include <exception>
 
+using namespace std;
 
-struct SyntaxError: std::exception {
+
+struct SyntaxError: exception {
 };
 
-struct RuntimeError: std::exception {
+struct RuntimeError: exception {
 };
 
-struct IOError: std::exception {
+struct IOError: exception {
 };

@@ -1,7 +1,10 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
+#include <deque>
 #include "glob.hpp"
+
+using namespace std;
 
 namespace ast {
 
@@ -79,8 +82,8 @@ struct Subst: Expr {
 };
 
 struct Var: Expr {
-	Var( std::string const& n ): Expr( tVar ), name( n ) {}
-	std::string name;
+	Var( string const& n ): Expr( tVar ), name( n ) {}
+	string name;
 };
 
 struct Pair: Expr {
@@ -102,16 +105,16 @@ struct Concat: Expr {
 struct VarFix: LeftExpr {
 	template<class Iter>
 	VarFix( Iter bgn, Iter end ): LeftExpr( tVarFix ), var( bgn, end ) {}
-	std::deque<Var*> var;
+	deque<Expr*> var;
 };
 
 struct VarVar: LeftExpr {
 	template<class Iter>
 	VarVar( Iter bgnL, Iter endL, Var* vM, Iter bgnR, Iter endR ):
 		LeftExpr( tVarVar ), varL( bgnL, endL ), varM( vM ), varR( bgnR, endR )  {}
-	std::deque<Var*> varL;
+	deque<Expr*> varL;
 	Var* varM;
-	std::deque<Var*> varR;
+	deque<Expr*> varR;
 };
 
 struct If: Stmt {

@@ -9,10 +9,10 @@
 #include "misc.hpp"
 #include "glob.hpp"
 
+using namespace std;
 
-int runCommand( std::deque<std::string> const& args, int ifd, int ofd ) {
-	using namespace std;
 
+int runCommand( deque<string> const& args, int ifd, int ofd ) {
 	assert( args.size() > 0 );
 
 	if( args[0] == "cd" ) {

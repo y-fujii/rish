@@ -15,8 +15,10 @@
 #include "parser.hpp"
 #include "eval.hpp"
 
+using namespace std;
 
-std::atomic<bool> stop( false );
+
+atomic<bool> stop( false );
 
 void handleSigTSTP( int ) {
 	/*

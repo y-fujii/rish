@@ -10,21 +10,19 @@
 #include "misc.hpp"
 #include "glob.hpp"
 
+using namespace std;
+
 namespace builtins {
 
 
-int chdir( std::deque<std::string> const& args, int ifd, int ofd ) {
-	using namespace std;
-
+int chdir( deque<string> const& args, int ifd, int ofd ) {
 	if( args.size() != 2 ) {
 		return 1;
 	}
 	return chdir( args[1].c_str() ) < 0 ? 1 : 0;
 }
 
-int strSize( std::deque<std::string> const& args, int ifd, int ofd ) {
-	using namespace std;
-
+int strSize( deque<string> const& args, int ifd, int ofd ) {
 	ostringstream buf;
 	for( int i = 1; i < args.sizre(); ++i ) {
 		buf << args[i].size() << '\n';
@@ -36,9 +34,7 @@ int strSize( std::deque<std::string> const& args, int ifd, int ofd ) {
 	return 0;
 }
 
-int strFind( std::deque<std::string> const& args, int ifd, int ofd ) {
-	using namespace std;
-
+int strFind( deque<string> const& args, int ifd, int ofd ) {
 	smatch match;
 	ostringstream buf;
 	for( int i = 2; i < args.size(); ++i ) {
@@ -51,9 +47,7 @@ int strFind( std::deque<std::string> const& args, int ifd, int ofd ) {
 	return 0;
 }
 
-int strMatch( std::deque<std::string> const& args, int ifd, int ofd ) {
-	using namespace std;
-
+int strMatch( deque<string> const& args, int ifd, int ofd ) {
 	if( args.size() != 2 ) {
 		return 1;
 	}
@@ -67,7 +61,7 @@ int strMatch( std::deque<std::string> const& args, int ifd, int ofd ) {
 	}
 }
 
-int strReplace( std::deque<std::string> const& args, int ifd, int ofd ) {
+int strReplace( deque<string> const& args, int ifd, int ofd ) {
 }
 
 template<class Map>

@@ -27,7 +27,7 @@
 	ast::Expr* expr;
 	ast::LeftExpr* lexpr;
 	ast::Stmt* stmt;
-	std::deque<ast::Var*>* vars;
+	std::deque<ast::Expr*>* vars;
 }
 
 %type<word> TK_WORD
@@ -112,7 +112,7 @@ lexpr_prim
 lexpr_list
 	: lexpr_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
 	| lexpr_list TK_WORD				{ $1->push_back( new Word( *$2 ) ); delete $2; $$ = $1; }
-	|									{ $$ = new deque<Var*>(); }
+	|									{ $$ = new deque<Expr*>(); }
 
 expr_list
 	: expr_concat expr_list				{ $$ = new Pair( $1, $2 ); }
