@@ -3,14 +3,15 @@
 
 #include "ast.hpp"
 #include "misc.hpp"
-#include "tokens.hpp"
 #include "lexer.hpp"
 
 
+extern size_t parseLineNo;
 extern ast::Stmt* parseResult;
 int yyparse();
 
-ast::Stmt* parse( char const* bgn, char const* end ) {
+inline ast::Stmt* parse( char const* bgn, char const* end ) {
+	parseLineNo = 0;
 	parseResult = NULL;
 	yy_scan_bytes( const_cast<char*>( bgn ), end - bgn );
 	yyparse();

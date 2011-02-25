@@ -14,6 +14,7 @@
 #include <cassert>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <sys/wait.h>
 #include "ast.hpp"
 #include "command.hpp"
@@ -264,7 +265,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		throw StopException();
 	}
 
-	switch( sb->tag ) {
+	try { switch( sb->tag ) {
 		MATCH( Stmt::tSequence ) {
 			Sequence* s = static_cast<Sequence*>( sb );
 			evalStmt( s->lhs, global, local, ifd, ofd, stop );
@@ -308,8 +309,10 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			Command* s = static_cast<Command*>( sb );
 			deque<string> args;
 			evalArgs( s->args, global, local, back_inserter( args ), stop );
-			
-			assert( args.size() >= 1 );
+			if( args.size() == 0 ) {
+				return 0;
+			}
+
 			map<string, Fun*>::const_iterator it = global->funs.find( args[0] );
 			if( it != global->funs.end() ) {
 				try {
@@ -319,7 +322,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 						return evalStmt( it->second->body, global, &local, ifd, ofd, stop );
 					}
 					else {
-						assert( false ); // will be implemented
+						assert( false ); // to be implemented
 					}
 				}
 				catch( ReturnException const& e ) {
@@ -334,6 +337,9 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			Return* s = static_cast<Return*>( sb );
 			deque<string> args;
 			evalArgs( s->retv, global, local, back_inserter( args ), stop );
+			if( args.size() == 0 ) {
+				return 1;
+			}
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -445,7 +451,11 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		OTHERWISE {
 			assert( false );
 		}
+	} }
+	catch( IOError const& ) {
+		return 1;
 	}
+
 	assert( false );
 }
 

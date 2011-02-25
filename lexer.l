@@ -11,6 +11,8 @@
 
 	using namespace std;
 
+	extern size_t parseLineNo;
+
 	extern "C" int yywrap() {
 		return 1;
 	}
@@ -19,29 +21,30 @@
 %s state1
 %%
 
-"("		{ return '('; }
-")"		{ return ')'; }
-"{"		{ return '{'; }
-"}"		{ return '}'; }
-"$"		{ return '$'; }
+"("			{ return '('; }
+")"			{ return ')'; }
+"{"			{ return '{'; }
+"}"			{ return '}'; }
+"$"			{ return '$'; }
 
-";"		{ return ';'; }
-"\n"	{ return ';'; }
-"&"		{ return '&'; }
-"!"		{ return '!'; }
-"|"		{ return '|'; }
-"="		{ return '='; }
-"^"		{ return '^'; }
-"@"		{ return '@'; }
+";"			{ return ';'; }
+"\n"		{ ++parseLineNo; return ';'; }
+"&"			{ return '&'; }
+"!"			{ return '!'; }
+"|"			{ return '|'; }
+"="			{ return '='; }
+"^"			{ return '^'; }
+"@"			{ return '@'; }
 
-"&&"	{ return TK_AND2; }
-"||"	{ return TK_OR2; }
-">|"	{ return TK_RDFR; }
-"|>"	{ return TK_RDT1; }
-"|>>"	{ return TK_RDT2; }
+"&&"		{ return TK_AND2; }
+"||"		{ return TK_OR2; }
+">|"		{ return TK_RDFR; }
+"|>"		{ return TK_RDT1; }
+"|>>"		{ return TK_RDT2; }
 
 "if"		{ return TK_IF; }
 "else"		{ return TK_ELSE; }
+\n[ \t]*else	{ ++parseLineNo; return TK_ELSE; }
 "while"		{ return TK_WHILE; }
 "for"		{ return TK_FOR; }
 "break"		{ return TK_BREAK; }
@@ -94,7 +97,7 @@
 					MATCH( 'e' ) { c = '\x1b'; }
 					OTHERWISE {
 						delete dst;
-						throw SyntaxError();
+						throw SyntaxError( parseLineNo );
 					}
 				}
 			}
@@ -112,7 +115,6 @@
 	return TK_WORD;
 }
 
-#.*\n
 [ \t]+
 
 %%
