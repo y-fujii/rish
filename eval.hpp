@@ -384,7 +384,15 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], stop, false, true ) );
-			int retv = evalStmtClose( s->rhs, global, fds[0], ofd, stop, true, false );
+			int retv;
+			try {
+				retv = evalStmt( s->rhs, global, fds[0], ofd, stop );
+			}
+			catch( ... ) {
+				close( fds[0] );
+				throw;
+			}
+			close( fds[0] );
 			thread.join();
 
 			return retv;
