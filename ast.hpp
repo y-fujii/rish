@@ -130,8 +130,8 @@ struct Command: Stmt {
 };
 
 struct Fun: Stmt {
-	Fun( MetaString const& n, Expr* a, Stmt* b ): Stmt( tFun ), name( n ), args( a ), body( b ) {}
-	MetaString name;
+	Fun( string const& n, Expr* a, Stmt* b ): Stmt( tFun ), name( n ), args( a ), body( b ) {}
+	string name;
 	Expr* args;
 	Stmt* body;
 };
