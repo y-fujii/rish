@@ -65,7 +65,7 @@ int main( int argc, char** ) {
 					ast::Stmt* ast = parse( line, line + len );
 
 					stop.store( false );
-					int retv = evalStmt( ast, &global, 0, 1, stop );
+					int retv = evalStmt( ast, &global, nullptr, 0, 1, stop );
 					if( retv != 0 ) {
 						cerr << "The command returned " << retv << "." << endl;
 					}
@@ -103,7 +103,7 @@ int main( int argc, char** ) {
 
 		Global global;
 		stop.store( false );
-		evalStmt( ast, &global, 0, 1, stop );
+		evalStmt( ast, &global, nullptr, 0, 1, stop );
 	}
 
 	return 0;

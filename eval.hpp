@@ -24,7 +24,7 @@ using namespace std;
 
 
 struct Global {
-	map<string, deque<string> > vars;
+	map<string, deque<string> > vars; // this will be removed
 	map<string, ast::Fun*> funs;
 	//map<string, pair<ast::Fun*, Local*> > funs;
 };
@@ -53,7 +53,7 @@ struct ReturnException {
 struct StopException {
 };
 
-void evalStmtClose( ast::Stmt*, Global*, int, int, atomic<bool>&, bool, bool );
+void evalStmtClose( ast::Stmt*, Global*, Local*, int, int, atomic<bool>&, bool, bool );
 
 
 inline void checkSysCall( int retv ) {
@@ -71,23 +71,28 @@ inline deque<string>& findVariable( string const& name, Global* global, Local* l
 	Local* it = local;
 	while( it != nullptr ) {
 		map<string, deque<string> >::iterator v = it->vars.find( name );
-		if( v != it->vars.find( name ) ) {
+		if( v != it->vars.end() ) {
 			return v->second;
 		}
 		it = local->outer;
 	}
 
 	map<string, deque<string> >::iterator v = global->vars.find( name );
-	if( v != it->vars.find( name ) ) {
+	if( v != global->vars.end() ) {
 		return v->second;
 	}
 
-	return local->vars[name];
+	if( local != nullptr ) {
+		return local->vars[name];
+	}
+	else {
+		return global->vars[name];
+	}
 }
 
 // XXX
 template<class Container>
-bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global ) {
+bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global, Local* local ) {
 	using namespace ast;
 
 	for( size_t i = 0; i < rhs.size(); ++i ) {
@@ -102,7 +107,7 @@ bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global ) {
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		if( lhs->var[i]->tag == Expr::tVar ) {
 			Var* tvar = static_cast<Var*>( lhs->var[i] );
-			deque<string>& vvar = global->vars[tvar->name];
+			deque<string>& vvar = findVariable( tvar->name, global, local );
 			vvar.clear();
 			vvar.push_back( rhs[i] );
 		}
@@ -113,7 +118,7 @@ bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global ) {
 
 // XXX
 template<class Container>
-bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global ) {
+bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global, Local* local ) {
 	using namespace ast;
 
 	size_t const lBgn = 0;
@@ -140,18 +145,18 @@ bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global ) {
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		if( lhs->varL[i]->tag == Expr::tVar ) {
 			Var* tvar = static_cast<Var*>( lhs->varL[i] );
-			deque<string>& vvar = global->vars[tvar->name];
+			deque<string>& vvar = findVariable( tvar->name, global, local );
 			vvar.clear();
 			vvar.push_back( rhs[i + lBgn] );
 		}
 	}
-	deque<string>& vvar = global->vars[lhs->varM->name];
+	deque<string>& vvar = findVariable( lhs->varM->name, global, local );
 	vvar.clear();
 	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( vvar ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		if( lhs->varR[i]->tag == Expr::tVar ) {
 			Var* tvar = static_cast<Var*>( lhs->varR[i] );
-			deque<string>& vvar = global->vars[tvar->name];
+			deque<string>& vvar = findVariable( tvar->name, global, local );
 			vvar.clear();
 			vvar.push_back( rhs[i + rBgn] );
 		}
@@ -160,8 +165,33 @@ bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global ) {
 	return true;
 }
 
+template<class Container>
+bool assign( ast::LeftExpr const* lhsb, Container const& rhs, Global* global, Local* local ) {
+	using namespace ast;
+
+	switch( lhsb->tag ) {
+		MATCH( LeftExpr::tVarFix ) {
+			VarFix const* lhs = static_cast<VarFix const*>( lhsb );
+			if( rhs.size() != lhs->var.size() ) {
+				return false;
+			}
+			return assign( lhs, rhs, global, local );
+		}
+		MATCH( LeftExpr::tVarVar ) {
+			VarVar const* lhs = static_cast<VarVar const*>( lhsb );
+			if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
+				return false;
+			}
+			return assign( lhs, rhs, global, local );
+		}
+		OTHERWISE {
+			assert( false );
+		}
+	}
+}
+
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, atomic<bool>& stop ) {
+DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atomic<bool>& stop ) {
 	using namespace ast;
 
 	if( stop.load() ) {
@@ -175,8 +205,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, atomic<bool>& stop
 		}
 		MATCH( Expr::tPair ) {
 			Pair* e = static_cast<Pair*>( eb );
-			evalExpr( e->lhs, global, dst, stop );
-			evalExpr( e->rhs, global, dst, stop );
+			evalExpr( e->lhs, global, local, dst, stop );
+			evalExpr( e->rhs, global, local, dst, stop );
 		}
 		MATCH( Expr::tNull ) {
 		}
@@ -184,8 +214,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, atomic<bool>& stop
 			Concat* e = static_cast<Concat*>( eb );
 			deque<MetaString> lhs;
 			deque<MetaString> rhs;
-			evalExpr( e->lhs, global, back_inserter( lhs ), stop );
-			evalExpr( e->rhs, global, back_inserter( rhs ), stop );
+			evalExpr( e->lhs, global, local, back_inserter( lhs ), stop );
+			evalExpr( e->rhs, global, local, back_inserter( rhs ), stop );
 			for( deque<MetaString>::const_iterator i = lhs.begin(); i != lhs.end(); ++i ) {
 				for( deque<MetaString>::const_iterator j = rhs.begin(); j != rhs.end(); ++j ) {
 					*dst++ = *i + *j;
@@ -194,17 +224,15 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, atomic<bool>& stop
 		}
 		MATCH( Expr::tVar ) {
 			Var* e = static_cast<Var*>( eb );
-			map<string, deque<string> >::const_iterator it = global->vars.find( e->name );
-			if( it != global->vars.end() ) {
-				dst = copy( it->second.begin(), it->second.end(), dst );
-			}
+			deque<string>& val = findVariable( e->name, global, local );
+			dst = copy( val.begin(), val.end(), dst );
 		}
 		MATCH( Expr::tSubst ) {
 			Subst* e = static_cast<Subst*>( eb );
 
 			int fds[2];
 			checkSysCall( pipe( fds ) );
-			Thread thread( bind( evalStmtClose, e->body, global, 0, fds[1], stop, false, true ) );
+			Thread thread( bind( evalStmtClose, e->body, global, local, 0, fds[1], stop, false, true ) );
 			{
 				UnixIStream ifs( fds[0] );
 				string buf;
@@ -223,13 +251,13 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, atomic<bool>& stop
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, atomic<bool>& stop ) {
+DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, DstIter dstIt, atomic<bool>& stop ) {
 	deque<MetaString> tmp;
-	evalExpr( expr, global, back_inserter( tmp ), stop );
+	evalExpr( expr, global, local, back_inserter( tmp ), stop );
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& stop ) {
+int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop ) {
 	using namespace ast;
 
 	if( stop.load() ) {
@@ -239,18 +267,18 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 	switch( sb->tag ) {
 		MATCH( Stmt::tSequence ) {
 			Sequence* s = static_cast<Sequence*>( sb );
-			evalStmt( s->lhs, global, ifd, ofd, stop );
-			return evalStmt( s->rhs, global, ifd, ofd, stop );
+			evalStmt( s->lhs, global, local, ifd, ofd, stop );
+			return evalStmt( s->rhs, global, local, ifd, ofd, stop );
 		}
 		MATCH( Stmt::tRedirFr ) {
 			RedirFr* s = static_cast<RedirFr*>( sb );
 			deque<string> args;
-			evalArgs( s->file, global, back_inserter( args ), stop );
+			evalArgs( s->file, global, local, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
 			int retv;
 			try {
-				retv = evalStmt( s->body, global, fd, ofd, stop );
+				retv = evalStmt( s->body, global, local, fd, ofd, stop );
 			}
 			catch( ... ) {
 				close( fd );
@@ -262,12 +290,12 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 		MATCH( Stmt::tRedirTo ) {
 			RedirTo* s = static_cast<RedirTo*>( sb );
 			deque<string> args;
-			evalArgs( s->file, global, back_inserter( args ), stop );
+			evalArgs( s->file, global, local, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
 			int retv;
 			try {
-				retv = evalStmt( s->body, global, ifd, fd, stop );
+				retv = evalStmt( s->body, global, local, ifd, fd, stop );
 			}
 			catch( ... ) {
 				close( fd );
@@ -279,13 +307,20 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 		MATCH( Stmt::tCommand ) {
 			Command* s = static_cast<Command*>( sb );
 			deque<string> args;
-			evalArgs( s->args, global, back_inserter( args ), stop );
+			evalArgs( s->args, global, local, back_inserter( args ), stop );
 			
 			assert( args.size() >= 1 );
 			map<string, Fun*>::const_iterator it = global->funs.find( args[0] );
 			if( it != global->funs.end() ) {
 				try {
-					return evalStmt( it->second->body, global, ifd, ofd, stop );
+					Local local;
+					args.pop_front();
+					if( assign( it->second->args, args, global, &local ) ) {
+						return evalStmt( it->second->body, global, &local, ifd, ofd, stop );
+					}
+					else {
+						assert( false ); // will be implemented
+					}
 				}
 				catch( ReturnException const& e ) {
 					return e.retv;
@@ -298,7 +333,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 		MATCH( Stmt::tReturn ) {
 			Return* s = static_cast<Return*>( sb );
 			deque<string> args;
-			evalArgs( s->retv, global, back_inserter( args ), stop );
+			evalArgs( s->retv, global, local, back_inserter( args ), stop );
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -312,29 +347,29 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 		}
 		MATCH( Stmt::tIf ) {
 			If* s = static_cast<If*>( sb );
-			if( evalStmt( s->cond, global, ifd, ofd, stop ) == 0 ) {
-				return evalStmt( s->then, global, ifd, ofd, stop );
+			if( evalStmt( s->cond, global, local, ifd, ofd, stop ) == 0 ) {
+				return evalStmt( s->then, global, local, ifd, ofd, stop );
 			}
 			else {
-				return evalStmt( s->elze, global, ifd, ofd, stop );
+				return evalStmt( s->elze, global, local, ifd, ofd, stop );
 			}
 		}
 		MATCH( Stmt::tWhile ) {
 			While* s = static_cast<While*>( sb );
 			try {
-				while( evalStmt( s->cond, global, ifd, ofd, stop ) == 0 ) {
-					evalStmt( s->body, global, ifd, ofd, stop );
+				while( evalStmt( s->cond, global, local, ifd, ofd, stop ) == 0 ) {
+					evalStmt( s->body, global, local, ifd, ofd, stop );
 				}
 			}
 			catch( BreakException const& e ) {
 				return e.retv;
 			}
-			return evalStmt( s->elze, global, ifd, ofd, stop );
+			return evalStmt( s->elze, global, local, ifd, ofd, stop );
 		}
 		MATCH( Stmt::tBreak ) {
 			Break* s = static_cast<Break*>( sb );
 			deque<string> args;
-			evalArgs( s->retv, global, back_inserter( args ), stop );
+			evalArgs( s->retv, global, local, back_inserter( args ), stop );
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -343,27 +378,9 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 		}
 		MATCH( Stmt::tLet ) {
 			Let* s = static_cast<Let*>( sb );
-			deque<string> rhs;
-			evalArgs( s->rhs, global, back_inserter( rhs ), stop );
-			switch( s->lhs->tag ) {
-				MATCH( LeftExpr::tVarFix ) {
-					VarFix* lhs = static_cast<VarFix*>( s->lhs );
-					if( rhs.size() != lhs->var.size() ) {
-						return 1;
-					}
-					return assign( lhs, rhs, global ) ? 0 : 1;
-				}
-				MATCH( LeftExpr::tVarVar ) {
-					VarVar* lhs = static_cast<VarVar*>( s->lhs );
-					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
-						return 1;
-					}
-					return assign( lhs, rhs, global ) ? 0 : 1;
-				}
-				OTHERWISE {
-					assert( false );
-				}
-			}
+			deque<string> vals;
+			evalArgs( s->rhs, global, local, back_inserter( vals ), stop );
+			return assign( s->lhs, vals, global, local ) ? 0 : 1;
 		}
 		MATCH( Stmt::tFetch ) {
 			Fetch* s = static_cast<Fetch*>( sb );
@@ -379,7 +396,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 						}
 					}
 
-					return assign( lhs, rhs, global ) ? 0 : 1;
+					return assign( lhs, rhs, global, local ) ? 0 : 1;
 				}
 				MATCH( LeftExpr::tVarVar ) {
 					VarVar* lhs = static_cast<VarVar*>( s->lhs );
@@ -394,7 +411,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 						return 1;
 					}
 
-					return assign( lhs, rhs, global ) ? 0 : 1;
+					return assign( lhs, rhs, global, local ) ? 0 : 1;
 				}
 			}
 		}
@@ -403,10 +420,10 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 
 			int fds[2];
 			checkSysCall( pipe( fds ) );
-			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], stop, false, true ) );
+			Thread thread( bind( evalStmtClose, s->lhs, global, local, ifd, fds[1], stop, false, true ) );
 			int retv;
 			try {
-				retv = evalStmt( s->rhs, global, fds[0], ofd, stop );
+				retv = evalStmt( s->rhs, global, local, fds[0], ofd, stop );
 			}
 			catch( ... ) {
 				close( fds[0] );
@@ -419,28 +436,6 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 		}
 		/*
 		MATCH( Stmt::tFor ) {
-			For* s = static_cast<For*>( sb );
-
-			UnixIStream ifs( ifd, 1 ); // XXX
-			while( true ) {
-				Expr* it = s->vars;
-				while( it->tag == Expr::tPair ) {
-					Pair* list = static_cast<Pair*>( it );
-					if( list->lhs->tag == Expr::tVar ) {
-						Var* var = static_cast<Var*>( list->lhs );
-						string lhs;
-						if( getline( ifs, lhs ) ) {
-							return 0;
-						}
-						deque<string>& rhs = global->vars[var->name];
-						rhs.clear();
-						rhs.push_back( lhs );
-					}
-					it = list->rhs;
-				}
-				evalStmt( s->body, global, ifd, ofd, stop );
-			}
-
 			return 0;
 		}
 		*/
@@ -454,8 +449,8 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 	assert( false );
 }
 
-void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
-	evalStmt( stmt, global, ifd, ofd, stop );
+void evalStmtClose( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
+	evalStmt( stmt, global, local, ifd, ofd, stop );
 	if( ic ) {
 		close( ifd );
 	}
