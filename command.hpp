@@ -13,7 +13,7 @@ using namespace std;
 
 
 int runCommand( deque<string> const& args, int ifd, int ofd ) {
-	assert( args.size() > 0 );
+	assert( args.size() >= 1 );
 
 	if( args[0] == "cd" ) {
 		if( args.size() != 2 ) {
@@ -27,21 +27,7 @@ int runCommand( deque<string> const& args, int ifd, int ofd ) {
 			buf << *it << '\n';
 		}
 		// XXX
-		write( ofd, buf.str().data(), buf.str().size() );
-		return 0;
-	}
-	else if( args[0] == "syscall" ) {
-		if( args.size() < 2 ) {
-			return 1;
-		}
-
-		if( args[1] == "tcgetpgrp" ) {
-			ostringstream buf;
-			buf << tcgetpgrp( 0 ) << endl;
-			write( ofd, buf.str().data(), buf.str().size() );
-			return 0;
-		}
-		return 1;
+		return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
 	}
 	else {
 		char const** args_raw = new char const*[args.size() + 1];
