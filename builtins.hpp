@@ -1,3 +1,4 @@
+// (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
 #include "config.hpp"
@@ -70,12 +71,14 @@ int strReplace( std::deque<std::string> const& args, int ifd, int ofd ) {
 }
 
 template<class Map>
-void register_( Map map ) {
+void register_( Map& map ) {
 	map["cd"] = chdir;
-	map["str.size"] = strFind;
+	map["str.size"] = strSize;
+	map["str.sub"] = strSub;
 	map["str.find"] = strFind;
 	map["str.match"] = strMatch;
 	map["str.replace"] = strReplace;
+	map["list."] = 
 }
 
 

@@ -1,3 +1,4 @@
+// (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
 #include "glob.hpp"
@@ -10,7 +11,7 @@ struct Expr {
 		tWord,
 		tSubst,
 		tVar,
-		tList,
+		tPair,
 		tNull,
 		tConcat
 	};
@@ -82,8 +83,8 @@ struct Var: Expr {
 	std::string name;
 };
 
-struct List: Expr {
-	List( Expr* l, Expr* r ): Expr( tList ), lhs( l ), rhs( r ) {}
+struct Pair: Expr {
+	Pair( Expr* l, Expr* r ): Expr( tPair ), lhs( l ), rhs( r ) {}
 	Expr* lhs;
 	Expr* rhs;
 };

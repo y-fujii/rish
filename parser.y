@@ -1,3 +1,5 @@
+/* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
+
 %{
 	#include <exception>
 	#include <deque>
@@ -14,10 +16,6 @@
 
 	extern "C" int yyerror( char const* ) {
 		throw SyntaxError();
-	}
-
-	extern "C" int yywrap() {
-		return 1;
 	}
 
 	ast::Stmt* parseResult = nullptr;
@@ -38,7 +36,7 @@
 %type<lexpr> lexpr_when lexpr_prim
 %type<stmt> stmt_seq stmt_bg stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
 %type<stmt> if_ else_
-%type<vars> var_list
+%type<vars> lexpr_list
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH
@@ -91,7 +89,7 @@ stmt_prim
 	| TK_LET lexpr_when '=' expr_list				{ $$ = new Let( $2, $4 ); }
 	| TK_FUN TK_WORD expr_list '{' stmt_seq '}'		{ $$ = new Fun( *$2, $3, $5 ); delete $2; }
 	| '{' stmt_seq '}'								{ $$ = $2; };
-	| expr_concat expr_list							{ $$ = new Command( new List( $1, $2 ) ); }
+	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }
 
 if_
 	: TK_IF stmt_andor '{' stmt_seq '}' else_		{ $$ = new If( $2, $4, $6 ); }
@@ -107,21 +105,17 @@ lexpr_when
 	*/
 	: lexpr_prim
 
-/*
 lexpr_prim
-	: expr_list
-	| expr_list '@' TK_VAR expr_list	{ $$ = new LExpr( $1, $3, $4 ); }
-*/
-lexpr_prim
-	: var_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
-	| var_list '@' TK_VAR var_list	{ $$ = new VarVar( $1->begin(), $1->end(), new Var( *$3 ), $4->begin(), $4->end() ); delete $1; delete $3; delete $4; }
+	: lexpr_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
+	| lexpr_list '@' TK_VAR lexpr_list	{ $$ = new VarVar( $1->begin(), $1->end(), new Var( *$3 ), $4->begin(), $4->end() ); delete $1; delete $3; delete $4; }
 
-var_list
-	: var_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
+lexpr_list
+	: lexpr_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
+	| lexpr_list TK_WORD				{ $1->push_back( new Word( *$2 ) ); delete $2; $$ = $1; }
 	|									{ $$ = new deque<Var*>(); }
 
 expr_list
-	: expr_concat expr_list				{ $$ = new List( $1, $2 ); }
+	: expr_concat expr_list				{ $$ = new Pair( $1, $2 ); }
 	| 									{ $$ = new Null(); }
 
 expr_concat
