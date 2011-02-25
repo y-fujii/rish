@@ -20,17 +20,19 @@
 #include "glob.hpp"
 #include "misc.hpp"
 
+using namespace std;
+
 
 struct Global {
-	std::map<std::string, std::deque<std::string> > vars;
-	std::map<MetaString, ast::Fun*> funs;
+	map<string, deque<string> > vars;
+	map<MetaString, ast::Fun*> funs;
 };
 
 struct Local {
 	Local( Local* o = nullptr ): outer( o ) {}
 
 	Local* outer;
-	std::map<std::string, std::deque<std::string> > vars;
+	map<string, deque<string> > vars;
 };
 
 struct BreakException {
@@ -61,54 +63,85 @@ inline void checkSysCall( int retv ) {
 	}
 }
 
-int evalStmt( ast::Stmt*, Global*, int, int, std::atomic<bool>& );
+void evalStmtClose( ast::Stmt*, Global*, int, int, atomic<bool>&, bool, bool );
 
-void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, std::atomic<bool>& stop, bool ic = false, bool oc = false ) {
-	evalStmt( stmt, global, ifd, ofd, stop );
-	if( ic ) {
-		close( ifd );
-	}
-	if( oc ) {
-		close( ofd );
-	}
-}
-
+// XXX
 template<class Container>
-void assign( ast::VarFix const* lhs, Container const& rhs, Global* global ) {
-	using namespace std;
+bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global ) {
+	using namespace ast;
 
 	for( size_t i = 0; i < rhs.size(); ++i ) {
-		deque<string>& var = global->vars[lhs->var[i]->name];
-		var.clear();
-		var.push_back( rhs[i] );
+		if( lhs->var[i]->tag == Expr::tWord ) {
+			Word* word = static_cast<Word*>( lhs->var[i] );
+			if( word->word != MetaString( rhs[i] ) ) {
+				return false;
+			}
+		}
 	}
+
+	for( size_t i = 0; i < rhs.size(); ++i ) {
+		if( lhs->var[i]->tag == Expr::tVar ) {
+			Var* tvar = static_cast<Var*>( lhs->var[i] );
+			deque<string>& vvar = global->vars[tvar->name];
+			vvar.clear();
+			vvar.push_back( rhs[i] );
+		}
+	}
+
+	return true;
 }
 
+// XXX
 template<class Container>
-void assign( ast::VarVar const* lhs, Container const& rhs, Global* global ) {
-	using namespace std;
+bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global ) {
+	using namespace ast;
 
 	size_t const lBgn = 0;
 	size_t const mBgn = lhs->varL.size();
 	size_t const rBgn = rhs.size() - lhs->varR.size();
+
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		deque<string>& var = global->vars[lhs->varL[i]->name];
-		var.clear();
-		var.push_back( rhs[i + lBgn] );
+		if( lhs->varL[i]->tag == Expr::tWord ) {
+			Word* word = static_cast<Word*>( lhs->varL[i] );
+			if( word->word != MetaString( rhs[i + lBgn] ) ) {
+				return false;
+			}
+		}
 	}
-	deque<string>& var = global->vars[lhs->varM->name];
-	var.clear();
-	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( var ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		deque<string>& var = global->vars[lhs->varR[i]->name];
-		var.clear();
-		var.push_back( rhs[i + rBgn] );
+		if( lhs->varR[i]->tag == Expr::tWord ) {
+			Word* word = static_cast<Word*>( lhs->varR[i] );
+			if( word->word != MetaString( rhs[i + rBgn] ) ) {
+				return false;
+			}
+		}
 	}
+
+	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
+		if( lhs->varL[i]->tag == Expr::tVar ) {
+			Var* tvar = static_cast<Var*>( lhs->varL[i] );
+			deque<string>& vvar = global->vars[tvar->name];
+			vvar.clear();
+			vvar.push_back( rhs[i + lBgn] );
+		}
+	}
+	deque<string>& vvar = global->vars[lhs->varM->name];
+	vvar.clear();
+	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( vvar ) );
+	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
+		if( lhs->varR[i]->tag == Expr::tVar ) {
+			Var* tvar = static_cast<Var*>( lhs->varR[i] );
+			deque<string>& vvar = global->vars[tvar->name];
+			vvar.clear();
+			vvar.push_back( rhs[i + rBgn] );
+		}
+	}
+
+	return true;
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, std::atomic<bool>& stop ) {
-	using namespace std;
+DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, atomic<bool>& stop ) {
 	using namespace ast;
 
 	if( stop.load() ) {
@@ -170,16 +203,13 @@ DstIter evalExpr( ast::Expr* eb, Global* global, DstIter dst, std::atomic<bool>&
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, std::atomic<bool>& stop ) {
-	using namespace std;
-
+DstIter evalArgs( ast::Expr* expr, Global* global, DstIter dstIt, atomic<bool>& stop ) {
 	deque<MetaString> tmp;
 	evalExpr( expr, global, back_inserter( tmp ), stop );
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>& stop ) {
-	using namespace std;
+int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& stop ) {
 	using namespace ast;
 
 	if( stop.load() ) {
@@ -301,23 +331,19 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 					if( rhs.size() != lhs->var.size() ) {
 						return 1;
 					}
-
-					assign( lhs, rhs, global );
+					return assign( lhs, rhs, global ) ? 0 : 1;
 				}
 				MATCH( LeftExpr::tVarVar ) {
 					VarVar* lhs = static_cast<VarVar*>( s->lhs );
 					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
 						return 1;
 					}
-
-					assign( lhs, rhs, global );
+					return assign( lhs, rhs, global ) ? 0 : 1;
 				}
 				OTHERWISE {
 					assert( false );
 				}
 			}
-
-			return 0;
 		}
 		MATCH( Stmt::tFetch ) {
 			Fetch* s = static_cast<Fetch*>( sb );
@@ -333,7 +359,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 						}
 					}
 
-					assign( lhs, rhs, global );
+					return assign( lhs, rhs, global ) ? 0 : 1;
 				}
 				MATCH( LeftExpr::tVarVar ) {
 					VarVar* lhs = static_cast<VarVar*>( s->lhs );
@@ -344,16 +370,13 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 					while( getline( ifs, buf ) ) {
 						rhs.push_back( buf );
 					}
-
 					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
 						return 1;
 					}
 
-					assign( lhs, rhs, global );
+					return assign( lhs, rhs, global ) ? 0 : 1;
 				}
 			}
-
-			return 0;
 		}
 		MATCH( Stmt::tPipe ) {
 			Pipe* s = static_cast<Pipe*>( sb );
@@ -401,4 +424,14 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, std::atomic<bool>
 		}
 	}
 	assert( false );
+}
+
+void evalStmtClose( ast::Stmt* stmt, Global* global, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
+	evalStmt( stmt, global, ifd, ofd, stop );
+	if( ic ) {
+		close( ifd );
+	}
+	if( oc ) {
+		close( ofd );
+	}
 }
