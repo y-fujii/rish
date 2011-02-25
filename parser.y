@@ -14,11 +14,12 @@
 
 	int yylex();
 
-	extern "C" int yyerror( char const* ) {
-		throw SyntaxError();
-	}
-
+	size_t parseLineNo = 0;
 	ast::Stmt* parseResult = nullptr;
+
+	extern "C" int yyerror( char const* ) {
+		throw SyntaxError( parseLineNo );
+	}
 %}
 
 %union {
@@ -27,7 +28,7 @@
 	ast::Expr* expr;
 	ast::LeftExpr* lexpr;
 	ast::Stmt* stmt;
-	std::deque<ast::Expr*>* vars;
+	std::deque<ast::Expr*>* exprs;
 }
 
 %type<word> TK_WORD
@@ -36,7 +37,7 @@
 %type<lexpr> lexpr_when lexpr_prim
 %type<stmt> stmt_seq stmt_bg stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
 %type<stmt> if_ else_
-%type<vars> lexpr_list
+%type<exprs> lexpr_list
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH

@@ -99,7 +99,14 @@ int main( int argc, char** ) {
 			(istreambuf_iterator<char>())
 		);
 
-		ast::Stmt* ast = parse( buf.data(), buf.data() + buf.size() );
+		ast::Stmt* ast;
+		try {
+			ast = parse( buf.data(), buf.data() + buf.size() );
+		}
+		catch( SyntaxError const& err ) {
+			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
+			return 1;
+		}
 
 		Global global;
 		stop.store( false );

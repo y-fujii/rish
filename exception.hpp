@@ -7,6 +7,8 @@ using namespace std;
 
 
 struct SyntaxError: exception {
+	SyntaxError( size_t l ): line( l ) {}
+	size_t line;
 };
 
 struct RuntimeError: exception {
