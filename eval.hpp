@@ -240,7 +240,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 			return retv;
 		}
 		MATCH( Stmt::tRedirTo ) {
-			RedirFr* s = static_cast<RedirFr*>( sb );
+			RedirTo* s = static_cast<RedirTo*>( sb );
 			deque<string> args;
 			evalArgs( s->file, global, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
@@ -261,7 +261,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 			deque<string> args;
 			evalArgs( s->args, global, back_inserter( args ), stop );
 			
-			assert( args.size() > 0 );
+			assert( args.size() >= 1 );
 			map<MetaString, Fun*>::const_iterator it = global->funs.find( args[0] );
 			if( it != global->funs.end() ) {
 				try {
@@ -319,7 +319,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
 			}
-			throw BreakException( retv ) ;
+			throw BreakException( retv );
 		}
 		MATCH( Stmt::tLet ) {
 			Let* s = static_cast<Let*>( sb );
@@ -384,10 +384,10 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, s->lhs, global, ifd, fds[1], stop, false, true ) );
-			evalStmtClose( s->rhs, global, fds[0], ofd, stop, true, false );
+			int retv = evalStmtClose( s->rhs, global, fds[0], ofd, stop, true, false );
 			thread.join();
 
-			return 0;
+			return retv;
 		}
 		/*
 		MATCH( Stmt::tFor ) {

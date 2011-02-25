@@ -72,7 +72,10 @@ void register_( Map& map ) {
 	map["str.find"] = strFind;
 	map["str.match"] = strMatch;
 	map["str.replace"] = strReplace;
-	map["list."] = 
+	/*
+	map["list.size"] = 
+	map["list.sub"] = 
+	*/
 }
 
 
