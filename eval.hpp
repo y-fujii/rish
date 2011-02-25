@@ -25,7 +25,8 @@ using namespace std;
 
 struct Global {
 	map<string, deque<string> > vars;
-	map<MetaString, ast::Fun*> funs;
+	map<string, ast::Fun*> funs;
+	//map<string, pair<ast::Fun*, Local*> > funs;
 };
 
 struct Local {
@@ -52,6 +53,9 @@ struct ReturnException {
 struct StopException {
 };
 
+void evalStmtClose( ast::Stmt*, Global*, int, int, atomic<bool>&, bool, bool );
+
+
 inline void checkSysCall( int retv ) {
 	if( retv < 0 ) {
 		if( errno == EINTR ) {
@@ -63,7 +67,23 @@ inline void checkSysCall( int retv ) {
 	}
 }
 
-void evalStmtClose( ast::Stmt*, Global*, int, int, atomic<bool>&, bool, bool );
+inline deque<string>& findVariable( string const& name, Global* global, Local* local ) {
+	Local* it = local;
+	while( it != nullptr ) {
+		map<string, deque<string> >::iterator v = it->vars.find( name );
+		if( v != it->vars.find( name ) ) {
+			return v->second;
+		}
+		it = local->outer;
+	}
+
+	map<string, deque<string> >::iterator v = global->vars.find( name );
+	if( v != it->vars.find( name ) ) {
+		return v->second;
+	}
+
+	return local->vars[name];
+}
 
 // XXX
 template<class Container>
@@ -262,7 +282,7 @@ int evalStmt( ast::Stmt* sb, Global* global, int ifd, int ofd, atomic<bool>& sto
 			evalArgs( s->args, global, back_inserter( args ), stop );
 			
 			assert( args.size() >= 1 );
-			map<MetaString, Fun*>::const_iterator it = global->funs.find( args[0] );
+			map<string, Fun*>::const_iterator it = global->funs.find( args[0] );
 			if( it != global->funs.end() ) {
 				try {
 					return evalStmt( it->second->body, global, ifd, ofd, stop );

@@ -16,6 +16,14 @@ rish: $(SRCS)
 	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
 	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline -lcurses
 
+E: $(SRCS)
+	$(YACC) -dv parser.y; \
+	mv y.tab.h tokens.hpp; \
+	mv y.tab.c parser.cpp; \
+	mv y.output parser.out
+	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
+	$(CXX) -E main.cpp lexer.cpp parser.cpp | wc
+
 test: rish
 	wc $(SRCS)
 	./rish
