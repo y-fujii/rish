@@ -93,24 +93,26 @@ inline deque<string>& findVariable( string const& name, Global* global, Local* l
 
 // XXX
 template<class Container>
-bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global, Local* local ) {
+bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
 	using namespace ast;
 
 	for( size_t i = 0; i < rhs.size(); ++i ) {
-		if( lhs->var[i]->tag == Expr::tWord ) {
-			Word* word = static_cast<Word*>( lhs->var[i] );
-			if( word->word != MetaString( rhs[i] ) ) {
-				return false;
+		VARIANT_SWITCH( Expr, lhs->var[i] ) {
+			VARIANT_CASE( Word, word ) {
+				if( word->word != MetaString( rhs[i] ) ) {
+					return false;
+				}
 			}
 		}
 	}
 
 	for( size_t i = 0; i < rhs.size(); ++i ) {
-		if( lhs->var[i]->tag == Expr::tVar ) {
-			Var* tvar = static_cast<Var*>( lhs->var[i] );
-			deque<string>& vvar = findVariable( tvar->name, global, local );
-			vvar.clear();
-			vvar.push_back( rhs[i] );
+		VARIANT_SWITCH( Expr, lhs->var[i] ) {
+			VARIANT_CASE( Var, tvar ) {
+				deque<string>& vvar = findVariable( tvar->name, global, local );
+				vvar.clear();
+				vvar.push_back( rhs[i] );
+			}
 		}
 	}
 
@@ -119,7 +121,7 @@ bool assign( ast::VarFix const* lhs, Container const& rhs, Global* global, Local
 
 // XXX
 template<class Container>
-bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global, Local* local ) {
+bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 	using namespace ast;
 
 	size_t const lBgn = 0;
@@ -127,39 +129,43 @@ bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global, Local
 	size_t const rBgn = rhs.size() - lhs->varR.size();
 
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		if( lhs->varL[i]->tag == Expr::tWord ) {
-			Word* word = static_cast<Word*>( lhs->varL[i] );
-			if( word->word != MetaString( rhs[i + lBgn] ) ) {
-				return false;
+		VARIANT_SWITCH( Expr, lhs->varL[i] ) {
+			VARIANT_CASE( Word, word ) {
+				if( word->word != MetaString( rhs[i + lBgn] ) ) {
+					return false;
+				}
 			}
 		}
 	}
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		if( lhs->varR[i]->tag == Expr::tWord ) {
-			Word* word = static_cast<Word*>( lhs->varR[i] );
-			if( word->word != MetaString( rhs[i + rBgn] ) ) {
-				return false;
+		VARIANT_SWITCH( Expr, lhs->varR[i] ) {
+			VARIANT_CASE( Word, word ) {
+				if( word->word != MetaString( rhs[i + rBgn] ) ) {
+					return false;
+				}
 			}
 		}
 	}
 
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		if( lhs->varL[i]->tag == Expr::tVar ) {
-			Var* tvar = static_cast<Var*>( lhs->varL[i] );
-			deque<string>& vvar = findVariable( tvar->name, global, local );
-			vvar.clear();
-			vvar.push_back( rhs[i + lBgn] );
+		VARIANT_SWITCH( Expr, lhs->varL[i] ) {
+			VARIANT_CASE( Var, tvar ) {
+				deque<string>& vvar = findVariable( tvar->name, global, local );
+				vvar.clear();
+				vvar.push_back( rhs[i + lBgn] );
+			}
 		}
 	}
 	deque<string>& vvar = findVariable( lhs->varM->name, global, local );
 	vvar.clear();
 	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( vvar ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		if( lhs->varR[i]->tag == Expr::tVar ) {
-			Var* tvar = static_cast<Var*>( lhs->varR[i] );
-			deque<string>& vvar = findVariable( tvar->name, global, local );
-			vvar.clear();
-			vvar.push_back( rhs[i + rBgn] );
+		VARIANT_SWITCH( Expr, lhs->varR[i] ) {
+			VARIANT_CASE( Var, tvar ) {
+				deque<string>& vvar = findVariable( tvar->name, global, local );
+				vvar.clear();
+				vvar.push_back( rhs[i + rBgn] );
+			}
 		}
 	}
 
@@ -167,19 +173,17 @@ bool assign( ast::VarVar const* lhs, Container const& rhs, Global* global, Local
 }
 
 template<class Container>
-bool assign( ast::LeftExpr const* lhsb, Container const& rhs, Global* global, Local* local ) {
+bool assign( ast::LeftExpr* lhsb, Container& rhs, Global* global, Local* local ) {
 	using namespace ast;
 
-	switch( lhsb->tag ) {
-		MATCH( LeftExpr::tVarFix ) {
-			VarFix const* lhs = static_cast<VarFix const*>( lhsb );
+	VARIANT_SWITCH( LeftExpr, lhsb ) {
+		VARIANT_CASE( VarFix, lhs ) {
 			if( rhs.size() != lhs->var.size() ) {
 				return false;
 			}
 			return assign( lhs, rhs, global, local );
 		}
-		MATCH( LeftExpr::tVarVar ) {
-			VarVar const* lhs = static_cast<VarVar const*>( lhsb );
+		VARIANT_CASE( VarVar, lhs ) {
 			if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
 				return false;
 			}
@@ -199,20 +203,17 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 		throw StopException();
 	}
 
-	switch( eb->tag ) {
-		MATCH( Expr::tWord ) {
-			Word* e = static_cast<Word*>( eb );
+	VARIANT_SWITCH( Expr, eb ) {
+		VARIANT_CASE( Word, e ) {
 			*dst++ = e->word;
 		}
-		MATCH( Expr::tPair ) {
-			Pair* e = static_cast<Pair*>( eb );
+		VARIANT_CASE( Pair, e ) {
 			evalExpr( e->lhs, global, local, dst, stop );
 			evalExpr( e->rhs, global, local, dst, stop );
 		}
-		MATCH( Expr::tNull ) {
+		VARIANT_CASE( Null, e ) {
 		}
-		MATCH( Expr::tConcat ) {
-			Concat* e = static_cast<Concat*>( eb );
+		VARIANT_CASE( Concat, e ) {
 			deque<MetaString> lhs;
 			deque<MetaString> rhs;
 			evalExpr( e->lhs, global, local, back_inserter( lhs ), stop );
@@ -223,14 +224,11 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 				}
 			}
 		}
-		MATCH( Expr::tVar ) {
-			Var* e = static_cast<Var*>( eb );
+		VARIANT_CASE( Var, e ) {
 			deque<string>& val = findVariable( e->name, global, local );
 			dst = copy( val.begin(), val.end(), dst );
 		}
-		MATCH( Expr::tSubst ) {
-			Subst* e = static_cast<Subst*>( eb );
-
+		VARIANT_CASE( Subst, e ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, e->body, global, local, 0, fds[1], stop, false, true ) );
@@ -265,14 +263,12 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		throw StopException();
 	}
 
-	try { switch( sb->tag ) {
-		MATCH( Stmt::tSequence ) {
-			Sequence* s = static_cast<Sequence*>( sb );
+	try { VARIANT_SWITCH( Stmt, sb ) {
+		VARIANT_CASE( Sequence, s ) {
 			evalStmt( s->lhs, global, local, ifd, ofd, stop );
 			return evalStmt( s->rhs, global, local, ifd, ofd, stop );
 		}
-		MATCH( Stmt::tRedirFr ) {
-			RedirFr* s = static_cast<RedirFr*>( sb );
+		VARIANT_CASE( RedirFr, s ) {
 			deque<string> args;
 			evalArgs( s->file, global, local, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_RDONLY );
@@ -280,8 +276,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			ScopeExit closer( bind( close, fd ) );
 			return evalStmt( s->body, global, local, fd, ofd, stop );
 		}
-		MATCH( Stmt::tRedirTo ) {
-			RedirTo* s = static_cast<RedirTo*>( sb );
+		VARIANT_CASE( RedirTo, s ) {
 			deque<string> args;
 			evalArgs( s->file, global, local, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
@@ -289,8 +284,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			ScopeExit closer( bind( close, fd ) );
 			return evalStmt( s->body, global, local, ifd, fd, stop );
 		}
-		MATCH( Stmt::tCommand ) {
-			Command* s = static_cast<Command*>( sb );
+		VARIANT_CASE( Command, s ) {
 			deque<string> args;
 			evalArgs( s->args, global, local, back_inserter( args ), stop );
 			if( args.size() == 0 ) {
@@ -317,8 +311,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				return runCommand( args, ifd, ofd );
 			}
 		}
-		MATCH( Stmt::tReturn ) {
-			Return* s = static_cast<Return*>( sb );
+		VARIANT_CASE( Return, s ) {
 			deque<string> args;
 			evalArgs( s->retv, global, local, back_inserter( args ), stop );
 			if( args.size() == 0 ) {
@@ -330,13 +323,11 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			}
 			throw ReturnException( retv ) ;
 		}
-		MATCH( Stmt::tFun ) {
-			Fun* s = static_cast<Fun*>( sb );
+		VARIANT_CASE( Fun, s ) {
 			global->funs[s->name] = s;
 			return 0;
 		}
-		MATCH( Stmt::tIf ) {
-			If* s = static_cast<If*>( sb );
+		VARIANT_CASE( If, s ) {
 			if( evalStmt( s->cond, global, local, ifd, ofd, stop ) == 0 ) {
 				return evalStmt( s->then, global, local, ifd, ofd, stop );
 			}
@@ -344,8 +335,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				return evalStmt( s->elze, global, local, ifd, ofd, stop );
 			}
 		}
-		MATCH( Stmt::tWhile ) {
-			While* s = static_cast<While*>( sb );
+		VARIANT_CASE( While, s ) {
 			try {
 				while( evalStmt( s->cond, global, local, ifd, ofd, stop ) == 0 ) {
 					evalStmt( s->body, global, local, ifd, ofd, stop );
@@ -356,8 +346,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			}
 			return evalStmt( s->elze, global, local, ifd, ofd, stop );
 		}
-		MATCH( Stmt::tBreak ) {
-			Break* s = static_cast<Break*>( sb );
+		VARIANT_CASE( Break, s ) {
 			deque<string> args;
 			evalArgs( s->retv, global, local, back_inserter( args ), stop );
 			int retv;
@@ -366,18 +355,14 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			}
 			throw BreakException( retv );
 		}
-		MATCH( Stmt::tLet ) {
-			Let* s = static_cast<Let*>( sb );
+		VARIANT_CASE( Let, s ) {
 			deque<string> vals;
 			evalArgs( s->rhs, global, local, back_inserter( vals ), stop );
 			return assign( s->lhs, vals, global, local ) ? 0 : 1;
 		}
-		MATCH( Stmt::tFetch ) {
-			Fetch* s = static_cast<Fetch*>( sb );
-			switch( s->lhs->tag ) {
-				MATCH( LeftExpr::tVarFix ) {
-					VarFix* lhs = static_cast<VarFix*>( s->lhs );
-
+		VARIANT_CASE( Fetch, s ) {
+			VARIANT_SWITCH( LeftExpr, s->lhs ) {
+				VARIANT_CASE( VarFix, lhs ) {
 					UnixIStream ifs( ifd, 1 );
 					deque<string> rhs( lhs->var.size() );
 					for( deque<string>::iterator it = rhs.begin(); it != rhs.end(); ++it ) {
@@ -388,9 +373,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 
 					return assign( lhs, rhs, global, local ) ? 0 : 1;
 				}
-				MATCH( LeftExpr::tVarVar ) {
-					VarVar* lhs = static_cast<VarVar*>( s->lhs );
-
+				VARIANT_CASE( VarVar, lhs ) {
 					deque<string> rhs;
 					UnixIStream ifs( ifd );
 					string buf;
@@ -405,9 +388,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				}
 			}
 		}
-		MATCH( Stmt::tPipe ) {
-			Pipe* s = static_cast<Pipe*>( sb );
-
+		VARIANT_CASE( Pipe, s ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, s->lhs, global, local, ifd, fds[1], stop, false, true ) );
@@ -421,11 +402,11 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			return retv;
 		}
 		/*
-		MATCH( Stmt::tFor ) {
+		VARIANT_CASE( For, s ) {
 			return 0;
 		}
 		*/
-		MATCH( Stmt::tNone ) {
+		VARIANT_CASE( None, s ) {
 			return 0;
 		}
 		OTHERWISE {

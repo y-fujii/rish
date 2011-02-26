@@ -89,6 +89,32 @@ struct ScopeExit {
 		std::function<void ()> const _callback;
 };
 
+template<class T>
+struct VariantBase: T {
+	VariantBase( int t ): _tag( t ) {}
+	int tag() const { return _tag; }
+
+	private:
+		int const _tag;
+};
+
+template<class T, int Id>
+struct Variant: VariantBase<T> {
+	Variant(): VariantBase<T>( Id ) {
+	}
+
+	enum { variantId = Id };
+};
+
+#define VARIANT_SWITCH( type, val ) \
+	if( VariantBase<type>* _type_switch_value_ = static_cast<VariantBase<type>*>( val ) ) \
+		switch( _type_switch_value_->tag() )
+
+#define VARIANT_CASE( type, lhs ) \
+	break; \
+	case type::variantId: \
+		if( type* lhs = static_cast<type*>( _type_switch_value_ ) )
+
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
 		_fd( fd ), _buf( bs ) {
