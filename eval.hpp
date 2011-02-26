@@ -440,13 +440,24 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 }
 
 int evalStmtClose( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
-	// try
-	int retv = evalStmt( stmt, global, local, ifd, ofd, stop );
-	if( ic ) {
-		close( ifd );
+	int retv;
+	try {
+		retv = evalStmt( stmt, global, local, ifd, ofd, stop );
+		if( ic ) {
+			close( ifd );
+		}
+		if( oc ) {
+			close( ofd );
+		}
 	}
-	if( oc ) {
-		close( ofd );
+	catch( ... ) {
+		if( ic ) {
+			close( ifd );
+		}
+		if( oc ) {
+			close( ofd );
+		}
+		throw;
 	}
 
 	return retv;
