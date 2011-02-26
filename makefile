@@ -1,6 +1,6 @@
 LEX = flex -X
-CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
-#CXX = g++ -g -pedantic -Wall -Wextra -pthread -Os
+#CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
+CXX = g++ -g -pedantic -Wall -Wextra -pthread -Os
 
 SRCS = \
 	lexer.l parser.y \
@@ -15,14 +15,6 @@ rish: $(SRCS)
 	mv y.output parser.out
 	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
 	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline -lcurses
-
-E: $(SRCS)
-	$(YACC) -dv parser.y; \
-	mv y.tab.h tokens.hpp; \
-	mv y.tab.c parser.cpp; \
-	mv y.output parser.out
-	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
-	$(CXX) -E main.cpp lexer.cpp parser.cpp | wc
 
 test: rish
 	wc $(SRCS)

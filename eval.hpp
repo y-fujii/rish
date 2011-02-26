@@ -54,7 +54,7 @@ struct ReturnException {
 struct StopException {
 };
 
-void evalStmtClose( ast::Stmt*, Global*, Local*, int, int, atomic<bool>&, bool, bool );
+int evalStmtClose( ast::Stmt*, Global*, Local*, int, int, atomic<bool>&, bool, bool );
 
 
 inline void checkSysCall( int retv ) {
@@ -235,13 +235,13 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, e->body, global, local, 0, fds[1], stop, false, true ) );
 			{
+				ScopeExit closer( bind( close, fds[0] ) );
 				UnixIStream ifs( fds[0] );
 				string buf;
 				while( getline( ifs, buf ) ) {
 					*dst++ = buf;
 				}
 			}
-			close( fds[0] );
 			thread.join();
 		}
 		OTHERWISE {
@@ -277,16 +277,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			evalArgs( s->file, global, local, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
-			int retv;
-			try {
-				retv = evalStmt( s->body, global, local, fd, ofd, stop );
-			}
-			catch( ... ) {
-				close( fd );
-				throw;
-			}
-			close( fd );
-			return retv;
+			ScopeExit closer( bind( close, fd ) );
+			return evalStmt( s->body, global, local, fd, ofd, stop );
 		}
 		MATCH( Stmt::tRedirTo ) {
 			RedirTo* s = static_cast<RedirTo*>( sb );
@@ -294,16 +286,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			evalArgs( s->file, global, local, back_inserter( args ), stop );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
-			int retv;
-			try {
-				retv = evalStmt( s->body, global, local, ifd, fd, stop );
-			}
-			catch( ... ) {
-				close( fd );
-				throw;
-			}
-			close( fd );
-			return retv;
+			ScopeExit closer( bind( close, fd ) );
+			return evalStmt( s->body, global, local, ifd, fd, stop );
 		}
 		MATCH( Stmt::tCommand ) {
 			Command* s = static_cast<Command*>( sb );
@@ -428,14 +412,10 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmtClose, s->lhs, global, local, ifd, fds[1], stop, false, true ) );
 			int retv;
-			try {
+			{
+				ScopeExit closer( bind( close, fds[0] ) );
 				retv = evalStmt( s->rhs, global, local, fds[0], ofd, stop );
 			}
-			catch( ... ) {
-				close( fds[0] );
-				throw;
-			}
-			close( fds[0] );
 			thread.join();
 
 			return retv;
@@ -459,12 +439,15 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 	assert( false );
 }
 
-void evalStmtClose( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
-	evalStmt( stmt, global, local, ifd, ofd, stop );
+int evalStmtClose( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
+	// try
+	int retv = evalStmt( stmt, global, local, ifd, ofd, stop );
 	if( ic ) {
 		close( ifd );
 	}
 	if( oc ) {
 		close( ofd );
 	}
+
+	return retv;
 }

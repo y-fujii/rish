@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <tr1/functional>
+#include <stdint.h>
 #include <cassert>
 #include <unistd.h>
 #include <signal.h>
@@ -63,17 +64,34 @@ namespace std {
 	};
 }
 
+#if !defined( __GNUC__ )
 struct {
 	template<class T>
 	operator T*() const {
 		return 0;
 	}
 } const nullptr = {};
+#else
+#define nullptr 0
+#endif
 
 template<class T, unsigned N>
 unsigned size( T const (&)[N] ) {
 	return N;
 }
+
+struct ScopeExit {
+	template<class T>
+	ScopeExit( T const& cb ): _callback( cb ) {
+	}
+
+	~ScopeExit() {
+		_callback();
+	}
+
+	private:
+		std::function<void ()> const _callback;
+};
 
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
@@ -131,10 +149,12 @@ struct Thread {
 		}
 	}
 
-	void join() {
-		if( pthread_join( _thread, NULL ) != 0 ) {
+	bool join() {
+		void* result;
+		if( pthread_join( _thread, &result ) != 0 ) {
 			throw std::exception();
 		}
+		return bool( reinterpret_cast<uintptr_t>( result ) );
 	}
 
 	void kill( int sig ) {
@@ -145,8 +165,13 @@ struct Thread {
 
 	private:
 		static void* _wrap( void* self ) {
-			reinterpret_cast<Thread*>( self )->_callback();
-			return 0;
+			try {
+				reinterpret_cast<Thread*>( self )->_callback();
+			}
+			catch( ... ) {
+				return reinterpret_cast<void*>( false );
+			}
+			return reinterpret_cast<void*>( true );
 		}
 
 		pthread_t _thread;
