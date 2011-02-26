@@ -64,16 +64,12 @@ namespace std {
 	};
 }
 
-#if !defined( __GNUC__ )
 struct {
 	template<class T>
 	operator T*() const {
 		return 0;
 	}
 } const nullptr = {};
-#else
-#define nullptr 0
-#endif
 
 template<class T, unsigned N>
 unsigned size( T const (&)[N] ) {
