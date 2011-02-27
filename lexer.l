@@ -86,19 +86,18 @@
 			assert( yytext[i] != '\0' );
 			if( isalnum( yytext[i] ) ) {
 				switch( yytext[i] ) {
-					MATCH( '0' ) { c = '\0'; }
-					MATCH( 'a' ) { c = '\a'; }
-					MATCH( 'b' ) { c = '\b'; }
-					MATCH( 'f' ) { c = '\f'; }
-					MATCH( 'n' ) { c = '\n'; }
-					MATCH( 'r' ) { c = '\r'; }
-					MATCH( 't' ) { c = '\t'; }
-					MATCH( 'v' ) { c = '\v'; }
-					MATCH( 'e' ) { c = '\x1b'; }
-					OTHERWISE {
+					case '0': c = '\0';   break;
+					case 'a': c = '\a';   break;
+					case 'b': c = '\b';   break;
+					case 'f': c = '\f';   break;
+					case 'n': c = '\n';   break;
+					case 'r': c = '\r';   break;
+					case 't': c = '\t';   break;
+					case 'v': c = '\v';   break;
+					case 'e': c = '\x1b'; break;
+					default:
 						delete dst;
 						throw SyntaxError( parseLineNo );
-					}
 				}
 			}
 			else {

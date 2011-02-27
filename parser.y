@@ -18,6 +18,7 @@
 	ast::Stmt* parseResult = nullptr;
 
 	extern "C" int yyerror( char const* ) {
+		// XXX: memory leaked on yyval.word, yyval.var
 		throw SyntaxError( parseLineNo );
 	}
 %}
