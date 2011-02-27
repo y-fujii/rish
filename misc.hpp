@@ -64,12 +64,15 @@ namespace std {
 	};
 }
 
+/* this does not work on gcc-4.5.x
 struct {
 	template<class T>
 	operator T*() const {
 		return 0;
 	}
 } const nullptr = {};
+*/
+#define nullptr (0)
 
 template<class T, unsigned N>
 unsigned size( T const (&)[N] ) {
@@ -78,7 +81,7 @@ unsigned size( T const (&)[N] ) {
 
 struct ScopeExit {
 	template<class T>
-	ScopeExit( T const& cb ): _callback( cb ) {
+	explicit ScopeExit( T const& cb ): _callback( cb ) {
 	}
 
 	~ScopeExit() {
@@ -90,30 +93,63 @@ struct ScopeExit {
 };
 
 template<class T>
-struct VariantBase: T {
-	VariantBase( int t ): _tag( t ) {}
-	int tag() const { return _tag; }
+struct VariantBase {
+	template<class U>
+	U* dynCast() {
+		if( dynId == U::template VariantBase<T>::staId ) {
+			return static_cast<U*>( this );
+		}
+		else {
+			return 0;
+		}
+	}
 
-	private:
-		int const _tag;
+	int const dynId;
+
+	protected:
+		VariantBase(): dynId( -1 ) {
+		}
 };
 
 template<class T, int Id>
-struct Variant: VariantBase<T> {
-	Variant(): VariantBase<T>( Id ) {
+struct Variant: T {
+	Variant() {
+		const_cast<int&>( VariantBase<T>::dynId ) = Id;
 	}
 
-	enum { variantId = Id };
+	enum { staId = Id };
 };
 
+template<class T>
+struct FalseWrapper {
+	FalseWrapper( T const& p ): obj( p ) {
+	}
+
+	operator bool() const {
+		return false;
+	}
+
+	T obj;
+};
+
+#define VARIANT_IF( type, lhs, rhs ) \
+	if( type* lhs = (rhs)->dynCast<type>() )
+
 #define VARIANT_SWITCH( type, val ) \
-	if( VariantBase<type>* _type_switch_value_ = static_cast<VariantBase<type>*>( val ) ) \
-		switch( _type_switch_value_->tag() )
+	if( FalseWrapper<type*> _variant_switch_value_ = (val) ) { \
+	} \
+	else switch( _variant_switch_value_.obj->VariantBase<type>::dynId ) {
 
 #define VARIANT_CASE( type, lhs ) \
-	break; \
-	case type::variantId: \
-		if( type* lhs = static_cast<type*>( _type_switch_value_ ) )
+		break; \
+	} \
+	case type::staId: { \
+		type* lhs = static_cast<type*>( _variant_switch_value_.obj );
+
+#define VARIANT_DEFAULT \
+		break; \
+	} \
+	default:
 
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
@@ -126,7 +162,7 @@ struct UnixStreamBuf: std::streambuf {
 			throw std::ios_base::failure( "read()" );
 		}
 		else if( n == 0 ) {
-			setg( nullptr, nullptr, 0 );
+			setg( nullptr, nullptr, nullptr );
 			return traits_type::eof();
 		}
 		else /* n > 0 */ {

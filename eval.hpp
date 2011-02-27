@@ -103,6 +103,8 @@ bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
 					return false;
 				}
 			}
+			VARIANT_DEFAULT {
+			}
 		}
 	}
 
@@ -112,6 +114,8 @@ bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
 				deque<string>& vvar = findVariable( tvar->name, global, local );
 				vvar.clear();
 				vvar.push_back( rhs[i] );
+			}
+			VARIANT_DEFAULT {
 			}
 		}
 	}
@@ -135,6 +139,8 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 					return false;
 				}
 			}
+			VARIANT_DEFAULT {
+			}
 		}
 	}
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
@@ -143,6 +149,8 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 				if( word->word != MetaString( rhs[i + rBgn] ) ) {
 					return false;
 				}
+			}
+			VARIANT_DEFAULT {
 			}
 		}
 	}
@@ -153,6 +161,8 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 				deque<string>& vvar = findVariable( tvar->name, global, local );
 				vvar.clear();
 				vvar.push_back( rhs[i + lBgn] );
+			}
+			VARIANT_DEFAULT {
 			}
 		}
 	}
@@ -165,6 +175,8 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 				deque<string>& vvar = findVariable( tvar->name, global, local );
 				vvar.clear();
 				vvar.push_back( rhs[i + rBgn] );
+			}
+			VARIANT_DEFAULT {
 			}
 		}
 	}
@@ -189,7 +201,7 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Global* global, Local* local )
 			}
 			return assign( lhs, rhs, global, local );
 		}
-		OTHERWISE {
+		VARIANT_DEFAULT {
 			assert( false );
 		}
 	}
@@ -242,7 +254,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 			}
 			thread.join();
 		}
-		OTHERWISE {
+		VARIANT_DEFAULT {
 			assert( false );
 		}
 	}
@@ -263,7 +275,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		throw StopException();
 	}
 
-	try { VARIANT_SWITCH( Stmt, sb ) {
+	try {
+	VARIANT_SWITCH( Stmt, sb ) {
 		VARIANT_CASE( Sequence, s ) {
 			evalStmt( s->lhs, global, local, ifd, ofd, stop );
 			return evalStmt( s->rhs, global, local, ifd, ofd, stop );
@@ -386,6 +399,9 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 
 					return assign( lhs, rhs, global, local ) ? 0 : 1;
 				}
+				VARIANT_DEFAULT {
+					assert( false );
+				}
 			}
 		}
 		VARIANT_CASE( Pipe, s ) {
@@ -409,10 +425,11 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		VARIANT_CASE( None, s ) {
 			return 0;
 		}
-		OTHERWISE {
+		VARIANT_DEFAULT {
 			assert( false );
 		}
-	} }
+	}
+	}
 	catch( IOError const& ) {
 		return 1;
 	}
