@@ -13,9 +13,6 @@
 #include <pthread.h>
 
 
-#define MATCH( c ) break; case (c):
-#define OTHERWISE break; default:
-
 namespace std {
 	using namespace tr1;
 	using namespace tr1::placeholders;
@@ -81,15 +78,19 @@ unsigned size( T const (&)[N] ) {
 
 struct ScopeExit {
 	template<class T>
-	explicit ScopeExit( T const& cb ): _callback( cb ) {
+	explicit ScopeExit( T const& cb, bool r = true ):
+		_callback( cb ), _run( r ) {
 	}
 
 	~ScopeExit() {
-		_callback();
+		if( _run ) {
+			_callback();
+		}
 	}
 
 	private:
 		std::function<void ()> const _callback;
+		bool const _run;
 };
 
 template<class T>
@@ -122,29 +123,33 @@ struct Variant: T {
 
 template<class T>
 struct FalseWrapper {
-	FalseWrapper( T const& p ): obj( p ) {
+	FalseWrapper( T const& v ): val( v ) {
 	}
 
 	operator bool() const {
 		return false;
 	}
 
-	T obj;
+	T val;
 };
 
 #define VARIANT_IF( type, lhs, rhs ) \
 	if( type* lhs = (rhs)->dynCast<type>() )
 
-#define VARIANT_SWITCH( type, val ) \
-	if( FalseWrapper<type*> _variant_switch_value_ = (val) ) { \
-	} \
-	else switch( _variant_switch_value_.obj->VariantBase<type>::dynId ) {
+#define VARIANT_SWITCH( type, rhs ) \
+	if( FalseWrapper<VariantBase<type>*> _variant_switch_value_ = (rhs) ) {} else \
+	switch( _variant_switch_value_.val->dynId ) {
 
 #define VARIANT_CASE( type, lhs ) \
 		break; \
 	} \
 	case type::staId: { \
-		type* lhs = static_cast<type*>( _variant_switch_value_.obj );
+		type* lhs = static_cast<type*>( _variant_switch_value_.val );
+
+#define VARIANT_CASE_( type ) \
+		break; \
+	} \
+	case type::staId: {
 
 #define VARIANT_DEFAULT \
 		break; \
