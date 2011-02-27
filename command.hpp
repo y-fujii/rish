@@ -15,7 +15,7 @@ using namespace std;
 int runCommand( deque<string> const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
-	if( args[0] == "cd" ) {
+	if( args[0] == "std.cd" ) {
 		if( args.size() != 2 ) {
 			return 1;
 		}

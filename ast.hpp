@@ -9,13 +9,13 @@ using namespace std;
 namespace ast {
 
 
-struct Expr {
+struct Expr: VariantBase<Expr> {
 };
 
-struct LeftExpr {
+struct LeftExpr: VariantBase<LeftExpr> {
 };
 
-struct Stmt {
+struct Stmt: VariantBase<Stmt> {
 };
 
 struct Word: Variant<Expr, 0> {
