@@ -54,7 +54,7 @@ struct ReturnException {
 struct StopException {
 };
 
-int evalStmtClose( ast::Stmt*, Global*, Local*, int, int, atomic<bool>&, bool, bool );
+int evalStmt( ast::Stmt*, Global*, Local*, int, int, atomic<bool>&, bool, bool );
 
 
 inline void checkSysCall( int retv ) {
@@ -209,7 +209,7 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Global* global, Local* local )
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atomic<bool>& stop ) {
+DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, atomic<bool>& stop, DstIter dst ) {
 	using namespace ast;
 
 	if( stop.load() ) {
@@ -221,16 +221,16 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 			*dst++ = e->word;
 		}
 		VARIANT_CASE( Pair, e ) {
-			evalExpr( e->lhs, global, local, dst, stop );
-			evalExpr( e->rhs, global, local, dst, stop );
+			evalExpr( e->lhs, global, local, ifd, stop, dst );
+			evalExpr( e->rhs, global, local, ifd, stop, dst );
 		}
 		VARIANT_CASE_( Null ) {
 		}
 		VARIANT_CASE( Concat, e ) {
 			deque<MetaString> lhs;
 			deque<MetaString> rhs;
-			evalExpr( e->lhs, global, local, back_inserter( lhs ), stop );
-			evalExpr( e->rhs, global, local, back_inserter( rhs ), stop );
+			evalExpr( e->lhs, global, local, ifd, stop, back_inserter( lhs ) );
+			evalExpr( e->rhs, global, local, ifd, stop, back_inserter( rhs ) );
 			for( deque<MetaString>::const_iterator i = lhs.begin(); i != lhs.end(); ++i ) {
 				for( deque<MetaString>::const_iterator j = rhs.begin(); j != rhs.end(); ++j ) {
 					*dst++ = *i + *j;
@@ -244,7 +244,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 		VARIANT_CASE( Subst, e ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
-			Thread thread( bind( evalStmtClose, e->body, global, local, 0, fds[1], stop, false, true ) );
+			Thread thread( bind( evalStmt, e->body, global, local, ifd, fds[1], stop, false, true ) );
 			{
 				ScopeExit closer( bind( close, fds[0] ) );
 				UnixIStream ifs( fds[0] );
@@ -263,14 +263,17 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, DstIter dst, atom
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, DstIter dstIt, atomic<bool>& stop ) {
+DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, atomic<bool>& stop, DstIter dstIt ) {
 	deque<MetaString> tmp;
-	evalExpr( expr, global, local, back_inserter( tmp ), stop );
+	evalExpr( expr, global, local, ifd, stop, back_inserter( tmp ) );
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop ) {
+int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
 	using namespace ast;
+
+	ScopeExit icloser( bind( close, ifd ), ic );
+	ScopeExit ocloser( bind( close, ofd ), oc );
 
 	if( stop.load() ) {
 		throw StopException();
@@ -284,23 +287,21 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		}
 		VARIANT_CASE( RedirFr, s ) {
 			deque<string> args;
-			evalArgs( s->file, global, local, back_inserter( args ), stop );
+			evalArgs( s->file, global, local, ifd, stop, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
-			ScopeExit closer( bind( close, fd ) );
-			return evalStmt( s->body, global, local, fd, ofd, stop );
+			return evalStmt( s->body, global, local, fd, ofd, stop, true, false );
 		}
 		VARIANT_CASE( RedirTo, s ) {
 			deque<string> args;
-			evalArgs( s->file, global, local, back_inserter( args ), stop );
+			evalArgs( s->file, global, local, ifd, stop, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
-			ScopeExit closer( bind( close, fd ) );
-			return evalStmt( s->body, global, local, ifd, fd, stop );
+			return evalStmt( s->body, global, local, ifd, fd, stop, false, true );
 		}
 		VARIANT_CASE( Command, s ) {
 			deque<string> args;
-			evalArgs( s->args, global, local, back_inserter( args ), stop );
+			evalArgs( s->args, global, local, ifd, stop, back_inserter( args ) );
 			if( args.size() == 0 ) {
 				return 0;
 			}
@@ -327,7 +328,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		}
 		VARIANT_CASE( Return, s ) {
 			deque<string> args;
-			evalArgs( s->retv, global, local, back_inserter( args ), stop );
+			evalArgs( s->retv, global, local, ifd, stop, back_inserter( args ) );
 			if( args.size() == 0 ) {
 				return 1;
 			}
@@ -362,7 +363,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		}
 		VARIANT_CASE( Break, s ) {
 			deque<string> args;
-			evalArgs( s->retv, global, local, back_inserter( args ), stop );
+			evalArgs( s->retv, global, local, ifd, stop, back_inserter( args ) );
 			int retv;
 			if( (istringstream( args.back() ) >> retv).fail() ) {
 				return 1;
@@ -371,7 +372,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		}
 		VARIANT_CASE( Let, s ) {
 			deque<string> vals;
-			evalArgs( s->rhs, global, local, back_inserter( vals ), stop );
+			evalArgs( s->rhs, global, local, ifd, stop, back_inserter( vals ) );
 			return assign( s->lhs, vals, global, local ) ? 0 : 1;
 		}
 		VARIANT_CASE( Fetch, s ) {
@@ -408,13 +409,9 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		VARIANT_CASE( Pipe, s ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
-			Thread thread( bind( evalStmtClose, s->lhs, global, local, ifd, fds[1], stop, false, true ) );
-			int retv;
-			{
-				ScopeExit closer( bind( close, fds[0] ) );
-				retv = evalStmt( s->rhs, global, local, fds[0], ofd, stop );
-			}
-			thread.join();
+			Thread thread( bind( evalStmt, s->lhs, global, local, ifd, fds[1], stop, false, true ) );
+			int retv = evalStmt( s->rhs, global, local, fds[0], ofd, stop, true, false );
+			thread.join(); // XXX
 
 			return retv;
 		}
@@ -436,28 +433,4 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 	}
 
 	assert( false );
-}
-
-int evalStmtClose( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd, atomic<bool>& stop, bool ic = false, bool oc = false ) {
-	int retv;
-	try {
-		retv = evalStmt( stmt, global, local, ifd, ofd, stop );
-		if( ic ) {
-			close( ifd );
-		}
-		if( oc ) {
-			close( ofd );
-		}
-	}
-	catch( ... ) {
-		if( ic ) {
-			close( ifd );
-		}
-		if( oc ) {
-			close( ofd );
-		}
-		throw;
-	}
-
-	return retv;
 }
