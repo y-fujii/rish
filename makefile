@@ -1,6 +1,5 @@
-LEX = flex -X
-CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
-#CXX = g++ -g -pedantic -Wall -Wextra -pthread
+#CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
+CXX = g++ -g -pedantic -Wall -Wextra -pthread
 
 SRCS = \
 	lexer.l parser.y \

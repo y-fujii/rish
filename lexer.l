@@ -13,16 +13,13 @@
 
 	using namespace std;
 
-	std::istream* parseIStream;
+	istream* parseIStream;
 	size_t parseLineNo;
 
+
 	#define YY_INPUT( buf, result, bufSize ) {		\
-		if( parseIStream->read( buf, bufSize ) ) {	\
-			result = parseIStream->gcount();		\
-		}											\
-		else {										\
-			result = YY_NULL;						\
-		}											\
+		parseIStream->read( buf, bufSize );			\
+		result = parseIStream->gcount();			\
 	}
 
 	extern "C" int yywrap() {

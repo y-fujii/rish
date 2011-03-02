@@ -49,7 +49,8 @@ int main( int argc, char** ) {
 	assert( argc == 1 );
 
 	if( isatty( 0 ) ) {
-		struct sigaction sa = {};
+		struct sigaction sa;
+		memset( &sa, 0, sizeof( sa ) );
 
 		sa.sa_handler = handleSigTSTP;
 		sa.sa_flags = SA_RESTART;
