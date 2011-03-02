@@ -1,6 +1,7 @@
 /* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
 
 %{
+	#include <iostream>
 	#include <exception>
 	#include <cassert>
 	#include <string.h>
@@ -8,10 +9,21 @@
 	#include "glob.hpp"
 	#include "ast.hpp"
 	#include "tokens.hpp"
+	#include "parser.hpp"
 
 	using namespace std;
 
-	extern size_t parseLineNo;
+	std::istream* parseIStream;
+	size_t parseLineNo;
+
+	#define YY_INPUT( buf, result, bufSize ) {		\
+		if( parseIStream->read( buf, bufSize ) ) {	\
+			result = parseIStream->gcount();		\
+		}											\
+		else {										\
+			result = YY_NULL;						\
+		}											\
+	}
 
 	extern "C" int yywrap() {
 		return 1;

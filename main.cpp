@@ -20,6 +20,14 @@ using namespace std;
 
 atomic<bool> stop( false );
 
+__thread void (*threadSigHandler)( int ) = nullptr;
+
+void handleSignal( int s ) {
+	if( threadSigHandler != nullptr ) {
+		threadSigHandler( s );
+	}
+}
+
 void handleSigTSTP( int ) {
 	/*
 	setpgid( 0, 0 );
@@ -62,7 +70,8 @@ int main( int argc, char** ) {
 				}
 
 				try {
-					ast::Stmt* ast = parse( line, line + len );
+					istringstream istr( line );
+					ast::Stmt* ast = parse( istr );
 
 					stop.store( false );
 					int retv = evalStmt( ast, &global, nullptr, 0, 1, stop );
@@ -94,14 +103,9 @@ int main( int argc, char** ) {
 		}
 	}
 	else {
-		string buf(
-			(istreambuf_iterator<char>( cin )),
-			(istreambuf_iterator<char>())
-		);
-
 		ast::Stmt* ast;
 		try {
-			ast = parse( buf.data(), buf.data() + buf.size() );
+			ast = parse( cin );
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
