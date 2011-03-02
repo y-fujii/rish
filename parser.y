@@ -127,6 +127,7 @@ expr_prim
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
 	| '(' expr_list ')'					{ $$ = $2; }
 	/*
+	| '$' '(' TK_WORD subscr_list ')'	{ $$ = new Slice( $3, $4 ); }
 	| expr '[' expr ']'					{ $$ = new Index( $1, $3 ); }
 	| expr '[' expr ':' expr ']'		{ $$ = new Slice( $1, $3, $5 ); }
 	| TK_FUN lexpr_when '{' stmt_seq '}' { $$ = NULL; }
