@@ -7,15 +7,12 @@
 	#include "misc.hpp"
 	#include "ast.hpp"
 	#include "exception.hpp"
+	#include "parser.hpp"
 
 	using namespace std;
 	using namespace ast;
 
-
-	int yylex();
-
-	size_t parseLineNo = 0;
-	ast::Stmt* parseResult = nullptr;
+	ast::Stmt* parseResult;
 
 	extern "C" int yyerror( char const* ) {
 		// XXX: memory leaked on yyval.word, yyval.var
@@ -128,8 +125,9 @@ expr_prim
 	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
 	| '$' '{' stmt_seq '}'				{ $$ = new Subst( $3 ); }
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
+	| '(' expr_list ')'					{ $$ = $2; }
 	/*
 	| expr '[' expr ']'					{ $$ = new Index( $1, $3 ); }
 	| expr '[' expr ':' expr ']'		{ $$ = new Slice( $1, $3, $5 ); }
+	| TK_FUN lexpr_when '{' stmt_seq '}' { $$ = NULL; }
 	*/
-	| '(' expr_list ')'					{ $$ = $2; }

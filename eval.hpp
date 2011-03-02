@@ -28,6 +28,7 @@ struct Global {
 	map<string, deque<string> > vars; // this will be removed
 	map<string, ast::Fun*> funs;
 	//map<string, pair<ast::Fun*, Local*> > funs;
+	//pthread_mutex_t lock;
 };
 
 struct Local {
@@ -35,6 +36,7 @@ struct Local {
 
 	Local* outer;
 	map<string, deque<string> > vars;
+	//pthread_mutex_t lock;
 };
 
 struct BreakException {
@@ -108,6 +110,8 @@ bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
 		}
 	}
 
+	//ScopedLock( global->lock );
+	//ScopedLock( local->lock );
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VARIANT_SWITCH( Expr, lhs->var[i] ) {
 			VARIANT_CASE( Var, tvar ) {
@@ -155,6 +159,8 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 		}
 	}
 
+	//ScopedLock( global->lock );
+	//ScopedLock( local->lock );
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VARIANT_SWITCH( Expr, lhs->varL[i] ) {
 			VARIANT_CASE( Var, tvar ) {

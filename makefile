@@ -13,7 +13,8 @@ rish: $(SRCS)
 	mv y.tab.h tokens.hpp; \
 	mv y.tab.c parser.cpp; \
 	mv y.output parser.out
-	$(LEX) -o lexer.cpp --header-file=lexer.hpp lexer.l
+	$(LEX) lexer.l; \
+	mv lex.yy.c lexer.cpp
 	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline -lcurses
 
 test: rish
@@ -21,4 +22,4 @@ test: rish
 	./rish
 
 clean:
-	rm -f tokens.hpp parser.cpp parser.out lexer.hpp lexer.cpp rish
+	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish
