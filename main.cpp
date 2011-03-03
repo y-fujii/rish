@@ -14,6 +14,7 @@
 #include "ast.hpp"
 #include "parser.hpp"
 #include "eval.hpp"
+#include "builtins.hpp"
 
 using namespace std;
 
@@ -61,6 +62,7 @@ int main( int argc, char** ) {
 		sigaction( SIGINT, &sa, NULL );
 
 		Global global;
+		builtins::register_( global.builtins );
 		while( true ) {
 			char* line = readline( "| " );
 			try {
@@ -82,9 +84,6 @@ int main( int argc, char** ) {
 				}
 				catch( SyntaxError const& ) {
 					cerr << "Syntax error." << endl;
-				}
-				catch( RuntimeError const& ) {
-					cerr << "Runtime error." << endl;
 				}
 				catch( StopException const& ) {
 					cerr << "\nInterrupted." << endl;
