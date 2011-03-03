@@ -4,6 +4,7 @@
 #include "config.hpp"
 #include <deque>
 #include <cassert>
+#include <cmath>
 #include <sstream>
 #include <iomanip>
 #include <unistd.h>
@@ -39,18 +40,18 @@ int showList( deque<string> const& args, int ifd, int ofd ) {
 	}
 	double avg = double( sum1 ) / args.size();
 	double var = sqrt( double( sum2 ) / args.size() - avg * avg );
-	int ncol = int( ws.ws_col / max( 4.0, avg + var * 2.0 + 2.0) );
-	int col = ws.ws_col / ncol;
-	assert( col >= 4 );
-	int nrow = (args.size() + ncol - 1) / ncol;
+	size_t ncol = ws.ws_col / (avg + var * 2.0 + 2.0);
+	size_t nrow = (args.size() + ncol - 1) / ncol;
+	size_t col = ws.ws_col / ncol;
+	assert( col >= 2 );
 
 	ostringstream buf;
-	for( int y = 0; y < nrow; ++y ) {
-		for( int x = 0; x < ncol; ++x ) {
-			if( y * ncol + x < args.size() ) {
-				string str = args[y * ncol + x];
+	for( size_t y = 0; y < nrow; ++y ) {
+		for( size_t x = 0; x < ncol; ++x ) {
+			if( x * nrow + y < args.size() ) {
+				string str = args[x * nrow + y];
 				if( str.size() >= col ) {
-					str = str.substr( 0, col - 4 ) + "...";
+					str = str.substr( 0, col - 2 ) + "$";
 				}
 				buf << setw( col ) << left << str;
 			}
@@ -63,7 +64,7 @@ int showList( deque<string> const& args, int ifd, int ofd ) {
 
 int strSize( deque<string> const& args, int ifd, int ofd ) {
 	ostringstream buf;
-	for( int i = 1; i < args.size(); ++i ) {
+	for( size_t i = 1; i < args.size(); ++i ) {
 		buf << args[i].size() << '\n';
 	}
 	if( write( ofd, buf.str().data(), buf.str().size() ) < 0 ) {
