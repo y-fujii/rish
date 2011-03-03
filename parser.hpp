@@ -12,6 +12,13 @@ extern ast::Stmt* parseResult;
 int yylex();
 int yyparse();
 
+
+struct SyntaxError: exception {
+	SyntaxError( size_t l ): line( l ) {}
+
+	size_t line;
+};
+
 inline ast::Stmt* parse( istream& istr ) {
 	parseIStream = &istr;
 	parseLineNo = 0;

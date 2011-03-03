@@ -156,6 +156,9 @@ struct FalseWrapper {
 	} \
 	default:
 
+struct IOError: std::exception {
+};
+
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
 		_fd( fd ), _buf( bs ) {
@@ -196,7 +199,7 @@ struct Thread {
 	explicit Thread( T const& cb ):
 		_callback( cb ) {
 		if( pthread_create( &_thread, NULL, _wrap, this ) != 0 ) {
-			throw std::exception();
+			throw IOError();
 		}
 	}
 
@@ -215,14 +218,14 @@ struct Thread {
 	bool join() {
 		void* result;
 		if( pthread_join( _thread, &result ) != 0 ) {
-			throw std::exception();
+			throw IOError();
 		}
 		return bool( reinterpret_cast<uintptr_t>( result ) );
 	}
 
 	void kill( int sig ) {
 		if( pthread_kill( _thread, sig ) != 0 ) {
-			throw std::exception();
+			throw IOError();
 		}
 	}
 

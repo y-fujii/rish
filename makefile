@@ -1,11 +1,11 @@
 #CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
-CXX = g++ -g -pedantic -Wall -Wextra -pthread
+CXX = g++ -g -pedantic -Wall -Wextra -pthread -Os
 
 SRCS = \
 	lexer.l parser.y \
-	config.hpp misc.hpp exception.hpp \
+	config.hpp misc.hpp \
 	parser.hpp ast.hpp eval.hpp command.hpp glob.hpp \
-	main.cpp
+	builtins.hpp main.cpp
 
 rish: $(SRCS)
 	$(YACC) -dv parser.y; \

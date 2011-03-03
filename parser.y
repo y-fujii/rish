@@ -6,7 +6,6 @@
 	#include <fcntl.h>
 	#include "misc.hpp"
 	#include "ast.hpp"
-	#include "exception.hpp"
 	#include "parser.hpp"
 
 	using namespace std;

@@ -15,13 +15,7 @@ using namespace std;
 int runCommand( deque<string> const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
-	if( args[0] == "std.cd" ) {
-		if( args.size() != 2 ) {
-			return 1;
-		}
-		return chdir( args[1].c_str() ) < 0 ? 1 : 0;
-	}
-	else if( args[0] == "yield" ) {
+	if( args[0] == "yield" ) {
 		ostringstream buf;
 		for( deque<string>::const_iterator it = args.begin() + 1; it != args.end(); ++it ) {
 			buf << *it << '\n';

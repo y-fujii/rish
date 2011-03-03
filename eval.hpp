@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <exception>
 #include <stdexcept>
 #include <cassert>
 #include <unistd.h>
@@ -27,6 +28,7 @@ using namespace std;
 struct Global {
 	map<string, deque<string> > vars; // this will be removed
 	map<string, ast::Fun*> funs;
+	map<string, function<int (deque<string> const&, int, int)> > builtins;
 	//map<string, pair<ast::Fun*, Local*> > funs;
 	//pthread_mutex_t lock;
 };
@@ -312,13 +314,13 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				return 0;
 			}
 
-			map<string, Fun*>::const_iterator it = global->funs.find( args[0] );
-			if( it != global->funs.end() ) {
+			map<string, Fun*>::const_iterator fit = global->funs.find( args[0] );
+			if( fit != global->funs.end() ) {
 				try {
 					Local local;
 					args.pop_front();
-					if( assign( it->second->args, args, global, &local ) ) {
-						return evalStmt( it->second->body, global, &local, ifd, ofd, stop );
+					if( assign( fit->second->args, args, global, &local ) ) {
+						return evalStmt( fit->second->body, global, &local, ifd, ofd, stop );
 					}
 					else {
 						assert( false ); // to be implemented
@@ -328,9 +330,15 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 					return e.retv;
 				}
 			}
-			else {
-				return runCommand( args, ifd, ofd );
+
+			map<string, function<int (deque<string> const&, int, int)> >::const_iterator bit =
+				global->builtins.find( args[0] );
+			if( bit != global->builtins.end() ) {
+				args.pop_front();
+				return bit->second( args, ifd, ofd );
 			}
+
+			return runCommand( args, ifd, ofd );
 		}
 		VARIANT_CASE( Return, s ) {
 			deque<string> args;

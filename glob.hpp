@@ -7,7 +7,6 @@
 #include <dirent.h>
 #include <sys/param.h>
 #include "misc.hpp"
-#include "exception.hpp"
 
 using namespace std;
 
