@@ -18,12 +18,11 @@ using namespace std;
 namespace builtins {
 
 
-int chdir( deque<string> const& args, int, int ) {
+int changeDir( deque<string> const& args, int, int ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
-	//return chdir( args[0].c_str() ) < 0 ? 1 : 0;
-	return 0;
+	return chdir( args[0].c_str() ) < 0 ? 1 : 0;
 }
 
 int showList( deque<string> const& args, int ifd, int ofd ) {
@@ -49,11 +48,13 @@ int showList( deque<string> const& args, int ifd, int ofd ) {
 	for( size_t y = 0; y < nrow; ++y ) {
 		for( size_t x = 0; x < ncol; ++x ) {
 			if( x * nrow + y < args.size() ) {
-				string str = args[x * nrow + y];
-				if( str.size() >= col ) {
-					str = str.substr( 0, col - 2 ) + "$";
+				string const& e = args[x * nrow + y];
+				if( e.size() >= col ) {
+					buf << e.substr( 0, col - 2 ) << "$ ";
 				}
-				buf << setw( col ) << left << str;
+				else {
+					buf << setw( col ) << left << e;
+				}
 			}
 		}
 		buf << '\n';
@@ -64,14 +65,11 @@ int showList( deque<string> const& args, int ifd, int ofd ) {
 
 int strSize( deque<string> const& args, int ifd, int ofd ) {
 	ostringstream buf;
-	for( size_t i = 1; i < args.size(); ++i ) {
-		buf << args[i].size() << '\n';
-	}
-	if( write( ofd, buf.str().data(), buf.str().size() ) < 0 ) {
-		return 1;
+	for( deque<string>::const_iterator it = args.begin(); it != args.end(); ++it ) {
+		buf << it->size() << '\n';
 	}
 
-	return 0;
+	return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
 }
 
 /*
@@ -81,11 +79,8 @@ int strFind( deque<string> const& args, int ifd, int ofd ) {
 	for( int i = 2; i < args.size(); ++i ) {
 		regex_search( args[i], match, args[1] );
 	}
-	if( write( ofd, buf.str().data(), buf.str().size() ) < 0 ) {
-		return 1;
-	}
 
-	return 0;
+	return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
 }
 
 int strMatch( deque<string> const& args, int ifd, int ofd ) {
@@ -108,7 +103,7 @@ int strReplace( deque<string> const& args, int ifd, int ofd ) {
 
 template<class Map>
 void register_( Map& map ) {
-	map["std.cd"] = chdir;
+	map["std.cd"] = changeDir;
 	map["std.show-list"] = showList;
 	map["str.size"] = strSize;
 	/*

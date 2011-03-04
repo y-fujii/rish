@@ -83,90 +83,83 @@ struct Fun: Variant<Stmt, 2> {
 	Stmt* body;
 };
 
-struct Fetch: Variant<Stmt, 3> {
-	Fetch( LeftExpr* l ): lhs( l ) {}
-	LeftExpr* lhs;
-};
-
-struct Let: Variant<Stmt, 4> {
+struct Let: Variant<Stmt, 3> {
 	Let( LeftExpr* l, Expr* r ): lhs( l ), rhs( r ) {}
 	LeftExpr* lhs;
 	Expr* rhs;
 };
 
-struct Return: Variant<Stmt, 5> {
+struct Fetch: Variant<Stmt, 4> {
+	Fetch( LeftExpr* l ): lhs( l ) {}
+	LeftExpr* lhs;
+};
+
+struct Yield: Variant<Stmt, 5> {
+	Yield( Expr* r ): rhs( r ) {}
+	Expr* rhs;
+};
+
+struct Return: Variant<Stmt, 6> {
 	Return( Expr* r ): retv( r ) {}
 	Expr* retv;
 };
 
-struct Break: Variant<Stmt, 6> {
+struct Break: Variant<Stmt, 7> {
 	Break( Expr* r ): retv( r ) {}
 	Expr* retv;
 };
 
-struct For: Variant<Stmt, 7> {
+struct For: Variant<Stmt, 8> {
 	For( Expr* v, Stmt* b, Stmt* e ): vars( v ), body( b ), elze( e ) {}
 	Expr* vars;
 	Stmt* body;
 	Stmt* elze;
 };
 
-struct While: Variant<Stmt, 8> {
+struct While: Variant<Stmt, 9> {
 	While( Stmt* c, Stmt* b, Stmt* e ): cond( c ), body( b ), elze( e ) {}
 	Stmt* cond;
 	Stmt* body;
 	Stmt* elze;
 };
 
-struct Not: Variant<Stmt, 9> {
+struct Not: Variant<Stmt, 10> {
 	Not( Stmt* b ): body( b ) {}
 	Stmt* body;
 };
 
-struct Or: Variant<Stmt, 10> {
-	Or( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
-	Stmt* lhs;
-	Stmt* rhs;
-};
-
-struct And: Variant<Stmt, 11> {
-	And( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
-	Stmt* lhs;
-	Stmt* rhs;
-};
-
-struct Bg: Variant<Stmt, 12> {
+struct Bg: Variant<Stmt, 13> {
 	Bg( Stmt* b ): body( b ) {}
 	Stmt* body;
 };
 
-struct Sequence: Variant<Stmt, 13> {
+struct Sequence: Variant<Stmt, 14> {
 	Sequence( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
 
-struct RedirFr: Variant<Stmt, 14> {
+struct RedirFr: Variant<Stmt, 15> {
 	RedirFr( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
 	Expr* file;
 };
 
-struct RedirTo: Variant<Stmt, 15> {
+struct RedirTo: Variant<Stmt, 16> {
 	RedirTo( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
 	Expr* file;
 };
 
-struct Pipe: Variant<Stmt, 16> {
+struct Pipe: Variant<Stmt, 17> {
 	Pipe( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
 
-struct None: Variant<Stmt, 17> {
-	None() {}
+struct None: Variant<Stmt, 18> {
+	None( int r ): retv( r ) {}
+	int retv;
 };
-
 
 } // namespace ast

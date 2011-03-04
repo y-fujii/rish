@@ -62,6 +62,7 @@
 "fun"		{ return TK_FUN; }
 "when"		{ return TK_WHEN; }
 "fetch"		{ return TK_FETCH; }
+"yield"		{ return TK_YIELD; }
 
 \$[a-zA-Z0-9_]+ {
 	yylval.var = new string( yytext + 1 );
