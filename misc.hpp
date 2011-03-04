@@ -1,7 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include "config.hpp"
 #include <algorithm>
 #include <vector>
 #include <iostream>
@@ -157,41 +156,6 @@ struct FalseWrapper {
 	default:
 
 struct IOError: std::exception {
-};
-
-struct UnixStreamBuf: std::streambuf {
-	UnixStreamBuf( int fd, size_t bs ):
-		_fd( fd ), _buf( bs ) {
-	}
-
-	virtual int underflow() {
-		ssize_t n = read( _fd, &_buf[0], _buf.size() );
-		if( n < 0 ) {
-			throw std::ios_base::failure( "read()" );
-		}
-		else if( n == 0 ) {
-			setg( nullptr, nullptr, nullptr );
-			return traits_type::eof();
-		}
-		else /* n > 0 */ {
-			setg( &_buf[0], &_buf[0], &_buf[n] );
-			return _buf[0];
-		}
-	}
-
-	private:
-		int const _fd;
-		std::vector<char> _buf;
-};
-
-struct UnixIStream: std::istream {
-	explicit UnixIStream( int fd, size_t bs = 4096 ):
-		std::istream( new UnixStreamBuf( fd, bs ) ) {
-	}
-
-	~UnixIStream() {
-		delete rdbuf();
-	}
 };
 
 struct Thread {
