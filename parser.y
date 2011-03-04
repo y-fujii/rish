@@ -51,7 +51,7 @@ stmt_seq
 	: stmt_seq ';' stmt_bg			{ $$ = new Sequence( $1, $3 ); }
 	| stmt_seq ';'
 	| stmt_bg
-	| 								{ $$ = new True(); }
+	| 								{ $$ = new None( 0 ); }
 
 stmt_bg
 	: '&' stmt_andor				{ $$ = new Bg( $2 ); }
