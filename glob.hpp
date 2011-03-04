@@ -29,26 +29,25 @@ inline bool isMeta( MetaString::value_type c ) {
 	return (c & metaMask) != 0;
 }
 
-// O(#pattern) space, O(#pattern * #src) time wildcard matcher
-template<class SrcIter>
-bool matchGlob( MetaString const& pattern, SrcIter srcBgn, SrcIter srcEnd ) {
-	deque<bool> mark( pattern.size() );
+// O(#ptn) space, O(#ptn * #src) time wildcard matcher
+inline bool matchGlob( MetaString const& ptn, string const& src ) {
+	deque<bool> mark( ptn.size() );
 	bool prev = true;
 
-	for( size_t i = 0; i < pattern.size(); ++i ) {
+	for( size_t i = 0; i < ptn.size(); ++i ) {
 		mark[i] = prev;
-		prev &= pattern[i] == star;
+		prev &= ptn[i] == star;
 	}
 
-	for( SrcIter srcIt = srcBgn; srcIt != srcEnd; ++srcIt ) {
+	for( size_t j = 0; j < src.size(); ++j ) {
 		prev = false;
-		for( size_t i = 0; i < pattern.size(); ++i ) {
+		for( size_t i = 0; i < ptn.size(); ++i ) {
 			bool curr;
-			if( pattern[i] == star ) {
+			if( ptn[i] == star ) {
 				curr = prev | mark[i];
 				prev = curr;
 			}
-			else if( pattern[i] == any1 || pattern[i] == *srcIt ) {
+			else if( ptn[i] == any1 || ptn[i] == src[j] ) {
 				curr = prev;
 				prev = mark[i];
 			}
@@ -80,89 +79,60 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 		if( result == NULL ) {
 			break;
 		}
-		if( string( entry.d_name ) != "." && string( entry.d_name ) != ".." ) {
-			*dstIt++ = entry;
+		string name( entry.d_name );
+		if( name != "." && name != ".." ) {
+			*dstIt++ = make_pair<string, int>( name, entry.d_type );
 		}
 	}
 
 	return dstIt;
 }
 
-/*
 template<class DstIter>
-DstIter walkDir( string const& root, DstIter dstIt ) {
-	deque< pair<int, string> > tmp;
-	listDir( root, back_inserter( tmp ) );
-
-	for( deque<dirent>::const_iterator it = tmp.begin(); it != tmp.end(); ++it ) {
-		if( it->d_type & DT_DIR ) {
-			string name = root + it->d_name + "/";
-			*dstIt++ = make_pair( it->d_name, name );
-			dstIt = walkDir( name, dstIt );
-		}
-		else {
-			string name = root + it->second;
-			*dstIt++ = make_pair( it->first, name );
-		}
-	}
-
-	return dstIt;
-}
-*/
-
-template<class DstIter>
-DstIter expandGlobRec( string const& root, MetaString const& pattern, DstIter dst ) {
-	size_t slash = pattern.find( '/' );
+DstIter expandGlobRec( string const& root, MetaString const& ptn, DstIter dstIt ) {
+	size_t slash = ptn.find( '/' );
 	if( slash == MetaString::npos ) {
-		deque<dirent> dirs;
+		deque<pair<string, int> > dirs;
 		listDir( root, back_inserter( dirs ) );
-		for( deque<dirent>::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
-			if(
-				!(it->d_type & DT_DIR) &&
-				matchGlob( pattern, it->d_name, it->d_name + it->d_namlen )
-			) {
-				*dst++ = root + it->d_name;
+		for( deque<pair<string, int> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+			if( !(it->second & DT_DIR) && matchGlob( ptn, it->first ) ) {
+				*dstIt++ = root + it->first;
 			}
 		}
 	}
 	else {
-		MetaString base = pattern.substr( 0, slash );
-		MetaString rest = pattern.substr( slash + 1 );
+		assert( slash != 0 );
+		MetaString base = ptn.substr( 0, slash );
+		MetaString rest = ptn.substr( slash + 1 );
 
-		/*
 		if( base == MetaString( "." ) || base == MetaString( ".." ) ) {
-			dst = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dst );
-		}
-		*/
-		if( all_of( base.begin(), base.end(), isMeta ) ) {
-			dst = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dst );
+			dstIt = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dstIt );
 		}
 		else {
-			assert( slash != 0 );
-			deque<dirent> dirs;
+			deque<pair<string, int> > dirs;
 			listDir( root, back_inserter( dirs ) );
-			for( deque<dirent>::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
-				if(
-					(it->d_type & DT_DIR) &&
-					matchGlob( base, it->d_name, it->d_name + it->d_namlen )
-				) {
-					if( rest == MetaString( "" ) ) {
-						*dst++ = root + it->d_name;
+			for( deque<pair<string, int> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+				if( (it->second & DT_DIR) && matchGlob( base, it->first ) ) {
+					if( rest.size() == 0 ) {
+						*dstIt++ = root + it->first + "/";
 					}
 					else {
-						dst = expandGlobRec( root + it->d_name + "/", rest, dst );
+						dstIt = expandGlobRec( root + it->first + "/", rest, dstIt );
 					}
 				}
 			}
 		}
 	}
 
-	return dst;
+	return dstIt;
 }
 
-#include <iostream>
 template<class DstIter>
 DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
+	if( !any_of( src.begin(), src.end(), isMeta ) ) {
+		*dstIt++ = string( src.begin(), src.end() );
+		return dstIt;
+	}
 	if( src.size() >= 2 && src[0] == home && src[1] == '/' ) {
 		return expandGlobRec( getenv( "HOME" ), src.substr( 2 ), dstIt );
 	}
@@ -170,8 +140,6 @@ DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
 		return expandGlobRec( "/", src.substr( 1 ), dstIt );
 	}
 	else {
-		char buf[MAXPATHLEN];
-		getcwd( buf, MAXPATHLEN );
-		return expandGlobRec( string( buf ) + "/", src, dstIt );
+		return expandGlobRec( "./", src, dstIt );
 	}
 }

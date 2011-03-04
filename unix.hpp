@@ -46,7 +46,18 @@ struct UnixIStream: std::istream {
 	}
 };
 
-int forkExec( deque<string> const& args, int ifd, int ofd ) {
+#if defined( __linux__ )
+inline void closefrom( int fd ) {
+	int end = getdtablesize(); // XXX: use /proc/{pid}/status
+	while( fd < end ) {
+		close( fd );
+		++fd;
+	}
+}
+#endif
+
+template<class Container>
+int forkExec( Container const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
 	char const** args_raw = new char const*[args.size() + 1];
@@ -73,13 +84,3 @@ int forkExec( deque<string> const& args, int ifd, int ofd ) {
 	}
 	return WEXITSTATUS( status );
 }
-
-#if defined( __linux__ )
-inline void closefrom( int fd ) {
-	int end = getdtablesize(); // XXX: use /proc/{pid}/status
-	while( fd < end ) {
-		close( fd );
-		++fd;
-	}
-}
-#endif
