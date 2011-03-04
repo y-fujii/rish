@@ -107,7 +107,7 @@ lexpr_when
 
 lexpr_prim
 	: lexpr_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
-	| lexpr_list '@' TK_VAR lexpr_list	{ $$ = new VarVar( $1->begin(), $1->end(), new Var( *$3 ), $4->begin(), $4->end() ); delete $1; delete $3; delete $4; }
+	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( $1->begin(), $1->end(), new Var( *$3 ), $5->begin(), $5->end() ); delete $1; delete $3; delete $5; }
 
 lexpr_list
 	: lexpr_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
