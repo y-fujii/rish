@@ -29,12 +29,12 @@ namespace std {
 
 	template<class Iter, class Func>
 	inline bool any_of( Iter bgn, Iter end, Func f ) {
-		return std::find_if( bgn, end, f ) != end;
+		return find_if( bgn, end, f ) != end;
 	}
 
 	template<class Iter, class Func>
 	inline bool all_of( Iter bgn, Iter end, Func f ) {
-		return std::find_if( bgn, end, std::not1( f ) ) == end;
+		return find_if( bgn, end, not1( f ) ) == end;
 	}
 
 	template<class T>

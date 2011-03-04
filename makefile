@@ -1,4 +1,4 @@
-#CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1
+#CXX = clang++ -g -pedantic -Wall -Wextra -pthread -I/usr/include/boost/tr1 -DBOOST_TR1_GCC_INCLUDE_PATH=4.5.2
 CXX = g++ -g -pedantic -Wall -Wextra -pthread
 
 SRCS = \

@@ -65,7 +65,8 @@ int main( int argc, char** ) {
 		while( true ) {
 			char* line = readline( "| " );
 			if( line == NULL ) break;
-			ScopeExit( bind( free, line ) );
+			ScopeExit deleter( bind( free, line ) );
+
 			size_t len = strlen( line );
 			if( len > 0 ) {
 				add_history( line );
@@ -98,18 +99,16 @@ int main( int argc, char** ) {
 		}
 	}
 	else {
-		ast::Stmt* ast;
 		try {
-			ast = parse( cin );
+			ast::Stmt* ast = parse( cin );
+			Global global;
+			stop.store( false );
+			evalStmt( ast, &global, nullptr, 0, 1, stop );
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
 			return 1;
 		}
-
-		Global global;
-		stop.store( false );
-		evalStmt( ast, &global, nullptr, 0, 1, stop );
 	}
 
 	return 0;
