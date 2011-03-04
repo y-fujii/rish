@@ -38,6 +38,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH
+%token TK_YIELD
 
 %start top
 
@@ -50,15 +51,15 @@ stmt_seq
 	: stmt_seq ';' stmt_bg			{ $$ = new Sequence( $1, $3 ); }
 	| stmt_seq ';'
 	| stmt_bg
-	| 								{ $$ = new None(); }
+	| 								{ $$ = new True(); }
 
 stmt_bg
 	: '&' stmt_andor				{ $$ = new Bg( $2 ); }
 	| stmt_andor
 
 stmt_andor
-	: stmt_andor TK_AND2 stmt_not	{ $$ = new And( $1, $3 ); }
-	| stmt_andor TK_OR2 stmt_not	{ $$ = new Or( $1, $3 ); }
+	: stmt_andor TK_AND2 stmt_not	{ $$ = new If( $1, $3, new None( 1 ) ); }
+	| stmt_andor TK_OR2 stmt_not	{ $$ = new If( $1, new None( 0 ), $3 ); }
 	| stmt_not
 
 stmt_not
@@ -83,8 +84,9 @@ stmt_prim
 	*/
 	| TK_BREAK expr_concat							{ $$ = new Break( $2 ); }
 	| TK_RETURN expr_concat							{ $$ = new Return( $2 ); }
-	| TK_FETCH lexpr_when							{ $$ = new Fetch( $2 ); }
 	| TK_LET lexpr_when '=' expr_list				{ $$ = new Let( $2, $4 ); }
+	| TK_FETCH lexpr_when							{ $$ = new Fetch( $2 ); }
+	| TK_YIELD expr_list							{ $$ = new Yield( $2 ); }
 	| TK_FUN TK_WORD lexpr_when '{' stmt_seq '}'	{ $$ = new Fun( string( $2->begin(), $2->end() ), $3, $5 ); delete $2; }
 	| '{' stmt_seq '}'								{ $$ = $2; };
 	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }
@@ -95,7 +97,7 @@ if_
 else_
 	: TK_ELSE '{' stmt_seq '}'			{ $$ = $3; }
 	| TK_ELSE if_						{ $$ = $2; }
-	| 									{ $$ = new None(); }
+	| 									{ $$ = new None( 0 ); }
 
 lexpr_when
 	/*

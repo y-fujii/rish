@@ -25,10 +25,12 @@
 using namespace std;
 
 
+typedef function<int (deque<string> const&, int, int)> Builtin;
+
 struct Global {
 	map<string, deque<string> > vars; // this will be removed
 	map<string, ast::Fun*> funs;
-	map<string, function<int (deque<string> const&, int, int)> > builtins;
+	map<string, Builtin> builtins;
 	//map<string, pair<ast::Fun*, Local*> > funs;
 	//pthread_mutex_t lock;
 };
@@ -331,8 +333,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				}
 			}
 
-			map<string, function<int (deque<string> const&, int, int)> >::const_iterator bit =
-				global->builtins.find( args[0] );
+			map<string, Builtin>::const_iterator bit = global->builtins.find( args[0] );
 			if( bit != global->builtins.end() ) {
 				args.pop_front();
 				return bit->second( args, ifd, ofd );
@@ -420,6 +421,15 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				}
 			}
 		}
+		VARIANT_CASE( Yield, s ) {
+			deque<string> vals;
+			evalArgs( s->rhs, global, local, ifd, stop, back_inserter( vals ) );
+			ostringstream buf;
+			for( deque<string>::const_iterator it = vals.begin(); it != vals.end(); ++it ) {
+				buf << *it << '\n';
+			}
+			return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
+		}
 		VARIANT_CASE( Pipe, s ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
@@ -434,8 +444,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			return 0;
 		}
 		*/
-		VARIANT_CASE_( None ) {
-			return 0;
+		VARIANT_CASE( None, s ) {
+			return s->retv;
 		}
 		VARIANT_DEFAULT {
 			assert( false );
