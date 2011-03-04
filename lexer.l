@@ -43,7 +43,6 @@
 "|"			{ return '|'; }
 "="			{ return '='; }
 "^"			{ return '^'; }
-"@"			{ return '@'; }
 
 "&&"		{ return TK_AND2; }
 "||"		{ return TK_OR2; }
