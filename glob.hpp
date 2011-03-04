@@ -29,25 +29,25 @@ inline bool isMeta( MetaString::value_type c ) {
 	return (c & metaMask) != 0;
 }
 
-// O(#ptn) space, O(#ptn * #src) time wildcard matcher
-inline bool matchGlob( MetaString const& ptn, string const& src ) {
-	deque<bool> mark( ptn.size() );
+// O(#ptrn) space, O(#ptrn * #src) time wildcard matcher
+inline bool matchGlob( MetaString const& ptrn, string const& src ) {
+	deque<bool> mark( ptrn.size() );
 	bool prev = true;
 
-	for( size_t i = 0; i < ptn.size(); ++i ) {
+	for( size_t i = 0; i < ptrn.size(); ++i ) {
 		mark[i] = prev;
-		prev &= ptn[i] == star;
+		prev &= ptrn[i] == star;
 	}
 
 	for( size_t j = 0; j < src.size(); ++j ) {
 		prev = false;
-		for( size_t i = 0; i < ptn.size(); ++i ) {
+		for( size_t i = 0; i < ptrn.size(); ++i ) {
 			bool curr;
-			if( ptn[i] == star ) {
+			if( ptrn[i] == star ) {
 				curr = prev | mark[i];
 				prev = curr;
 			}
-			else if( ptn[i] == any1 || ptn[i] == src[j] ) {
+			else if( ptrn[i] == any1 || ptrn[i] == src[j] ) {
 				curr = prev;
 				prev = mark[i];
 			}
@@ -64,7 +64,8 @@ inline bool matchGlob( MetaString const& ptn, string const& src ) {
 
 template<class DstIter>
 DstIter listDir( string const& root, DstIter dstIt ) {
-	DIR* dir = opendir( root.c_str() );
+	char const* r = root.size() == 0 ? "." : root.c_str();
+	DIR* dir = opendir( r );
 	if( dir == NULL ) {
 		throw IOError();
 	}
@@ -89,21 +90,21 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 }
 
 template<class DstIter>
-DstIter expandGlobRec( string const& root, MetaString const& ptn, DstIter dstIt ) {
-	size_t slash = ptn.find( '/' );
+DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt ) {
+	size_t slash = ptrn.find( '/' );
 	if( slash == MetaString::npos ) {
 		deque<pair<string, int> > dirs;
 		listDir( root, back_inserter( dirs ) );
 		for( deque<pair<string, int> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
-			if( !(it->second & DT_DIR) && matchGlob( ptn, it->first ) ) {
+			if( !(it->second & DT_DIR) && matchGlob( ptrn, it->first ) ) {
 				*dstIt++ = root + it->first;
 			}
 		}
 	}
 	else {
 		assert( slash != 0 );
-		MetaString base = ptn.substr( 0, slash );
-		MetaString rest = ptn.substr( slash + 1 );
+		MetaString base = ptrn.substr( 0, slash );
+		MetaString rest = ptrn.substr( slash + 1 );
 
 		if( base == MetaString( "." ) || base == MetaString( ".." ) ) {
 			dstIt = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dstIt );
@@ -129,17 +130,23 @@ DstIter expandGlobRec( string const& root, MetaString const& ptn, DstIter dstIt 
 
 template<class DstIter>
 DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
-	if( !any_of( src.begin(), src.end(), isMeta ) ) {
-		*dstIt++ = string( src.begin(), src.end() );
-		return dstIt;
-	}
-	if( src.size() >= 2 && src[0] == home && src[1] == '/' ) {
-		return expandGlobRec( getenv( "HOME" ), src.substr( 2 ), dstIt );
-	}
-	else if( src.size() >= 1 && src[0] == '/' ) {
-		return expandGlobRec( "/", src.substr( 1 ), dstIt );
+	MetaString ptrn;
+	if( src.size() >= 1 && src[0] == home ) {
+		ptrn = MetaString( getenv( "HOME" ) ) + src.substr( 1 );
 	}
 	else {
-		return expandGlobRec( "./", src, dstIt );
+		ptrn = src;
+	}
+
+	if( !any_of( ptrn.begin(), ptrn.end(), isMeta ) ) {
+		*dstIt++ = string( ptrn.begin(), ptrn.end() );
+		return dstIt;
+	}
+
+	if( ptrn.size() >= 1 && ptrn[0] == '/' ) {
+		return expandGlobRec( "/", ptrn.substr( 1 ), dstIt );
+	}
+	else {
+		return expandGlobRec( "", ptrn, dstIt );
 	}
 }
