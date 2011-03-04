@@ -3,8 +3,8 @@ CXX = g++ -g -pedantic -Wall -Wextra -pthread -Os
 
 SRCS = \
 	lexer.l parser.y \
-	config.hpp misc.hpp \
-	parser.hpp ast.hpp eval.hpp command.hpp glob.hpp \
+	misc.hpp unix.hpp \
+	parser.hpp ast.hpp eval.hpp glob.hpp \
 	builtins.hpp main.cpp
 
 rish: $(SRCS)

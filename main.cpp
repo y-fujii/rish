@@ -1,6 +1,5 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
-#include "config.hpp"
 #include <memory>
 #include <tr1/memory>
 #include <iostream>

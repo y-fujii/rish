@@ -1,7 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include "config.hpp"
 #include <algorithm>
 #include <functional>
 #include <tr1/functional>
@@ -18,9 +17,9 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include "ast.hpp"
-#include "command.hpp"
 #include "glob.hpp"
 #include "misc.hpp"
+#include "unix.hpp"
 
 using namespace std;
 
@@ -325,7 +324,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 						return evalStmt( fit->second->body, global, &local, ifd, ofd, stop );
 					}
 					else {
-						assert( false ); // to be implemented
+						return 1; // to be implemented
 					}
 				}
 				catch( ReturnException const& e ) {
@@ -339,7 +338,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				return bit->second( args, ifd, ofd );
 			}
 
-			return runCommand( args, ifd, ofd );
+			return forkExec( args, ifd, ofd );
 		}
 		VARIANT_CASE( Return, s ) {
 			deque<string> args;
