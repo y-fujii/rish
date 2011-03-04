@@ -64,41 +64,37 @@ int main( int argc, char** ) {
 		builtins::register_( global.builtins );
 		while( true ) {
 			char* line = readline( "| " );
+			if( line == NULL ) break;
+			ScopeExit( bind( free, line ) );
+			size_t len = strlen( line );
+			if( len > 0 ) {
+				add_history( line );
+			}
+
 			try {
-				if( line == NULL ) break;
-				size_t len = strlen( line );
-				if( len > 0 ) {
-					add_history( line );
-				}
+				istringstream istr( line );
+				ast::Stmt* ast = parse( istr );
 
-				try {
-					istringstream istr( line );
-					ast::Stmt* ast = parse( istr );
-
-					stop.store( false );
-					int retv = evalStmt( ast, &global, nullptr, 0, 1, stop );
-					if( retv != 0 ) {
-						cerr << "The command returned " << retv << "." << endl;
-					}
-				}
-				catch( SyntaxError const& ) {
-					cerr << "Syntax error." << endl;
-				}
-				catch( StopException const& ) {
-					cerr << "\nInterrupted." << endl;
-				}
-				catch( IOError const& ) {
-					cerr << "I/O error." << endl;
-				}
-				catch( ios_base::failure const& ) {
-					cerr << "I/O error." << endl;
+				stop.store( false );
+				int retv = evalStmt( ast, &global, nullptr, 0, 1, stop );
+				if( retv != 0 ) {
+					cerr << "The command returned " << retv << "." << endl;
 				}
 			}
-			catch( ... ) {
-				free( line );
-				throw;
+			catch( SyntaxError const& ) {
+				cerr << "Syntax error." << endl;
 			}
-			free( line );
+			catch( StopException const& ) {
+				cerr << "\nInterrupted." << endl;
+			}
+			/*
+			catch( IOError const& ) {
+				cerr << "I/O error." << endl;
+			}
+			*/
+			catch( ios_base::failure const& ) {
+				cerr << "I/O error." << endl;
+			}
 		}
 	}
 	else {

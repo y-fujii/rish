@@ -25,19 +25,8 @@ MetaString::value_type const star = '*' | metaMask;
 MetaString::value_type const any1 = '?' | metaMask;
 MetaString::value_type const home = '~' | metaMask;
 
-template<class String>
-String pathJoin( String const& x, String const& y ) {
-	if( y.size() > 0 && y[0] == '/' ) {
-		return y;
-	}
-	else {
-		if( x.size() > 0 && x[x.size() - 1] == '/' ) {
-			return x + y;
-		}
-		else {
-			return x + "/" + y;
-		}
-	}
+inline bool isMeta( MetaString::value_type c ) {
+	return (c & metaMask) != 0;
 }
 
 // O(#pattern) space, O(#pattern * #src) time wildcard matcher
@@ -80,42 +69,35 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 	if( dir == NULL ) {
 		throw IOError();
 	}
-	try {
-		while( true ) {
-			dirent entry;
-			dirent* result;
-			if( readdir_r( dir, &entry, &result ) != 0 ) {
-				throw IOError();
-			}
-			if( result == NULL ) {
-				break;
-			}
-			*dstIt++ = make_pair( entry.d_type, entry.d_name );
+	ScopeExit closer( bind( closedir, dir ) );
+
+	while( true ) {
+		dirent entry;
+		dirent* result;
+		if( readdir_r( dir, &entry, &result ) != 0 ) {
+			throw IOError();
 		}
-	}
-	catch( ... ) {
-		closedir( dir );
-		throw;
-	}
-	if( closedir( dir ) < 0 ) {
-		throw IOError();
+		if( result == NULL ) {
+			break;
+		}
+		if( string( entry.d_name ) != "." && string( entry.d_name ) != ".." ) {
+			*dstIt++ = entry;
+		}
 	}
 
 	return dstIt;
 }
 
+/*
 template<class DstIter>
 DstIter walkDir( string const& root, DstIter dstIt ) {
 	deque< pair<int, string> > tmp;
 	listDir( root, back_inserter( tmp ) );
 
-	for( deque< pair<int, string> >::const_iterator it = tmp.begin(); it != tmp.end(); ++it ) {
-		if( it->second == "." || it->second == ".." ) {
-			continue;
-		}
-		if( it->first & DT_DIR ) {
-			string name = root + it->second + "/";
-			*dstIt++ = make_pair( it->first, name );
+	for( deque<dirent>::const_iterator it = tmp.begin(); it != tmp.end(); ++it ) {
+		if( it->d_type & DT_DIR ) {
+			string name = root + it->d_name + "/";
+			*dstIt++ = make_pair( it->d_name, name );
 			dstIt = walkDir( name, dstIt );
 		}
 		else {
@@ -126,20 +108,20 @@ DstIter walkDir( string const& root, DstIter dstIt ) {
 
 	return dstIt;
 }
+*/
 
-/*
 template<class DstIter>
-DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst ) {
+DstIter expandGlobRec( string const& root, MetaString const& pattern, DstIter dst ) {
 	size_t slash = pattern.find( '/' );
 	if( slash == MetaString::npos ) {
-		deque< pair<int, string> > dirs;
+		deque<dirent> dirs;
 		listDir( root, back_inserter( dirs ) );
-		for( deque< pair<int, string> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
-			if( it->first & DT_DIR ) {
-				continue;
-			}
-			if( matchGlob( pattern, it->second.begin(), it->second.end() ) ) {
-				*dst++ = root + it->second;
+		for( deque<dirent>::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+			if(
+				!(it->d_type & DT_DIR) &&
+				matchGlob( pattern, it->d_name, it->d_name + it->d_namlen )
+			) {
+				*dst++ = root + it->d_name;
 			}
 		}
 	}
@@ -147,28 +129,28 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 		MetaString base = pattern.substr( 0, slash );
 		MetaString rest = pattern.substr( slash + 1 );
 
+		/*
 		if( base == MetaString( "." ) || base == MetaString( ".." ) ) {
-			dst = expandGlob( root + string( base.begin(), base.end() ) + "/", rest, dst );
+			dst = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dst );
+		}
+		*/
+		if( all_of( base.begin(), base.end(), isMeta ) ) {
+			dst = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dst );
 		}
 		else {
-			deque< pair<int, string> > dirs;
-			string root2;
-			if( base == MetaString( "" ) ) {
-				root2 = "/";
-			} else {
-				root2 = root;
-			}
-			listDir( root2, back_inserter( dirs ) );
-			for( deque< pair<int, string> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
-				if( !(it->first & DT_DIR) || it->second == "." || it->second == ".." ) {
-					continue;
-				}
-				if( matchGlob( base, it->second.begin(), it->second.end() ) ) {
-					if( rest != MetaString( "" ) ) {
-						dst = expandGlob( root2 + it->second + "/", rest, dst );
+			assert( slash != 0 );
+			deque<dirent> dirs;
+			listDir( root, back_inserter( dirs ) );
+			for( deque<dirent>::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+				if(
+					(it->d_type & DT_DIR) &&
+					matchGlob( base, it->d_name, it->d_name + it->d_namlen )
+				) {
+					if( rest == MetaString( "" ) ) {
+						*dst++ = root + it->d_name;
 					}
 					else {
-						*dst++ = root2 + it->second;
+						dst = expandGlobRec( root + it->d_name + "/", rest, dst );
 					}
 				}
 			}
@@ -178,32 +160,18 @@ DstIter expandGlob( string const& root, MetaString const& pattern, DstIter dst )
 	return dst;
 }
 
+#include <iostream>
 template<class DstIter>
 DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
-	MetaString root;
-	if( src.size() > 0 && src[0] == home ) {
-		root = MetaString( getenv( "HOME" ) ) + src.substr( 1 );
+	if( src.size() >= 2 && src[0] == home && src[1] == '/' ) {
+		return expandGlobRec( getenv( "HOME" ), src.substr( 2 ), dstIt );
 	}
-	else if( src.size() > 0 && src[0] == '/' ) {
-		root = src;
+	else if( src.size() >= 1 && src[0] == '/' ) {
+		return expandGlobRec( "/", src.substr( 1 ), dstIt );
 	}
 	else {
 		char buf[MAXPATHLEN];
 		getcwd( buf, MAXPATHLEN );
-		root = MetaString( buf ) + MetaString( "/" ) + src;
+		return expandGlobRec( string( buf ) + "/", src, dstIt );
 	}
-	// expandGlob( root, src, dstIt );
-	return dstIt;
-}
-*/
-
-template<class DstIter>
-DstIter expandGlob( MetaString const& src, DstIter dst ) {
-	if( src.size() > 0 && src[0] == home ) {
-		*dst++ = getenv( "HOME" ) + string( src.begin() + 1, src.end() );
-	}
-	else {
-		*dst++ = string( src.begin(), src.end() );
-	}
-	return dst;
 }
