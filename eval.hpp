@@ -288,7 +288,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		throw StopException();
 	}
 
-	try {
+	//try {
 	VARIANT_SWITCH( Stmt, sb ) {
 		VARIANT_CASE( Sequence, s ) {
 			evalStmt( s->lhs, global, local, ifd, ofd, stop );
@@ -450,10 +450,12 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			assert( false );
 		}
 	}
+	/*
 	}
 	catch( IOError const& ) {
 		return 1;
 	}
+	*/
 
 	assert( false );
 }
