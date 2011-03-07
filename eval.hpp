@@ -287,7 +287,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			return evalStmt( s->rhs, global, local, ifd, ofd, stop );
 		}
 		VARIANT_CASE( Bg, s ) {
-			//Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd, stop, false, false ) );
+			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd, stop, false, false ) );
 			return 0;
 		}
 		VARIANT_CASE( RedirFr, s ) {
