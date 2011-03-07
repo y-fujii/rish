@@ -24,9 +24,9 @@ Examples:
 
 Examples:
 	let $x = 1
-	let &x = 1 2 3
-	let $x:1 = 1
-	let 3 &x = 3 4 5 6
+	let ($x) = 1 2 3
+	let $x ($y) = 1
+	let 3 ($x) = 3 4 5 6
 	let opAdd $lhs $rhs = (opAdd 1 2)
 
 	if let opAdd $x $y = $args {
@@ -39,7 +39,7 @@ Examples:
 ## Control structures
 	$x = ${pipe.new}
 	pipe.close $x
-	data.dat >| for $i $j when ($i == $j) { yield ($i + 1) } |> name
+	data.dat >| while {fetch $i $j} if ($i == $j) yield ($i + 1) |> name
 
 	let 2323
 	let $var = fetch;

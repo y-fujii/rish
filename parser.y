@@ -63,7 +63,7 @@ stmt_andor
 	| stmt_not
 
 stmt_not
-	: '!' stmt_redir				{ $$ = new Not( $2 ); }
+	: '!' stmt_redir				{ $$ = new If( $2, new None( 1 ), new None( 0 ) ); }
 	| stmt_redir
 
 stmt_redir

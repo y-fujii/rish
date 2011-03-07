@@ -123,41 +123,36 @@ struct While: Variant<Stmt, 9> {
 	Stmt* elze;
 };
 
-struct Not: Variant<Stmt, 10> {
-	Not( Stmt* b ): body( b ) {}
-	Stmt* body;
-};
-
-struct Bg: Variant<Stmt, 11> {
+struct Bg: Variant<Stmt, 10> {
 	Bg( Stmt* b ): body( b ) {}
 	Stmt* body;
 };
 
-struct Sequence: Variant<Stmt, 12> {
+struct Sequence: Variant<Stmt, 11> {
 	Sequence( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
 
-struct RedirFr: Variant<Stmt, 13> {
+struct RedirFr: Variant<Stmt, 12> {
 	RedirFr( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
 	Expr* file;
 };
 
-struct RedirTo: Variant<Stmt, 14> {
+struct RedirTo: Variant<Stmt, 13> {
 	RedirTo( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
 	Expr* file;
 };
 
-struct Pipe: Variant<Stmt, 15> {
+struct Pipe: Variant<Stmt, 14> {
 	Pipe( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
 
-struct None: Variant<Stmt, 16> {
+struct None: Variant<Stmt, 15> {
 	None( int r ): retv( r ) {}
 	int retv;
 };
