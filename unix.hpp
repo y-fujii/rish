@@ -91,8 +91,9 @@ struct Thread {
 
 	template<class T>
 	explicit Thread( T const& cb ):
-		_callback( cb ) {
-		if( pthread_create( &_thread, NULL, _wrap, this ) != 0 ) {
+		_callback( new function<void ()>( cb ) ) {
+		if( pthread_create( &_thread, NULL, _wrap, _callback ) != 0 ) {
+			delete _callback;
 			throw IOError();
 		}
 	}
@@ -112,18 +113,21 @@ struct Thread {
 	}
 
 	private:
-		static void* _wrap( void* self ) {
+		static void* _wrap( void* data ) {
+			function<void ()>* callback = reinterpret_cast<function<void ()>*>( data );
 			try {
-				reinterpret_cast<Thread*>( self )->_callback();
+				(*callback)();
+				delete callback;
+				return reinterpret_cast<void*>( true );
 			}
 			catch( ... ) {
+				delete callback;
 				return reinterpret_cast<void*>( false );
 			}
-			return reinterpret_cast<void*>( true );
 		}
 
 		pthread_t _thread;
-		std::function<void ()> const _callback;
+		std::function<void ()>* const _callback;
 };
 
 inline void checkSysCall( int retv ) {
