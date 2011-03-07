@@ -84,3 +84,55 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 	}
 	return WEXITSTATUS( status );
 }
+
+struct Thread {
+	struct Interrupt {
+	};
+
+	template<class T>
+	explicit Thread( T const& cb ):
+		_callback( cb ) {
+		if( pthread_create( &_thread, NULL, _wrap, this ) != 0 ) {
+			throw IOError();
+		}
+	}
+
+	bool join() {
+		void* result;
+		if( pthread_join( _thread, &result ) != 0 ) {
+			throw IOError();
+		}
+		return bool( reinterpret_cast<uintptr_t>( result ) );
+	}
+
+	void interrupt() {
+		if( pthread_kill( _thread, SIGINT ) != 0 ) {
+			throw IOError();
+		}
+	}
+
+	private:
+		static void* _wrap( void* self ) {
+			try {
+				reinterpret_cast<Thread*>( self )->_callback();
+			}
+			catch( ... ) {
+				return reinterpret_cast<void*>( false );
+			}
+			return reinterpret_cast<void*>( true );
+		}
+
+		pthread_t _thread;
+		std::function<void ()> const _callback;
+};
+
+inline void checkSysCall( int retv ) {
+	if( retv < 0 ) {
+		if( errno == EINTR ) {
+			throw Thread::Interrupt();
+		}
+		else {
+			throw IOError();
+		}
+	}
+}

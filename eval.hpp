@@ -44,15 +44,11 @@ struct Local {
 
 struct BreakException {
 	BreakException( int r ): retv( r ) {}
-	virtual ~BreakException() {}
-
 	int const retv;
 };
 
 struct ReturnException {
 	ReturnException( int r ): retv( r ) {}
-	virtual ~ReturnException() {}
-
 	int const retv;
 };
 
@@ -61,17 +57,6 @@ struct StopException {
 
 int evalStmt( ast::Stmt*, Global*, Local*, int, int, atomic<bool>&, bool, bool );
 
-
-inline void checkSysCall( int retv ) {
-	if( retv < 0 ) {
-		if( errno == EINTR ) {
-			throw StopException();
-		}
-		else {
-			throw IOError();
-		}
-	}
-}
 
 inline deque<string>& findVariable( string const& name, Global* global, Local* local ) {
 	Local* it = local;
@@ -254,15 +239,22 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, atomic<b
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmt, e->body, global, local, ifd, fds[1], stop, false, true ) );
-			{
-				ScopeExit closer( bind( close, fds[0] ) );
-				UnixIStream ifs( fds[0] );
-				string buf;
-				while( getline( ifs, buf ) ) {
-					*dst++ = buf;
+			try {
+				{
+					ScopeExit closer( bind( close, fds[0] ) );
+					UnixIStream ifs( fds[0] );
+					string buf;
+					while( getline( ifs, buf ) ) {
+						*dst++ = buf;
+					}
 				}
+				thread.join();
 			}
-			thread.join();
+			catch( Thread::Interrupt const& ) {
+				thread.interrupt();
+				thread.join();
+				throw;
+			}
 		}
 		VARIANT_DEFAULT {
 			assert( false );
@@ -293,6 +285,10 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 		VARIANT_CASE( Sequence, s ) {
 			evalStmt( s->lhs, global, local, ifd, ofd, stop );
 			return evalStmt( s->rhs, global, local, ifd, ofd, stop );
+		}
+		VARIANT_CASE( Bg, s ) {
+			//Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd, stop, false, false ) );
+			return 0;
 		}
 		VARIANT_CASE( RedirFr, s ) {
 			deque<string> args;
@@ -433,10 +429,16 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 			Thread thread( bind( evalStmt, s->lhs, global, local, ifd, fds[1], stop, false, true ) );
-			int retv = evalStmt( s->rhs, global, local, fds[0], ofd, stop, true, false );
-			thread.join(); // XXX
-
-			return retv;
+			try {
+				int retv = evalStmt( s->rhs, global, local, fds[0], ofd, stop, true, false );
+				thread.join();
+				return retv;
+			}
+			catch( Thread::Interrupt const& ) {
+				thread.interrupt();
+				thread.join();
+				throw;
+			}
 		}
 		/*
 		VARIANT_CASE( For, s ) {
