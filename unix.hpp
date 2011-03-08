@@ -10,6 +10,8 @@
 
 using namespace std;
 
+int checkSysCall( int );
+
 
 struct UnixStreamBuf: std::streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
@@ -18,14 +20,12 @@ struct UnixStreamBuf: std::streambuf {
 
 	virtual int underflow() {
 		ssize_t n = read( _fd, &_buf[0], _buf.size() );
-		if( n < 0 ) {
-			throw std::ios_base::failure( "read()" );
-		}
-		else if( n == 0 ) {
+		checkSysCall( n );
+		if( n == 0 ) {
 			setg( nullptr, nullptr, nullptr );
 			return traits_type::eof();
 		}
-		else /* n > 0 */ {
+		else {
 			setg( &_buf[0], &_buf[0], &_buf[n] );
 			return _buf[0];
 		}
@@ -67,10 +67,8 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 	args_raw[args.size()] = NULL;
 
 	pid_t pid = fork();
-	if( pid < 0 ) {
-		throw IOError();
-	}
-	else if( pid == 0 ) {
+	checkSysCall( pid );
+	if( pid == 0 ) {
 		dup2( ifd, 0 );
 		dup2( ofd, 1 );
 		closefrom( 3 );
@@ -79,9 +77,7 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 	}
 
 	int status;
-	if( waitpid( pid, &status, 0 ) < 0 ) {
-		throw IOError();
-	}
+	checkSysCall( waitpid( pid, &status, 0 ) );
 	return WEXITSTATUS( status );
 }
 
@@ -89,10 +85,34 @@ struct Thread {
 	struct Interrupt {
 	};
 
+	static void setup() {
+		_interrupted() = false;
+
+		struct sigaction sa;
+		memset( &sa, 0, sizeof( sa ) );
+		sa.sa_flags = 0;
+		sa.sa_handler = _sigHandler;
+		checkSysCall( sigaction( SIGUSR1, &sa, NULL ) );
+	}
+
+	static void checkIntr() {
+		if( _interrupted() ) {
+			throw Interrupt();
+		}
+	}
+
 	template<class T>
 	explicit Thread( T const& cb ):
 		_callback( new function<void ()>( cb ) ) {
 		if( pthread_create( &_thread, NULL, _wrap, _callback ) != 0 ) {
+			delete _callback;
+			throw IOError();
+		}
+
+		sigset_t sset;
+		sigemptyset( &sset );  
+		sigaddset( &sset, SIGUSR1 );  
+		if( pthread_sigmask( SIG_SETMASK, &sset, NULL ) != 0 ) {
 			delete _callback;
 			throw IOError();
 		}
@@ -106,14 +126,22 @@ struct Thread {
 		return bool( reinterpret_cast<uintptr_t>( result ) );
 	}
 
+	// This function behaves like Java's Thread.interrupt() rather than boost::thread::interrupt()
 	void interrupt() {
-		if( pthread_kill( _thread, SIGINT ) != 0 ) {
+		if( pthread_kill( _thread, SIGUSR1 ) != 0 ) {
 			throw IOError();
 		}
 	}
 
 	private:
+		static void _sigHandler( int sig ) {
+			if( sig == SIGUSR1 ) {
+				_interrupted() = true;
+			}
+		}
+
 		static void* _wrap( void* data ) {
+			_interrupted() = false;
 			function<void ()>* callback = reinterpret_cast<function<void ()>*>( data );
 			try {
 				(*callback)();
@@ -125,6 +153,12 @@ struct Thread {
 				return reinterpret_cast<void*>( false );
 			}
 		}
+
+	public: static bool volatile& _interrupted() {
+			static __thread bool volatile intr;
+			return intr;
+		}
+	private:
 
 		pthread_t _thread;
 		function<void ()>* const _callback;
