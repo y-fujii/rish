@@ -250,9 +250,12 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, atomic<b
 				}
 				thread.join();
 			}
-			catch( Thread::Interrupt const& ) {
-				thread.interrupt();
-				thread.join();
+			catch( ... ) {
+				try {
+					thread.interrupt();
+					thread.join();
+				}
+				catch ( ... ) {}
 				throw;
 			}
 		}
@@ -434,9 +437,12 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 				thread.join();
 				return retv;
 			}
-			catch( Thread::Interrupt const& ) {
-				thread.interrupt();
-				thread.join();
+			catch( ... ) {
+				try {
+					thread.interrupt();
+					thread.join();
+				}
+				catch ( ... ) {}
 				throw;
 			}
 		}

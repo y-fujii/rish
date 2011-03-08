@@ -127,7 +127,7 @@ struct Thread {
 		}
 
 		pthread_t _thread;
-		std::function<void ()>* const _callback;
+		function<void ()>* const _callback;
 };
 
 inline void checkSysCall( int retv ) {
