@@ -290,6 +290,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			return evalStmt( s->rhs, global, local, ifd, ofd, stop );
 		}
 		VARIANT_CASE( Bg, s ) {
+			// XXX: detach?
 			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd, stop, false, false ) );
 			return 0;
 		}
@@ -426,7 +427,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, ato
 			for( deque<string>::const_iterator it = vals.begin(); it != vals.end(); ++it ) {
 				buf << *it << '\n';
 			}
-			return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
+			writeAll( ofd, buf.str() );
+			return 0;
 		}
 		VARIANT_CASE( Pipe, s ) {
 			int fds[2];

@@ -10,6 +10,7 @@
 #include <sys/ioctl.h>
 //#include <tr1/regrex>
 #include "misc.hpp"
+#include "unix.hpp"
 #include "glob.hpp"
 
 using namespace std;
@@ -21,14 +22,13 @@ int changeDir( deque<string> const& args, int, int ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
-	return chdir( args[0].c_str() ) < 0 ? 1 : 0;
+	checkSysCall( chdir( args[0].c_str() ) );
+	return 0;
 }
 
 int showList( deque<string> const& args, int ifd, int ofd ) {
 	struct winsize ws;
-	if( ioctl( ofd, TIOCGWINSZ, &ws ) < 0 ) {
-		return 1;
-	}
+	checkSysCall( ioctl( ofd, TIOCGWINSZ, &ws ) );
 
 	int sum1 = 0;
 	int sum2 = 0;
@@ -59,7 +59,8 @@ int showList( deque<string> const& args, int ifd, int ofd ) {
 		buf << '\n';
 	}
 
-	return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
+	writeAll( ofd, buf.str() );
+	return 0;
 }
 
 int strSize( deque<string> const& args, int ifd, int ofd ) {
@@ -68,7 +69,8 @@ int strSize( deque<string> const& args, int ifd, int ofd ) {
 		buf << it->size() << '\n';
 	}
 
-	return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
+	writeAll( ofd, buf.str() );
+	return 0;
 }
 
 /*
@@ -79,7 +81,8 @@ int strFind( deque<string> const& args, int ifd, int ofd ) {
 		regex_search( args[i], match, args[1] );
 	}
 
-	return write( ofd, buf.str().data(), buf.str().size() ) < 0 ? 1 : 0;
+	writeAll( ofd, buf.str() );
+	return 0;
 }
 
 int strMatch( deque<string> const& args, int ifd, int ofd ) {

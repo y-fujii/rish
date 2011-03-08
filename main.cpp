@@ -36,8 +36,8 @@ void handleSigTSTP( int ) {
 
 // XXX
 void handleSigINT( int ) {
-	char data[] = "\r\x1b[K";
-	write( 0, data, size( data ) );
+	string data( "\r\x1b[K" );
+	writeAll( 0, data );
 	rl_initialize();
 	rl_redisplay();
 
