@@ -130,7 +130,7 @@ struct Thread {
 		function<void ()>* const _callback;
 };
 
-inline void checkSysCall( int retv ) {
+inline int checkSysCall( int retv ) {
 	if( retv < 0 ) {
 		if( errno == EINTR ) {
 			throw Thread::Interrupt();
@@ -138,5 +138,13 @@ inline void checkSysCall( int retv ) {
 		else {
 			throw IOError();
 		}
+	}
+	return retv;
+}
+
+inline void writeAll( int ofd, string const& src ) {
+	size_t i = 0;
+	while( i < src.size() ) {
+		i += checkSysCall( write( ofd, src.data() + i, src.size() - i ) );
 	}
 }
