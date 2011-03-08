@@ -18,16 +18,6 @@
 using namespace std;
 
 
-atomic<bool> stop( false );
-
-__thread void (*threadSigHandler)( int ) = nullptr;
-
-void handleSignal( int s ) {
-	if( threadSigHandler != nullptr ) {
-		threadSigHandler( s );
-	}
-}
-
 void handleSigTSTP( int ) {
 	/*
 	setpgid( 0, 0 );
@@ -41,7 +31,7 @@ void handleSigINT( int ) {
 	rl_initialize();
 	rl_redisplay();
 
-	stop.store( true );
+	Thread::_interrupted() = true;
 }
 
 int main( int argc, char** ) {
@@ -49,6 +39,8 @@ int main( int argc, char** ) {
 	assert( argc == 1 );
 
 	if( isatty( 0 ) ) {
+		Thread::setup();
+
 		struct sigaction sa;
 		memset( &sa, 0, sizeof( sa ) );
 
@@ -76,8 +68,8 @@ int main( int argc, char** ) {
 				istringstream istr( line );
 				ast::Stmt* ast = parse( istr );
 
-				stop.store( false );
-				int retv = evalStmt( ast, &global, nullptr, 0, 1, stop );
+				Thread::_interrupted() = false;
+				int retv = evalStmt( ast, &global, nullptr, 0, 1 );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
@@ -85,14 +77,12 @@ int main( int argc, char** ) {
 			catch( SyntaxError const& ) {
 				cerr << "Syntax error." << endl;
 			}
-			catch( StopException const& ) {
+			catch( Thread::Interrupt const& ) {
 				cerr << "\nInterrupted." << endl;
 			}
-			/*
 			catch( IOError const& ) {
 				cerr << "I/O error." << endl;
 			}
-			*/
 			catch( ios_base::failure const& ) {
 				cerr << "I/O error." << endl;
 			}
@@ -102,8 +92,8 @@ int main( int argc, char** ) {
 		try {
 			ast::Stmt* ast = parse( cin );
 			Global global;
-			stop.store( false );
-			evalStmt( ast, &global, nullptr, 0, 1, stop );
+			Thread::_interrupted() = false;
+			evalStmt( ast, &global, nullptr, 0, 1 );
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
