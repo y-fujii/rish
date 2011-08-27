@@ -39,6 +39,7 @@ struct Local {
 
 	Local* outer;
 	map<string, deque<string> > vars;
+	deque<deque<string> > defs;
 	//pthread_mutex_t lock;
 };
 
@@ -52,7 +53,7 @@ struct ReturnException {
 	int const retv;
 };
 
-int evalStmt( ast::Stmt*, Global*, Local*, int, int, bool, bool );
+int evalStmt( ast::Stmt*, Global*, Local*, int, int, bool = false, bool = false );
 
 
 inline deque<string>& findVariable( string const& name, Global* global, Local* local ) {
@@ -65,17 +66,20 @@ inline deque<string>& findVariable( string const& name, Global* global, Local* l
 		it = local->outer;
 	}
 
-	map<string, deque<string> >::iterator v = global->vars.find( name );
-	if( v != global->vars.end() ) {
-		return v->second;
+	if( global != nullptr ) {
+		map<string, deque<string> >::iterator v = global->vars.find( name );
+		if( v != global->vars.end() ) {
+			return v->second;
+		}
 	}
 
 	if( local != nullptr ) {
 		return local->vars[name];
 	}
-	else {
+	else if( global != nullptr ) {
 		return global->vars[name];
 	}
+	assert( false );
 }
 
 // XXX
@@ -261,6 +265,40 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 	return dst;
 }
 
+int execCommand( deque<string>& args, Global* global, int ifd, int ofd ) {
+	map<string, ast::Fun*>::const_iterator fit = global->funs.find( args[0] );
+	if( fit != global->funs.end() ) {
+		Local local;
+		int retv;
+		try {
+			args.pop_front();
+			if( assign( fit->second->args, args, nullptr, &local ) ) {
+				retv = evalStmt( fit->second->body, global, &local, ifd, ofd );
+			}
+			else {
+				return 1; // to be implemented
+			}
+		}
+		catch( ReturnException const& e ) {
+			retv = e.retv;
+		}
+
+		for( deque<deque<string> >::reverse_iterator it = local.defs.rbegin(); it != local.defs.rend(); ++it ) {
+			execCommand( *it, global, ifd, ofd );
+		}
+
+		return retv;
+	}
+
+	map<string, Builtin>::const_iterator bit = global->builtins.find( args[0] );
+	if( bit != global->builtins.end() ) {
+		args.pop_front();
+		return bit->second( args, ifd, ofd );
+	}
+
+	return forkExec( args, ifd, ofd );
+}
+
 template<class DstIter>
 DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIter dstIt ) {
 	deque<MetaString> tmp;
@@ -268,7 +306,7 @@ DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, bool ic = false, bool oc = false ) {
+int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, bool ic, bool oc ) {
 	using namespace ast;
 
 	ScopeExit icloser( bind( close, ifd ), ic );
@@ -308,30 +346,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 				return 0;
 			}
 
-			map<string, Fun*>::const_iterator fit = global->funs.find( args[0] );
-			if( fit != global->funs.end() ) {
-				try {
-					Local local;
-					args.pop_front();
-					if( assign( fit->second->args, args, global, &local ) ) {
-						return evalStmt( fit->second->body, global, &local, ifd, ofd );
-					}
-					else {
-						return 1; // to be implemented
-					}
-				}
-				catch( ReturnException const& e ) {
-					return e.retv;
-				}
-			}
-
-			map<string, Builtin>::const_iterator bit = global->builtins.find( args[0] );
-			if( bit != global->builtins.end() ) {
-				args.pop_front();
-				return bit->second( args, ifd, ofd );
-			}
-
-			return forkExec( args, ifd, ofd );
+			return execCommand( args, global, ifd, ofd );
 		}
 		VARIANT_CASE( Return, s ) {
 			deque<string> args;
@@ -440,6 +455,12 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 				catch ( ... ) {}
 				throw;
 			}
+		}
+		VARIANT_CASE( Defer, s ) {
+			deque<string> vals;
+			evalArgs( s->args, global, local, ifd, back_inserter( vals ) );
+			local->defs.push_back( vals );
+			return 0;
 		}
 		/*
 		VARIANT_CASE( For, s ) {

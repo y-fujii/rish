@@ -62,6 +62,7 @@
 "when"		{ return TK_WHEN; }
 "fetch"		{ return TK_FETCH; }
 "yield"		{ return TK_YIELD; }
+"defer"		{ return TK_DEFER; }
 
 \$[a-zA-Z0-9_]+ {
 	yylval.var = new string( yytext + 1 );
