@@ -38,7 +38,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH
-%token TK_YIELD
+%token TK_YIELD TK_DEFER
 
 %start top
 
@@ -87,6 +87,7 @@ stmt_prim
 	| TK_LET lexpr_when '=' expr_list				{ $$ = new Let( $2, $4 ); }
 	| TK_FETCH lexpr_when							{ $$ = new Fetch( $2 ); }
 	| TK_YIELD expr_list							{ $$ = new Yield( $2 ); }
+	| TK_DEFER expr_list							{ $$ = new Defer( $2 ); }
 	| TK_FUN TK_WORD lexpr_when '{' stmt_seq '}'	{ $$ = new Fun( string( $2->begin(), $2->end() ), $3, $5 ); delete $2; }
 	| '{' stmt_seq '}'								{ $$ = $2; };
 	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }

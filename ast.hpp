@@ -152,7 +152,12 @@ struct Pipe: Variant<Stmt, 14> {
 	Stmt* rhs;
 };
 
-struct None: Variant<Stmt, 15> {
+struct Defer: Variant<Stmt, 15> {
+	Defer( Expr* a ): args( a ) {}
+	Expr* args;
+};
+
+struct None: Variant<Stmt, 16> {
 	None( int r ): retv( r ) {}
 	int retv;
 };
