@@ -124,9 +124,8 @@ expr_concat
 
 expr_prim
 	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
-	| '$' '{' stmt_seq '}'				{ $$ = new Subst( $3 ); }
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
-	| '(' expr_list ')'					{ $$ = $2; }
+	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
 	/*
 	| '$' '(' TK_WORD subscr_list ')'	{ $$ = new Slice( $3, $4 ); }
 	| expr '[' expr ']'					{ $$ = new Index( $1, $3 ); }
