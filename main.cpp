@@ -52,6 +52,7 @@ int main( int argc, char** ) {
 		sa.sa_flags = 0;
 		sigaction( SIGINT, &sa, NULL );
 
+		Local local;
 		Global global;
 		builtins::register_( global.builtins );
 		while( true ) {
@@ -69,7 +70,7 @@ int main( int argc, char** ) {
 				ast::Stmt* ast = parse( istr );
 
 				Thread::_interrupted() = false;
-				int retv = evalStmt( ast, &global, nullptr, 0, 1 );
+				int retv = evalStmt( ast, &global, &local, 0, 1 );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
@@ -91,9 +92,10 @@ int main( int argc, char** ) {
 	else {
 		try {
 			ast::Stmt* ast = parse( cin );
+			Local local;
 			Global global;
 			Thread::_interrupted() = false;
-			evalStmt( ast, &global, nullptr, 0, 1 );
+			evalStmt( ast, &global, &local, 0, 1 );
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
