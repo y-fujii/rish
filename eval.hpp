@@ -27,7 +27,6 @@ using namespace std;
 typedef function<int (deque<string> const&, int, int)> Builtin;
 
 struct Global {
-	map<string, deque<string> > vars; // this will be removed
 	map<string, ast::Fun*> funs;
 	map<string, Builtin> builtins;
 	//map<string, pair<ast::Fun*, Local*> > funs;
@@ -56,7 +55,7 @@ struct ReturnException {
 int evalStmt( ast::Stmt*, Global*, Local*, int, int, bool = false, bool = false );
 
 
-inline deque<string>& findVariable( string const& name, Global* global, Local* local ) {
+inline deque<string>& findVariable( string const& name, Local* local ) {
 	Local* it = local;
 	while( it != nullptr ) {
 		map<string, deque<string> >::iterator v = it->vars.find( name );
@@ -66,25 +65,13 @@ inline deque<string>& findVariable( string const& name, Global* global, Local* l
 		it = local->outer;
 	}
 
-	if( global != nullptr ) {
-		map<string, deque<string> >::iterator v = global->vars.find( name );
-		if( v != global->vars.end() ) {
-			return v->second;
-		}
-	}
-
-	if( local != nullptr ) {
-		return local->vars[name];
-	}
-	else if( global != nullptr ) {
-		return global->vars[name];
-	}
-	assert( false );
+	assert( local != nullptr );
+	return local->vars[name];
 }
 
 // XXX
 template<class Container>
-bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
+bool assign( ast::VarFix* lhs, Container& rhs, Local* local ) {
 	using namespace ast;
 
 	for( size_t i = 0; i < rhs.size(); ++i ) {
@@ -104,7 +91,7 @@ bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VARIANT_SWITCH( Expr, lhs->var[i] ) {
 			VARIANT_CASE( Var, tvar ) {
-				deque<string>& vvar = findVariable( tvar->name, global, local );
+				deque<string>& vvar = findVariable( tvar->name, local );
 				vvar.clear();
 				vvar.push_back( rhs[i] );
 			}
@@ -118,7 +105,7 @@ bool assign( ast::VarFix* lhs, Container& rhs, Global* global, Local* local ) {
 
 // XXX
 template<class Container>
-bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
+bool assign( ast::VarVar* lhs, Container& rhs, Local* local ) {
 	using namespace ast;
 
 	size_t const lBgn = 0;
@@ -153,7 +140,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VARIANT_SWITCH( Expr, lhs->varL[i] ) {
 			VARIANT_CASE( Var, tvar ) {
-				deque<string>& vvar = findVariable( tvar->name, global, local );
+				deque<string>& vvar = findVariable( tvar->name, local );
 				vvar.clear();
 				vvar.push_back( rhs[i + lBgn] );
 			}
@@ -161,13 +148,13 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 			}
 		}
 	}
-	deque<string>& vvar = findVariable( lhs->varM->name, global, local );
+	deque<string>& vvar = findVariable( lhs->varM->name, local );
 	vvar.clear();
 	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( vvar ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VARIANT_SWITCH( Expr, lhs->varR[i] ) {
 			VARIANT_CASE( Var, tvar ) {
-				deque<string>& vvar = findVariable( tvar->name, global, local );
+				deque<string>& vvar = findVariable( tvar->name, local );
 				vvar.clear();
 				vvar.push_back( rhs[i + rBgn] );
 			}
@@ -180,7 +167,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Global* global, Local* local ) {
 }
 
 template<class Container>
-bool assign( ast::LeftExpr* lhsb, Container& rhs, Global* global, Local* local ) {
+bool assign( ast::LeftExpr* lhsb, Container& rhs, Local* local ) {
 	using namespace ast;
 
 	VARIANT_SWITCH( LeftExpr, lhsb ) {
@@ -188,13 +175,13 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Global* global, Local* local )
 			if( rhs.size() != lhs->var.size() ) {
 				return false;
 			}
-			return assign( lhs, rhs, global, local );
+			return assign( lhs, rhs, local );
 		}
 		VARIANT_CASE( VarVar, lhs ) {
 			if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
 				return false;
 			}
-			return assign( lhs, rhs, global, local );
+			return assign( lhs, rhs, local );
 		}
 		VARIANT_DEFAULT {
 			assert( false );
@@ -231,7 +218,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 			}
 		}
 		VARIANT_CASE( Var, e ) {
-			deque<string>& val = findVariable( e->name, global, local );
+			deque<string>& val = findVariable( e->name, local );
 			dst = copy( val.begin(), val.end(), dst );
 		}
 		VARIANT_CASE( Subst, e ) {
@@ -272,7 +259,7 @@ int execCommand( deque<string>& args, Global* global, int ifd, int ofd ) {
 		int retv;
 		try {
 			args.pop_front();
-			if( assign( fit->second->args, args, nullptr, &local ) ) {
+			if( assign( fit->second->args, args, &local ) ) {
 				retv = evalStmt( fit->second->body, global, &local, ifd, ofd );
 			}
 			else {
@@ -395,7 +382,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 		VARIANT_CASE( Let, s ) {
 			deque<string> vals;
 			evalArgs( s->rhs, global, local, ifd, back_inserter( vals ) );
-			return assign( s->lhs, vals, global, local ) ? 0 : 1;
+			return assign( s->lhs, vals, local ) ? 0 : 1;
 		}
 		VARIANT_CASE( Fetch, s ) {
 			VARIANT_SWITCH( LeftExpr, s->lhs ) {
@@ -408,7 +395,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 						}
 					}
 
-					return assign( lhs, rhs, global, local ) ? 0 : 1;
+					return assign( lhs, rhs, local ) ? 0 : 1;
 				}
 				VARIANT_CASE( VarVar, lhs ) {
 					deque<string> rhs;
@@ -421,7 +408,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 						return 1;
 					}
 
-					return assign( lhs, rhs, global, local ) ? 0 : 1;
+					return assign( lhs, rhs, local ) ? 0 : 1;
 				}
 				VARIANT_DEFAULT {
 					assert( false );
@@ -457,9 +444,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			}
 		}
 		VARIANT_CASE( Defer, s ) {
-			deque<string> vals;
-			evalArgs( s->args, global, local, ifd, back_inserter( vals ) );
-			local->defs.push_back( vals );
+			local->defs.push_back( deque<string>() );
+			evalArgs( s->args, global, local, ifd, back_inserter( local->defs.back() ) );
 			return 0;
 		}
 		/*
