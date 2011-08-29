@@ -338,11 +338,11 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 		VARIANT_CASE( Return, s ) {
 			deque<string> args;
 			evalArgs( s->retv, global, local, ifd, back_inserter( args ) );
-			if( args.size() == 0 ) {
+			if( args.size() != 1 ) {
 				return 1;
 			}
 			int retv;
-			if( (istringstream( args.back() ) >> retv).fail() ) {
+			if( (istringstream( args[0] ) >> retv).fail() ) {
 				return 1;
 			}
 			throw ReturnException( retv ) ;
@@ -378,8 +378,11 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 		VARIANT_CASE( Break, s ) {
 			deque<string> args;
 			evalArgs( s->retv, global, local, ifd, back_inserter( args ) );
+			if( args.size() != 1 ) {
+				return 1;
+			}
 			int retv;
-			if( (istringstream( args.back() ) >> retv).fail() ) {
+			if( (istringstream( args[0] ) >> retv).fail() ) {
 				return 1;
 			}
 			throw BreakException( retv );
