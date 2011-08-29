@@ -77,8 +77,8 @@ struct Command: Variant<Stmt, 1> {
 };
 
 struct Fun: Variant<Stmt, 2> {
-	Fun( string const& n, LeftExpr* a, Stmt* b ): name( n ), args( a ), body( b ) {}
-	string name;
+	Fun( Expr* n, LeftExpr* a, Stmt* b ): name( n ), args( a ), body( b ) {}
+	Expr* name;
 	LeftExpr* args;
 	Stmt* body;
 };

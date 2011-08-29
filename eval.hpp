@@ -348,7 +348,12 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			throw ReturnException( retv ) ;
 		}
 		VARIANT_CASE( Fun, s ) {
-			global->funs[s->name] = s;
+			deque<string> args;
+			evalArgs( s->name, global, local, ifd, back_inserter( args ) );
+			if( args.size() != 1 ) {
+				return 1;
+			}
+			global->funs[args[0]] = s;
 			return 0;
 		}
 		VARIANT_CASE( If, s ) {

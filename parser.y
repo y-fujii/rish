@@ -88,7 +88,7 @@ stmt_prim
 	| TK_FETCH lexpr_when							{ $$ = new Fetch( $2 ); }
 	| TK_YIELD expr_list							{ $$ = new Yield( $2 ); }
 	| TK_DEFER expr_list							{ $$ = new Defer( $2 ); }
-	| TK_FUN TK_WORD lexpr_when '{' stmt_seq '}'	{ $$ = new Fun( string( $2->begin(), $2->end() ), $3, $5 ); delete $2; }
+	| TK_FUN expr_concat lexpr_when '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
 	| '{' stmt_seq '}'								{ $$ = $2; };
 	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }
 
