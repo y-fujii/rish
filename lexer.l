@@ -15,61 +15,80 @@
 
 	istream* parseIStream;
 	size_t parseLineNo;
+	bool parseAutoCaret;
 
+
+	extern "C" int yywrap() {
+		return 1;
+	}
 
 	#define YY_INPUT( buf, result, bufSize ) {		\
 		parseIStream->read( buf, bufSize );			\
 		result = parseIStream->gcount();			\
 	}
 
-	extern "C" int yywrap() {
-		return 1;
-	}
+	#define AUTO_CARET_END() \
+		if( parseAutoCaret ) { \
+			parseAutoCaret = false; \
+			string tmp( yytext ); \
+			for( string::reverse_iterator i = tmp.rbegin(); i != tmp.rend(); ++i ) { \
+				unput( *i ); \
+			} \
+			return '^'; \
+		}
+
+	#define AUTO_CARET_BGN() \
+		parseAutoCaret = true;
+	
+	#define AUTO_CARET_IGN() \
+		parseAutoCaret = false;
 %}
 
-%s state1
 %%
 
-"("			{ return '('; }
-")"			{ return ')'; }
-"{"			{ return '{'; }
-"}"			{ return '}'; }
-"$"			{ return '$'; }
+"("				{ AUTO_CARET_END(); return '('; }
+")"				{ AUTO_CARET_BGN(); return ')'; }
+"{"				{ AUTO_CARET_IGN(); return '{'; }
+"}"				{ AUTO_CARET_IGN(); return '}'; }
 
-";"			{ return ';'; }
-"\n"		{ ++parseLineNo; return ';'; }
-"&"			{ return '&'; }
-"!"			{ return '!'; }
-"|"			{ return '|'; }
-"="			{ return '='; }
-"^"			{ return '^'; }
+";"				{ AUTO_CARET_IGN(); return ';'; }
+"\n"			{ AUTO_CARET_IGN(); ++parseLineNo; return ';'; }
+"&"				{ AUTO_CARET_IGN(); return '&'; }
+"!"				{ AUTO_CARET_IGN(); return '!'; }
+"|"[ \t]*\n		{ AUTO_CARET_IGN(); ++parseLineNo; return '|'; }
+"="				{ AUTO_CARET_IGN(); return '='; }
+"^"				{ AUTO_CARET_IGN(); return '^'; }
 
-"&&"		{ return TK_AND2; }
-"||"		{ return TK_OR2; }
-">|"		{ return TK_RDFR; }
-"|>"		{ return TK_RDT1; }
-"|>>"		{ return TK_RDT2; }
+"&&"			{ AUTO_CARET_IGN(); return TK_AND2; }
+"&&"[ \t]*\n	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_AND2; }
+"||"			{ AUTO_CARET_IGN(); return TK_OR2; }
+"||"[ \t]*\n	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_OR2; }
+">|"			{ AUTO_CARET_IGN(); return TK_RDFR; }
+"|>"			{ AUTO_CARET_IGN(); return TK_RDT1; }
+"|>>"			{ AUTO_CARET_IGN(); return TK_RDT2; }
 
-"if"		{ return TK_IF; }
-"else"		{ return TK_ELSE; }
-\n[ \t]*else	{ ++parseLineNo; return TK_ELSE; }
-"while"		{ return TK_WHILE; }
-"for"		{ return TK_FOR; }
-"break"		{ return TK_BREAK; }
-"return"	{ return TK_RETURN; }
-"let"		{ return TK_LET; }
-"fun"		{ return TK_FUN; }
-"when"		{ return TK_WHEN; }
-"fetch"		{ return TK_FETCH; }
-"yield"		{ return TK_YIELD; }
-"defer"		{ return TK_DEFER; }
+"if"			{ AUTO_CARET_IGN(); return TK_IF; }
+"else"			{ AUTO_CARET_IGN(); return TK_ELSE; }
+\n[ \t]*"else"	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_ELSE; }
+"while"			{ AUTO_CARET_IGN(); return TK_WHILE; }
+"break"			{ AUTO_CARET_IGN(); return TK_BREAK; }
+"return"		{ AUTO_CARET_IGN(); return TK_RETURN; }
+"let"			{ AUTO_CARET_IGN(); return TK_LET; }
+"fun"			{ AUTO_CARET_IGN(); return TK_FUN; }
+"fetch"			{ AUTO_CARET_IGN(); return TK_FETCH; }
+"yield"			{ AUTO_CARET_IGN(); return TK_YIELD; }
+"defer"			{ AUTO_CARET_IGN(); return TK_DEFER; }
 
 \$[a-zA-Z0-9_]+ {
+	AUTO_CARET_END();
+	AUTO_CARET_BGN();
 	yylval.var = new string( yytext + 1 );
 	return TK_VAR;
 }
 
 [^(){}$" \t\n]+ {
+	AUTO_CARET_END();
+	AUTO_CARET_BGN();
 	yylval.word = new MetaString( yytext );
 	MetaString::iterator it = yylval.word->begin();
 	assert( it != yylval.word->end() );
@@ -86,6 +105,7 @@
 }
 
 \"(\\.|[^\\"])*\" {
+	AUTO_CARET_IGN();
 	MetaString* dst = new MetaString();
 	size_t len = strlen( yytext );
 	assert( len >= 2 );
@@ -124,6 +144,6 @@
 	return TK_WORD;
 }
 
-[ \t]+
+[ \t]+ { AUTO_CARET_IGN(); }
 
 %%
