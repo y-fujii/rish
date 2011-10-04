@@ -52,7 +52,7 @@ fun factorialRec $n {
 }
 
 fun runTest {
-	echo (yield a b c)^(range 4)
+	echo pfx_(yield a b c)(range 4)
 	factorialRec 8
 	factorialLoop 8
 	testDefer

@@ -27,7 +27,7 @@
 		result = parseIStream->gcount();			\
 	}
 
-	#define AUTO_CARET_END() \
+	#define AUTO_CARET_END() { \
 		if( parseAutoCaret ) { \
 			parseAutoCaret = false; \
 			string tmp( yytext ); \
@@ -35,13 +35,16 @@
 				unput( *i ); \
 			} \
 			return '^'; \
-		}
+		} \
+	}
 
-	#define AUTO_CARET_BGN() \
-		parseAutoCaret = true;
+	#define AUTO_CARET_BGN() { \
+		parseAutoCaret = true; \
+	}
 	
-	#define AUTO_CARET_IGN() \
-		parseAutoCaret = false;
+	#define AUTO_CARET_IGN() { \
+		parseAutoCaret = false; \
+	}
 %}
 
 %%
