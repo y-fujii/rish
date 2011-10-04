@@ -55,9 +55,11 @@
 "\n"			{ AUTO_CARET_IGN(); ++parseLineNo; return ';'; }
 "&"				{ AUTO_CARET_IGN(); return '&'; }
 "!"				{ AUTO_CARET_IGN(); return '!'; }
+"|"				{ AUTO_CARET_IGN(); return '|'; }
 "|"[ \t]*\n		{ AUTO_CARET_IGN(); ++parseLineNo; return '|'; }
 "="				{ AUTO_CARET_IGN(); return '='; }
 "^"				{ AUTO_CARET_IGN(); return '^'; }
+"$"				{ AUTO_CARET_IGN(); return '$'; }
 
 "&&"			{ AUTO_CARET_IGN(); return TK_AND2; }
 "&&"[ \t]*\n	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_AND2; }
@@ -86,7 +88,7 @@
 	return TK_VAR;
 }
 
-[^(){}$" \t\n]+ {
+[^()$" \t\n]+ {
 	AUTO_CARET_END();
 	AUTO_CARET_BGN();
 	yylval.word = new MetaString( yytext );
