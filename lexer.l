@@ -93,7 +93,7 @@
 
 <N,C,I>\"(\\.|[^\\"])*\" {
 	MetaString* dst = new MetaString();
-	for( size_t i = 1; i < yyleng - 1; ++i ) {
+	for( int i = 1; i < yyleng - 1; ++i ) {
 		char c;
 		if( yytext[i] == '\\' ) {
 			++i;
