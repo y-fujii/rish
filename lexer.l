@@ -13,86 +13,67 @@
 
 	using namespace std;
 
-	istream* parseIStream;
-	size_t parseLineNo;
-	bool parseAutoCaret;
-
-
-	extern "C" int yywrap() {
-		return 1;
-	}
+	istream* lexerIStream;
+	size_t lexerLineNo;
 
 	#define YY_INPUT( buf, result, bufSize ) {		\
-		parseIStream->read( buf, bufSize );			\
-		result = parseIStream->gcount();			\
+		lexerIStream->read( buf, bufSize );			\
+		result = lexerIStream->gcount();			\
 	}
 
-	#define AUTO_CARET_END() { \
-		if( parseAutoCaret ) { \
-			parseAutoCaret = false; \
-			yyless( 0 ); \
-			return '^'; \
-		} \
-	}
-
-	#define AUTO_CARET_BGN() { \
-		parseAutoCaret = true; \
-	}
-	
-	#define AUTO_CARET_IGN() { \
-		parseAutoCaret = false; \
+	#define INSERT_CARET() {	\
+		BEGIN( N );				\
+		yyless( 0 );			\
+		return '^';				\
 	}
 %}
 
+/* [N]ormal, auto [C]aret, [I]gnore newline */
+%x N C I
+
 %%
 
-"("				{ AUTO_CARET_END(); return '('; }
-"("[ \t]*\n		{ AUTO_CARET_END(); ++parseLineNo; return '('; }
-")"				{ AUTO_CARET_BGN(); return ')'; }
-"{"				{ AUTO_CARET_IGN(); return '{'; }
-"("[ \t]*\n		{ AUTO_CARET_END(); ++parseLineNo; return '{'; }
-"}"				{ AUTO_CARET_IGN(); return '}'; }
+<C>"("					{ INSERT_CARET(); }
+<N,I>"("				{ BEGIN( I ); return '('; }
+<N,C,I>")"				{ BEGIN( C ); return ')'; }
+<N,C,I>"{"				{ BEGIN( I ); return '{'; }
+<N,C,I>"}"				{ BEGIN( N ); return '}'; }
 
-";"				{ AUTO_CARET_IGN(); return ';'; }
-"\n"			{ AUTO_CARET_IGN(); ++parseLineNo; return ';'; }
-"&"				{ AUTO_CARET_IGN(); return '&'; }
-"!"				{ AUTO_CARET_IGN(); return '!'; }
-"|"				{ AUTO_CARET_IGN(); return '|'; }
-"|"[ \t]*\n		{ AUTO_CARET_IGN(); ++parseLineNo; return '|'; }
-"="				{ AUTO_CARET_IGN(); return '='; }
-"^"				{ AUTO_CARET_IGN(); return '^'; }
-"$"				{ AUTO_CARET_IGN(); return '$'; }
+<N,C,I>";"				{ BEGIN( I ); return ';'; }
+<N,C,I>"&"				{ BEGIN( I ); return '&'; }
+<N,C,I>"!"				{ BEGIN( I ); return '!'; }
+<N,C,I>"|"				{ BEGIN( I ); return '|'; }
+<N,C,I>"="				{ BEGIN( I ); return '='; }
+<N,C,I>"^"				{ BEGIN( I ); return '^'; }
+<N,C,I>"$"				{ BEGIN( I ); return '$'; }
 
-"&&"			{ AUTO_CARET_IGN(); return TK_AND2; }
-"&&"[ \t]*\n	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_AND2; }
-"||"			{ AUTO_CARET_IGN(); return TK_OR2; }
-"||"[ \t]*\n	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_OR2; }
-">|"			{ AUTO_CARET_IGN(); return TK_RDFR; }
-"|>"			{ AUTO_CARET_IGN(); return TK_RDT1; }
-"|>>"			{ AUTO_CARET_IGN(); return TK_RDT2; }
+<N,C,I>"&&"				{ BEGIN( I ); return TK_AND2; }
+<N,C,I>"||"				{ BEGIN( I ); return TK_OR2; }
+<N,C,I>">|"				{ BEGIN( I ); return TK_RDFR; }
+<N,C,I>"|>"				{ BEGIN( I ); return TK_RDT1; }
+<N,C,I>"|>>"			{ BEGIN( I ); return TK_RDT2; }
 
-"if"			{ AUTO_CARET_IGN(); return TK_IF; }
-"else"			{ AUTO_CARET_IGN(); return TK_ELSE; }
-\n[ \t]*"else"	{ AUTO_CARET_IGN(); ++parseLineNo; return TK_ELSE; }
-"while"			{ AUTO_CARET_IGN(); return TK_WHILE; }
-"break"			{ AUTO_CARET_IGN(); return TK_BREAK; }
-"return"		{ AUTO_CARET_IGN(); return TK_RETURN; }
-"let"			{ AUTO_CARET_IGN(); return TK_LET; }
-"fun"			{ AUTO_CARET_IGN(); return TK_FUN; }
-"fetch"			{ AUTO_CARET_IGN(); return TK_FETCH; }
-"yield"			{ AUTO_CARET_IGN(); return TK_YIELD; }
-"defer"			{ AUTO_CARET_IGN(); return TK_DEFER; }
+<N,C,I>"if"				{ BEGIN( N ); return TK_IF; }
+<N,C,I>"else"			{ BEGIN( N ); return TK_ELSE; }
+<N,C,I>\n[ \t]*"else"	{ BEGIN( N ); ++lexerLineNo; return TK_ELSE; }
+<N,C,I>"while"			{ BEGIN( N ); return TK_WHILE; }
+<N,C,I>"break"			{ BEGIN( N ); return TK_BREAK; }
+<N,C,I>"return"			{ BEGIN( N ); return TK_RETURN; }
+<N,C,I>"let"			{ BEGIN( N ); return TK_LET; }
+<N,C,I>"fun"			{ BEGIN( N ); return TK_FUN; }
+<N,C,I>"fetch"			{ BEGIN( N ); return TK_FETCH; }
+<N,C,I>"yield"			{ BEGIN( N ); return TK_YIELD; }
+<N,C,I>"defer"			{ BEGIN( N ); return TK_DEFER; }
 
-\$[a-zA-Z0-9_]+ {
-	AUTO_CARET_END();
-	AUTO_CARET_BGN();
+<C>\$[a-zA-Z0-9_]+ { INSERT_CARET(); }
+<N,I>\$[a-zA-Z0-9_]+ {
+	BEGIN( C );
 	yylval.var = new string( yytext + 1, yyleng - 1 );
 	return TK_VAR;
 }
 
-[^()$" \t\n]+ {
-	AUTO_CARET_END();
-	AUTO_CARET_BGN();
+<C>[^()$" \t\n]+ { INSERT_CARET(); }
+<N,I>[^()$" \t\n]+ {
 	yylval.word = new MetaString( yytext, yytext + yyleng );
 	MetaString::iterator it = yylval.word->begin();
 	assert( it != yylval.word->end() );
@@ -105,11 +86,12 @@
 		}
 		++it;
 	}
+
+	BEGIN( C );
 	return TK_WORD;
 }
 
-\"(\\.|[^\\"])*\" {
-	AUTO_CARET_IGN();
+<N,C,I>\"(\\.|[^\\"])*\" {
 	MetaString* dst = new MetaString();
 	for( size_t i = 1; i < yyleng - 1; ++i ) {
 		char c;
@@ -129,7 +111,7 @@
 					case 'e': c = '\x1b'; break;
 					default:
 						delete dst;
-						throw SyntaxError( parseLineNo );
+						throw SyntaxError( lexerLineNo );
 				}
 			}
 			else {
@@ -141,11 +123,29 @@
 		}
 		dst->push_back( c );
 	}
-
 	yylval.word = dst;
+
+	BEGIN( N );
 	return TK_WORD;
 }
 
-[ \t]+ { AUTO_CARET_IGN(); }
+<I>[ \t]+		{}
+<N,C>[ \t]+		{ BEGIN( N ); }
+<I>"\n"			{ ++lexerLineNo; }
+<N,C>"\n"		{ BEGIN( N ); ++lexerLineNo; return ';'; }
 
 %%
+
+extern "C" int yywrap() {
+	return 1;
+}
+
+void lexerInit( istream* istr ) {
+	lexerLineNo = 0;
+	lexerIStream = istr;
+	BEGIN( N );
+}
+
+size_t lexerGetLineNo() {
+	return lexerLineNo;
+}

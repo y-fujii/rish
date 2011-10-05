@@ -6,12 +6,11 @@
 #include "misc.hpp"
 
 
-extern std::istream* parseIStream;
-extern size_t parseLineNo;
-extern bool parseAutoCaret;
-extern ast::Stmt* parseResult;
+void lexerInit( istream* );
+size_t lexerGetLineNo();
 int yylex();
 int yyparse();
+extern ast::Stmt* parserResult;
 
 
 struct SyntaxError: exception {
@@ -21,21 +20,17 @@ struct SyntaxError: exception {
 };
 
 inline ast::Stmt* parse( istream& istr ) {
-	parseIStream = &istr;
-	parseLineNo = 0;
-	parseAutoCaret = false;
-	parseResult = nullptr;
+	parserResult = nullptr;
+	lexerInit( &istr );
 	yyparse();
-	assert( parseResult != nullptr );
+	assert( parserResult != nullptr );
 
-	return parseResult;
+	return parserResult;
 }
 
 template<class Iter>
 Iter lex( istream& istr, Iter dstIt ) {
-	parseIStream = &istr;
-	parseLineNo = 0;
-	parseAutoCaret = false;
+	lexerInit( &istr );
 	char c;
 	while( c = yylex(), c != 0 ) {
 		*dstIt++ = c;
