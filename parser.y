@@ -11,11 +11,11 @@
 	using namespace std;
 	using namespace ast;
 
-	ast::Stmt* parseResult;
+	ast::Stmt* parserResult;
 
 	extern "C" int yyerror( char const* ) {
 		// XXX: memory leaked on yyval.word, yyval.var
-		throw SyntaxError( parseLineNo );
+		throw SyntaxError( lexerGetLineNo() );
 	}
 %}
 
@@ -45,7 +45,7 @@
 %%
 
 top
-	: stmt_seq						{ ::parseResult = $1; }
+	: stmt_seq						{ ::parserResult = $1; }
 
 stmt_seq
 	: stmt_seq ';' stmt_bg			{ $$ = new Sequence( $1, $3 ); }
@@ -89,7 +89,9 @@ stmt_prim
 	| TK_YIELD expr_list							{ $$ = new Yield( $2 ); }
 	| TK_DEFER expr_list							{ $$ = new Defer( $2 ); }
 	| TK_FUN expr_concat lexpr_when '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
+	/*
 	| '{' stmt_seq '}'								{ $$ = $2; };
+	*/
 	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }
 
 if_
