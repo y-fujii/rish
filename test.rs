@@ -52,7 +52,8 @@ fun factorialRec $n {
 }
 
 fun runTest {
-	echo pfx_(yield a b c)(range 4)
+	let $var = S
+	echo P(yield a b c)(range 4)$var
 	factorialRec 8
 	factorialLoop 8
 	testDefer

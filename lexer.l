@@ -30,10 +30,7 @@
 	#define AUTO_CARET_END() { \
 		if( parseAutoCaret ) { \
 			parseAutoCaret = false; \
-			string tmp( yytext ); \
-			for( string::reverse_iterator i = tmp.rbegin(); i != tmp.rend(); ++i ) { \
-				unput( *i ); \
-			} \
+			yyless( 0 ); \
 			return '^'; \
 		} \
 	}
@@ -50,8 +47,10 @@
 %%
 
 "("				{ AUTO_CARET_END(); return '('; }
+"("[ \t]*\n		{ AUTO_CARET_END(); ++parseLineNo; return '('; }
 ")"				{ AUTO_CARET_BGN(); return ')'; }
 "{"				{ AUTO_CARET_IGN(); return '{'; }
+"("[ \t]*\n		{ AUTO_CARET_END(); ++parseLineNo; return '{'; }
 "}"				{ AUTO_CARET_IGN(); return '}'; }
 
 ";"				{ AUTO_CARET_IGN(); return ';'; }
@@ -87,14 +86,14 @@
 \$[a-zA-Z0-9_]+ {
 	AUTO_CARET_END();
 	AUTO_CARET_BGN();
-	yylval.var = new string( yytext + 1 );
+	yylval.var = new string( yytext + 1, yyleng - 1 );
 	return TK_VAR;
 }
 
 [^()$" \t\n]+ {
 	AUTO_CARET_END();
 	AUTO_CARET_BGN();
-	yylval.word = new MetaString( yytext );
+	yylval.word = new MetaString( yytext, yytext + yyleng );
 	MetaString::iterator it = yylval.word->begin();
 	assert( it != yylval.word->end() );
 	if( *it == '~' ) {
@@ -112,9 +111,7 @@
 \"(\\.|[^\\"])*\" {
 	AUTO_CARET_IGN();
 	MetaString* dst = new MetaString();
-	size_t len = strlen( yytext );
-	assert( len >= 2 );
-	for( size_t i = 1; i < len - 1; ++i ) {
+	for( size_t i = 1; i < yyleng - 1; ++i ) {
 		char c;
 		if( yytext[i] == '\\' ) {
 			++i;
