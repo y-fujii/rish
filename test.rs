@@ -51,13 +51,24 @@ fun factorialRec $n {
 	}
 }
 
+fun ackermann $m $n {
+	if test $m -eq 0 {
+		expr $n + 1
+	}
+	else if test $n -eq 0 {
+		ackermann (expr $m - 1) 1
+	}
+	else {
+		ackermann (expr $m - 1) (ackermann $m (expr $n - 1))
+	}
+}
+
 fun runTest {
 	let $var = S
 	echo P(yield a b c)(range 4)$var
-	range 8 | while fetch $i {
-		factorialRec 16
-		factorialLoop 16
-	}
+	factorialRec 16
+	factorialLoop 16
+	ackermann 3 3
 	testDefer
 	at 4 (range 16)
 }
