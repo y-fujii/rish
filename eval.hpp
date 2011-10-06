@@ -187,7 +187,9 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Local* local ) {
 			assert( false );
 		}
 	}
+
 	assert( false );
+	return false;
 }
 
 template<class DstIter>
@@ -204,7 +206,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 			evalExpr( e->lhs, global, local, ifd, dst );
 			evalExpr( e->rhs, global, local, ifd, dst );
 		}
-		VARIANT_CASE_( Null ) {
+		VARIANT_CASE( Null, _ ) {
 		}
 		VARIANT_CASE( Concat, e ) {
 			deque<MetaString> lhs;
@@ -482,4 +484,5 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 	*/
 
 	assert( false );
+	return -1;
 }

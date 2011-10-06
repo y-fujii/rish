@@ -26,7 +26,7 @@ int changeDir( deque<string> const& args, int, int ) {
 	return 0;
 }
 
-int showList( deque<string> const& args, int ifd, int ofd ) {
+int showList( deque<string> const& args, int, int ofd ) {
 	struct winsize ws;
 	checkSysCall( ioctl( ofd, TIOCGWINSZ, &ws ) );
 
@@ -63,7 +63,7 @@ int showList( deque<string> const& args, int ifd, int ofd ) {
 	return 0;
 }
 
-int strSize( deque<string> const& args, int ifd, int ofd ) {
+int strSize( deque<string> const& args, int, int ofd ) {
 	ostringstream buf;
 	for( deque<string>::const_iterator it = args.begin(); it != args.end(); ++it ) {
 		buf << it->size() << '\n';
