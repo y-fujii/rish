@@ -1,0 +1,15 @@
+language:
+	- array slicing
+	- map/dict type?
+	- arithmetic expressions
+	- command for strings, such as regex operations
+	- pipe/redirection for non-stdin/stdout
+	- pipe object
+	- multiple pipes support like select(), epoll()
+	- lambda expression with lexical scoped break, continue and return?
+
+UI:
+	- job control
+	- incremental completion
+	- quicksilver like command name completion
+	- sandbox mode
