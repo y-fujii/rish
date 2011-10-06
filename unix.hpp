@@ -59,21 +59,11 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 	pid_t pid = vfork();
 	checkSysCall( pid );
 	if( pid == 0 ) {
-		if( ifd != 0 ) {
-			if( dup2( ifd, 0 ) < 0 ) {
-				_exit( 1 );
-			}
-			if( close( ifd ) < 0 ) {
-				_exit( 1 );
-			}
+		if( dup2( ifd, 0 ) < 0 ) {
+			_exit( 1 );
 		}
-		if( ofd != 1 ) {
-			if( dup2( ofd, 1 ) < 0 ) {
-				_exit( 1 );
-			}
-			if( close( ofd ) < 0 ) {
-				_exit( 1 );
-			}
+		if( dup2( ofd, 1 ) < 0 ) {
+			_exit( 1 );
 		}
 		// closefrom( 3 );
 		execvp( args_raw[0], const_cast<char* const*>( args_raw ) );
