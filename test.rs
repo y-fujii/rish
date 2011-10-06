@@ -54,8 +54,10 @@ fun factorialRec $n {
 fun runTest {
 	let $var = S
 	echo P(yield a b c)(range 4)$var
-	factorialRec 8
-	factorialLoop 8
+	range 8 | while fetch $i {
+		factorialRec 16
+		factorialLoop 16
+	}
 	testDefer
 	at 4 (range 16)
 }

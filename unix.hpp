@@ -46,16 +46,6 @@ struct UnixIStream: std::istream {
 	}
 };
 
-#if defined( __linux__ )
-inline void closefrom( int fd ) {
-	int end = getdtablesize(); // XXX: use /proc/{pid}/status
-	while( fd < end ) {
-		close( fd );
-		++fd;
-	}
-}
-#endif
-
 template<class Container>
 int forkExec( Container const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
@@ -66,12 +56,26 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 	}
 	args_raw[args.size()] = NULL;
 
-	pid_t pid = fork();
+	pid_t pid = vfork();
 	checkSysCall( pid );
 	if( pid == 0 ) {
-		dup2( ifd, 0 );
-		dup2( ofd, 1 );
-		closefrom( 3 );
+		if( ifd != 0 ) {
+			if( dup2( ifd, 0 ) < 0 ) {
+				_exit( 1 );
+			}
+			if( close( ifd ) < 0 ) {
+				_exit( 1 );
+			}
+		}
+		if( ofd != 1 ) {
+			if( dup2( ofd, 1 ) < 0 ) {
+				_exit( 1 );
+			}
+			if( close( ofd ) < 0 ) {
+				_exit( 1 );
+			}
+		}
+		// closefrom( 3 );
 		execvp( args_raw[0], const_cast<char* const*>( args_raw ) );
 		_exit( 1 );
 	}
