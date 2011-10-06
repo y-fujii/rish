@@ -317,6 +317,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
+			checkSysCall( fcntl( fd, F_SETFD, FD_CLOEXEC ) );
 			return evalStmt( s->body, global, local, fd, ofd, true, false );
 		}
 		VARIANT_CASE( RedirTo, s ) {
@@ -324,6 +325,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
+			checkSysCall( fcntl( fd, F_SETFD, FD_CLOEXEC ) );
 			return evalStmt( s->body, global, local, ifd, fd, false, true );
 		}
 		VARIANT_CASE( Command, s ) {
@@ -436,6 +438,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 		VARIANT_CASE( Pipe, s ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
+			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
+			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 			Thread thread( bind( evalStmt, s->lhs, global, local, ifd, fds[1], false, true ) );
 			try {
 				int retv = evalStmt( s->rhs, global, local, fds[0], ofd, true, false );
