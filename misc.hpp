@@ -143,12 +143,8 @@ struct FalseWrapper {
 		break; \
 	} \
 	case type::staId: { \
-		type* lhs = static_cast<type*>( _variant_switch_value_.val );
-
-#define VARIANT_CASE_( type ) \
-		break; \
-	} \
-	case type::staId: {
+		type* lhs = static_cast<type*>( _variant_switch_value_.val ); \
+		(void)(lhs);
 
 #define VARIANT_DEFAULT \
 		break; \
