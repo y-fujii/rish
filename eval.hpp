@@ -224,6 +224,8 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 		VARIANT_CASE( Subst, e ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
+			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
+			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 			Thread thread( bind( evalStmt, e->body, global, local, ifd, fds[1], false, true ) );
 			try {
 				{
