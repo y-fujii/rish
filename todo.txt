@@ -2,11 +2,13 @@ language:
 	- array slicing
 	- map/dict type?
 	- arithmetic expressions
-	- command for strings, such as regex operations
+	- builtin commands for strings, such as regex operations
 	- pipe/redirection for non-stdin/stdout
 	- pipe object
 	- multiple pipes support like select(), epoll()
 	- lambda expression with lexical scoped break, continue and return?
+	- eliminate unnecessary threads creation
+	- look up variable names at compile time
 
 UI:
 	- job control

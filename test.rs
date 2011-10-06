@@ -63,6 +63,10 @@ fun ackermann $m $n {
 	}
 }
 
+fun redirect {
+	test.rs >| cat | wc
+}
+
 fun runTest {
 	let $var = S
 	echo P(yield a b c)(range 4)$var
@@ -71,6 +75,7 @@ fun runTest {
 	ackermann 3 3
 	testDefer
 	at 4 (range 16)
+	redirect
 }
 
 runTest
