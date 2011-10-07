@@ -22,6 +22,7 @@
 #include "unix.hpp"
 
 using namespace std;
+using namespace placeholders;
 
 
 typedef function<int (deque<string> const&, int, int)> Builtin;
@@ -464,11 +465,6 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			evalArgs( s->args, global, local, ifd, back_inserter( local->defs.back() ) );
 			return 0;
 		}
-		/*
-		VARIANT_CASE( For, s ) {
-			return 0;
-		}
-		*/
 		VARIANT_CASE( None, s ) {
 			return s->retv;
 		}
