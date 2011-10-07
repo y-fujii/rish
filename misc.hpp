@@ -122,7 +122,7 @@ struct FalseWrapper {
 };
 
 #define VARIANT_SWITCH( type, rhs ) \
-	if( FalseWrapper<VariantBase<type>*> _variant_switch_value_ = (rhs) ) {} else \
+	if( FalseWrapper<type*> _variant_switch_value_ = (rhs) ) {} else \
 	switch( _variant_switch_value_.val->dTag ) {
 
 #define VARIANT_CASE( type, lhs ) \
