@@ -50,11 +50,11 @@ template<class Container>
 int forkExec( Container const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
-	char const** args_raw = new char const*[args.size() + 1];
+	vector<char const*> argsRaw( args.size() + 1 );
 	for( size_t i = 0; i < args.size(); ++i ) {
-		args_raw[i] = args[i].c_str();
+		argsRaw[i] = args[i].c_str();
 	}
-	args_raw[args.size()] = NULL;
+	argsRaw[args.size()] = NULL;
 
 	pid_t pid = vfork();
 	checkSysCall( pid );
@@ -66,7 +66,7 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 			_exit( 1 );
 		}
 		// closefrom( 3 );
-		execvp( args_raw[0], const_cast<char* const*>( args_raw ) );
+		execvp( argsRaw[0], const_cast<char* const*>( &argsRaw[0] ) );
 		_exit( 1 );
 	}
 
