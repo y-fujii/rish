@@ -14,6 +14,7 @@
 
 namespace std {
 	using namespace tr1;
+	using namespace tr1::placeholders;
 
 	template<class SrcIter, class DstIter, class Pred>
 	inline DstIter copy_if( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt, Pred pred ) {
