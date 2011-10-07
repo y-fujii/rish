@@ -22,6 +22,7 @@
 #include "unix.hpp"
 
 using namespace std;
+using namespace placeholders;
 
 
 typedef function<int (deque<string> const&, int, int)> Builtin;
@@ -75,7 +76,7 @@ bool assign( ast::VarFix* lhs, Container& rhs, Local* local ) {
 	using namespace ast;
 
 	for( size_t i = 0; i < rhs.size(); ++i ) {
-		VARIANT_SWITCH( Expr, lhs->var[i] ) {
+		VARIANT_SWITCH( RExpr, lhs->var[i] ) {
 			VARIANT_CASE( Word, word ) {
 				if( word->word != MetaString( rhs[i] ) ) {
 					return false;
@@ -89,7 +90,7 @@ bool assign( ast::VarFix* lhs, Container& rhs, Local* local ) {
 	//ScopedLock( global->lock );
 	//ScopedLock( local->lock );
 	for( size_t i = 0; i < rhs.size(); ++i ) {
-		VARIANT_SWITCH( Expr, lhs->var[i] ) {
+		VARIANT_SWITCH( RExpr, lhs->var[i] ) {
 			VARIANT_CASE( Var, tvar ) {
 				deque<string>& vvar = findVariable( tvar->name, local );
 				vvar.clear();
@@ -113,7 +114,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local* local ) {
 	size_t const rBgn = rhs.size() - lhs->varR.size();
 
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		VARIANT_SWITCH( Expr, lhs->varL[i] ) {
+		VARIANT_SWITCH( RExpr, lhs->varL[i] ) {
 			VARIANT_CASE( Word, word ) {
 				if( word->word != MetaString( rhs[i + lBgn] ) ) {
 					return false;
@@ -124,7 +125,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local* local ) {
 		}
 	}
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		VARIANT_SWITCH( Expr, lhs->varR[i] ) {
+		VARIANT_SWITCH( RExpr, lhs->varR[i] ) {
 			VARIANT_CASE( Word, word ) {
 				if( word->word != MetaString( rhs[i + rBgn] ) ) {
 					return false;
@@ -138,7 +139,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local* local ) {
 	//ScopedLock( global->lock );
 	//ScopedLock( local->lock );
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		VARIANT_SWITCH( Expr, lhs->varL[i] ) {
+		VARIANT_SWITCH( RExpr, lhs->varL[i] ) {
 			VARIANT_CASE( Var, tvar ) {
 				deque<string>& vvar = findVariable( tvar->name, local );
 				vvar.clear();
@@ -152,7 +153,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local* local ) {
 	vvar.clear();
 	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( vvar ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		VARIANT_SWITCH( Expr, lhs->varR[i] ) {
+		VARIANT_SWITCH( RExpr, lhs->varR[i] ) {
 			VARIANT_CASE( Var, tvar ) {
 				deque<string>& vvar = findVariable( tvar->name, local );
 				vvar.clear();
@@ -167,10 +168,10 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local* local ) {
 }
 
 template<class Container>
-bool assign( ast::LeftExpr* lhsb, Container& rhs, Local* local ) {
+bool assign( ast::LExpr* lhsb, Container& rhs, Local* local ) {
 	using namespace ast;
 
-	VARIANT_SWITCH( LeftExpr, lhsb ) {
+	VARIANT_SWITCH( LExpr, lhsb ) {
 		VARIANT_CASE( VarFix, lhs ) {
 			if( rhs.size() != lhs->var.size() ) {
 				return false;
@@ -193,12 +194,12 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Local* local ) {
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter dst ) {
+DstIter evalExpr( ast::RExpr* eb, Global* global, Local* local, int ifd, DstIter dst ) {
 	using namespace ast;
 
 	Thread::checkIntr();
 
-	VARIANT_SWITCH( Expr, eb ) {
+	VARIANT_SWITCH( RExpr, eb ) {
 		VARIANT_CASE( Word, e ) {
 			*dst++ = e->word;
 		}
@@ -291,7 +292,7 @@ int execCommand( deque<string>& args, Global* global, int ifd, int ofd ) {
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIter dstIt ) {
+DstIter evalArgs( ast::RExpr* expr, Global* global, Local* local, int ifd, DstIter dstIt ) {
 	deque<MetaString> tmp;
 	evalExpr( expr, global, local, ifd, back_inserter( tmp ) );
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
@@ -399,7 +400,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			return assign( s->lhs, vals, local ) ? 0 : 1;
 		}
 		VARIANT_CASE( Fetch, s ) {
-			VARIANT_SWITCH( LeftExpr, s->lhs ) {
+			VARIANT_SWITCH( LExpr, s->lhs ) {
 				VARIANT_CASE( VarFix, lhs ) {
 					UnixIStream ifs( ifd, 1 );
 					deque<string> rhs( lhs->var.size() );
