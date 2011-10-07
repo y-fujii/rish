@@ -9,59 +9,59 @@ using namespace std;
 namespace ast {
 
 
-struct RExpr: VariantBase<RExpr> {
+struct Expr: VariantBase<Expr> {
 };
 
-struct LExpr: VariantBase<LExpr> {
+struct LeftExpr: VariantBase<LeftExpr> {
 };
 
 struct Stmt: VariantBase<Stmt> {
 };
 
-struct Word: Variant<RExpr, 0> {
+struct Word: Variant<Expr, 0> {
 	Word( MetaString const& w ): word( w ) {}
 	MetaString word;
 };
 
-struct Subst: Variant<RExpr, 1> {
+struct Subst: Variant<Expr, 1> {
 	Subst( Stmt* b ): body( b ) {}
 	Stmt* body;
 };
 
-struct Var: Variant<RExpr, 2> {
+struct Var: Variant<Expr, 2> {
 	Var( string const& n ): name( n ) {}
 	string name;
 };
 
-struct Pair: Variant<RExpr, 3> {
-	Pair( RExpr* l, RExpr* r ): lhs( l ), rhs( r ) {}
-	RExpr* lhs;
-	RExpr* rhs;
+struct Pair: Variant<Expr, 3> {
+	Pair( Expr* l, Expr* r ): lhs( l ), rhs( r ) {}
+	Expr* lhs;
+	Expr* rhs;
 };
 
-struct Null: Variant<RExpr, 4> {
+struct Null: Variant<Expr, 4> {
 	Null() {}
 };
 
-struct Concat: Variant<RExpr, 5> {
-	Concat( RExpr* l, RExpr* r ): lhs( l ), rhs( r ) {}
-	RExpr* lhs;
-	RExpr* rhs;
+struct Concat: Variant<Expr, 5> {
+	Concat( Expr* l, Expr* r ): lhs( l ), rhs( r ) {}
+	Expr* lhs;
+	Expr* rhs;
 };
 
-struct VarFix: Variant<LExpr, 0> {
+struct VarFix: Variant<LeftExpr, 0> {
 	template<class Iter>
 	VarFix( Iter bgn, Iter end ): var( bgn, end ) {}
-	deque<RExpr*> var;
+	deque<Expr*> var;
 };
 
-struct VarVar: Variant<LExpr, 1> {
+struct VarVar: Variant<LeftExpr, 1> {
 	template<class Iter>
 	VarVar( Iter bgnL, Iter endL, Var* vM, Iter bgnR, Iter endR ):
 		varL( bgnL, endL ), varM( vM ), varR( bgnR, endR )  {}
-	deque<RExpr*> varL;
+	deque<Expr*> varL;
 	Var* varM;
-	deque<RExpr*> varR;
+	deque<Expr*> varR;
 };
 
 struct If: Variant<Stmt, 0> {
@@ -72,46 +72,46 @@ struct If: Variant<Stmt, 0> {
 };
 
 struct Command: Variant<Stmt, 1> {
-	Command( RExpr* a ): args( a ) {}
-	RExpr* args;
+	Command( Expr* a ): args( a ) {}
+	Expr* args;
 };
 
 struct Fun: Variant<Stmt, 2> {
-	Fun( RExpr* n, LExpr* a, Stmt* b ): name( n ), args( a ), body( b ) {}
-	RExpr* name;
-	LExpr* args;
+	Fun( Expr* n, LeftExpr* a, Stmt* b ): name( n ), args( a ), body( b ) {}
+	Expr* name;
+	LeftExpr* args;
 	Stmt* body;
 };
 
 struct Let: Variant<Stmt, 3> {
-	Let( LExpr* l, RExpr* r ): lhs( l ), rhs( r ) {}
-	LExpr* lhs;
-	RExpr* rhs;
+	Let( LeftExpr* l, Expr* r ): lhs( l ), rhs( r ) {}
+	LeftExpr* lhs;
+	Expr* rhs;
 };
 
 struct Fetch: Variant<Stmt, 4> {
-	Fetch( LExpr* l ): lhs( l ) {}
-	LExpr* lhs;
+	Fetch( LeftExpr* l ): lhs( l ) {}
+	LeftExpr* lhs;
 };
 
 struct Yield: Variant<Stmt, 5> {
-	Yield( RExpr* r ): rhs( r ) {}
-	RExpr* rhs;
+	Yield( Expr* r ): rhs( r ) {}
+	Expr* rhs;
 };
 
 struct Return: Variant<Stmt, 6> {
-	Return( RExpr* r ): retv( r ) {}
-	RExpr* retv;
+	Return( Expr* r ): retv( r ) {}
+	Expr* retv;
 };
 
 struct Break: Variant<Stmt, 7> {
-	Break( RExpr* r ): retv( r ) {}
-	RExpr* retv;
+	Break( Expr* r ): retv( r ) {}
+	Expr* retv;
 };
 
 struct For: Variant<Stmt, 8> {
-	For( RExpr* v, Stmt* b, Stmt* e ): vars( v ), body( b ), elze( e ) {}
-	RExpr* vars;
+	For( Expr* v, Stmt* b, Stmt* e ): vars( v ), body( b ), elze( e ) {}
+	Expr* vars;
 	Stmt* body;
 	Stmt* elze;
 };
@@ -135,15 +135,15 @@ struct Sequence: Variant<Stmt, 11> {
 };
 
 struct RedirFr: Variant<Stmt, 12> {
-	RedirFr( Stmt* b, RExpr* f ): body( b ), file( f ) {}
+	RedirFr( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
-	RExpr* file;
+	Expr* file;
 };
 
 struct RedirTo: Variant<Stmt, 13> {
-	RedirTo( Stmt* b, RExpr* f ): body( b ), file( f ) {}
+	RedirTo( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
-	RExpr* file;
+	Expr* file;
 };
 
 struct Pipe: Variant<Stmt, 14> {
@@ -153,8 +153,8 @@ struct Pipe: Variant<Stmt, 14> {
 };
 
 struct Defer: Variant<Stmt, 15> {
-	Defer( RExpr* a ): args( a ) {}
-	RExpr* args;
+	Defer( Expr* a ): args( a ) {}
+	Expr* args;
 };
 
 struct None: Variant<Stmt, 16> {
