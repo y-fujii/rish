@@ -14,7 +14,6 @@
 
 namespace std {
 	using namespace tr1;
-	using namespace tr1::placeholders;
 
 	template<class SrcIter, class DstIter, class Pred>
 	inline DstIter copy_if( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt, Pred pred ) {
@@ -94,30 +93,20 @@ struct ScopeExit {
 
 template<class T>
 struct VariantBase {
-	template<class U>
-	U* dynCast() {
-		if( dynId == U::template VariantBase<T>::staId ) {
-			return static_cast<U*>( this );
-		}
-		else {
-			return 0;
-		}
-	}
-
-	int const dynId;
+	int const dTag;
 
 	protected:
-		VariantBase(): dynId( -1 ) {
+		VariantBase(): dTag( -1 ) {
 		}
 };
 
-template<class T, int Id>
+template<class T, int Tag>
 struct Variant: T {
-	Variant() {
-		const_cast<int&>( VariantBase<T>::dynId ) = Id;
-	}
+	static int const sTag = Tag;
 
-	enum { staId = Id };
+	Variant() {
+		const_cast<int&>( VariantBase<T>::dTag ) = Tag;
+	}
 };
 
 template<class T>
@@ -132,17 +121,14 @@ struct FalseWrapper {
 	T val;
 };
 
-#define VARIANT_IF( type, lhs, rhs ) \
-	if( type* lhs = (rhs)->dynCast<type>() )
-
 #define VARIANT_SWITCH( type, rhs ) \
 	if( FalseWrapper<VariantBase<type>*> _variant_switch_value_ = (rhs) ) {} else \
-	switch( _variant_switch_value_.val->dynId ) {
+	switch( _variant_switch_value_.val->dTag ) {
 
 #define VARIANT_CASE( type, lhs ) \
 		break; \
 	} \
-	case type::staId: { \
+	case type::sTag: { \
 		type* lhs = static_cast<type*>( _variant_switch_value_.val ); \
 		(void)(lhs);
 

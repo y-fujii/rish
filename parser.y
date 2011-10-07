@@ -31,14 +31,14 @@
 %type<word> TK_WORD
 %type<var> TK_VAR
 %type<expr> expr_prim expr_concat expr_list
-%type<lexpr> lexpr_when lexpr_prim
+%type<lexpr> lexpr_prim
 %type<stmt> stmt_seq stmt_bg stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
 %type<stmt> if_ else_
 %type<exprs> lexpr_list
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
-%token TK_WHILE TK_FOR TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH
-%token TK_YIELD TK_DEFER
+%token TK_WHILE TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH TK_YIELD
+%token TK_DEFER
 
 %start top
 
@@ -80,15 +80,15 @@ stmt_prim
 	: if_
 	| TK_WHILE stmt_andor '{' stmt_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
 	/*
-	| TK_FOR lexpr_when   '{' stmt_seq '}' else_	{ $$ = new For( $2, $4, $6 ); }
+	| 'for' lexpr_prim ':' stmt_andor '->' expr_list
 	*/
 	| TK_BREAK expr_concat							{ $$ = new Break( $2 ); }
 	| TK_RETURN expr_concat							{ $$ = new Return( $2 ); }
-	| TK_LET lexpr_when '=' expr_list				{ $$ = new Let( $2, $4 ); }
-	| TK_FETCH lexpr_when							{ $$ = new Fetch( $2 ); }
+	| TK_LET lexpr_prim '=' expr_list				{ $$ = new Let( $2, $4 ); }
+	| TK_FETCH lexpr_prim							{ $$ = new Fetch( $2 ); }
 	| TK_YIELD expr_list							{ $$ = new Yield( $2 ); }
 	| TK_DEFER expr_list							{ $$ = new Defer( $2 ); }
-	| TK_FUN expr_concat lexpr_when '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
+	| TK_FUN expr_concat lexpr_prim '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
 	| '{' stmt_seq '}'								{ $$ = $2; };
 	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }
 
@@ -99,12 +99,6 @@ else_
 	: TK_ELSE '{' stmt_seq '}'			{ $$ = $3; }
 	| TK_ELSE if_						{ $$ = $2; }
 	| 									{ $$ = new None( 0 ); }
-
-lexpr_when
-	/*
-	: lexpr_prim TK_WHEN stmt_prim
-	*/
-	: lexpr_prim
 
 lexpr_prim
 	: lexpr_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
@@ -128,8 +122,7 @@ expr_prim
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
 	/*
-	| '$' '(' TK_WORD subscr_list ')'	{ $$ = new Slice( $3, $4 ); }
-	| expr '[' expr ']'					{ $$ = new Index( $1, $3 ); }
-	| expr '[' expr ':' expr ']'		{ $$ = new Slice( $1, $3, $5 ); }
-	| TK_FUN lexpr_when '{' stmt_seq '}' { $$ = NULL; }
+	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( $3, $4, $5 ); }
+	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Slice( $3, $4, $4 ); }
+	| TK_FUN lexpr_prim '{' stmt_seq '}'			{ $$ = NULL; }
 	*/
