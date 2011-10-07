@@ -109,55 +109,48 @@ struct Break: Variant<Stmt, 7> {
 	Expr* retv;
 };
 
-struct For: Variant<Stmt, 8> {
-	For( Expr* v, Stmt* b, Stmt* e ): vars( v ), body( b ), elze( e ) {}
-	Expr* vars;
-	Stmt* body;
-	Stmt* elze;
-};
-
-struct While: Variant<Stmt, 9> {
+struct While: Variant<Stmt, 8> {
 	While( Stmt* c, Stmt* b, Stmt* e ): cond( c ), body( b ), elze( e ) {}
 	Stmt* cond;
 	Stmt* body;
 	Stmt* elze;
 };
 
-struct Bg: Variant<Stmt, 10> {
+struct Bg: Variant<Stmt, 9> {
 	Bg( Stmt* b ): body( b ) {}
 	Stmt* body;
 };
 
-struct Sequence: Variant<Stmt, 11> {
+struct Sequence: Variant<Stmt, 10> {
 	Sequence( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
 
-struct RedirFr: Variant<Stmt, 12> {
+struct RedirFr: Variant<Stmt, 11> {
 	RedirFr( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
 	Expr* file;
 };
 
-struct RedirTo: Variant<Stmt, 13> {
+struct RedirTo: Variant<Stmt, 12> {
 	RedirTo( Stmt* b, Expr* f ): body( b ), file( f ) {}
 	Stmt* body;
 	Expr* file;
 };
 
-struct Pipe: Variant<Stmt, 14> {
+struct Pipe: Variant<Stmt, 13> {
 	Pipe( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
 
-struct Defer: Variant<Stmt, 15> {
+struct Defer: Variant<Stmt, 14> {
 	Defer( Expr* a ): args( a ) {}
 	Expr* args;
 };
 
-struct None: Variant<Stmt, 16> {
+struct None: Variant<Stmt, 15> {
 	None( int r ): retv( r ) {}
 	int retv;
 };
