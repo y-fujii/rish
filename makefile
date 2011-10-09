@@ -18,7 +18,7 @@ rish: $(SRCS)
 
 test: rish
 	wc $(SRCS)
-	./rish
+	./rish test.rs
 
 clean:
 	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish
