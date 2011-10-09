@@ -3,6 +3,7 @@
 #include <memory>
 #include <tr1/memory>
 #include <iostream>
+#include <fstream>
 #include <cassert>
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,11 +35,49 @@ void handleSigINT( int ) {
 	Thread::_interrupted() = true;
 }
 
-int main( int argc, char** ) {
+int main( int argc, char** argv ) {
 	using namespace std;
-	assert( argc == 1 );
 
-	if( isatty( 0 ) ) {
+	int opt;
+	while( opt = getopt( argc, argv, "" ), opt != -1 ) {
+	}
+
+	if( optind < argc ) {
+		while( optind < argc ) {
+			try {
+				ifstream ofs( argv[optind] );
+				ast::Stmt* ast = parse( ofs );
+
+				Local local;
+				Global global;
+				builtins::register_( global.builtins );
+				Thread::_interrupted() = false;
+				evalStmt( ast, &global, &local, 0, 1 );
+			}
+			catch( SyntaxError const& err ) {
+				cerr << "Syntax error on " << argv[optind] << ":" << err.line + 1 << "." << endl;
+				return 1;
+			}
+
+			++optind;
+		}
+	}
+	else if( !isatty( 0 ) ) {
+		try {
+			ast::Stmt* ast = parse( cin );
+
+			Local local;
+			Global global;
+			builtins::register_( global.builtins );
+			Thread::_interrupted() = false;
+			return evalStmt( ast, &global, &local, 0, 1 );
+		}
+		catch( SyntaxError const& err ) {
+			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
+			return 1;
+		}
+	}
+	else {
 		Thread::setup();
 
 		struct sigaction sa;
@@ -87,19 +126,6 @@ int main( int argc, char** ) {
 			catch( ios_base::failure const& ) {
 				cerr << "I/O error." << endl;
 			}
-		}
-	}
-	else {
-		try {
-			ast::Stmt* ast = parse( cin );
-			Local local;
-			Global global;
-			Thread::_interrupted() = false;
-			evalStmt( ast, &global, &local, 0, 1 );
-		}
-		catch( SyntaxError const& err ) {
-			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
-			return 1;
 		}
 	}
 
