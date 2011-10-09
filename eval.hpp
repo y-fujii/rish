@@ -230,25 +230,18 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
 			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 			Thread thread( bind( evalStmt, e->body, global, local, ifd, fds[1], false, true ) );
+			// XXX
 			try {
-				{
-					ScopeExit closer( bind( close, fds[0] ) );
-					UnixIStream ifs( fds[0] );
-					string buf;
-					while( getline( ifs, buf ) ) {
-						*dst++ = buf;
-					}
+				ScopeExit closer( bind( close, fds[0] ) );
+				UnixIStream ifs( fds[0] );
+				string buf;
+				while( getline( ifs, buf ) ) {
+					*dst++ = buf;
 				}
-				thread.join();
 			}
 			catch( ... ) {
-				try {
-					thread.interrupt();
-					thread.join();
-				}
-				catch ( ... ) {}
-				throw;
 			}
+			thread.join();
 		}
 		VARIANT_DEFAULT {
 			assert( false );
@@ -446,19 +439,14 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
 			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 			Thread thread( bind( evalStmt, s->lhs, global, local, ifd, fds[1], false, true ) );
+			// XXX
 			try {
-				int retv = evalStmt( s->rhs, global, local, fds[0], ofd, true, false );
-				thread.join();
-				return retv;
+				evalStmt( s->rhs, global, local, fds[0], ofd, true, false );
 			}
 			catch( ... ) {
-				try {
-					thread.interrupt();
-					thread.join();
-				}
-				catch ( ... ) {}
-				throw;
 			}
+			thread.join();
+			return 0;
 		}
 		VARIANT_CASE( Defer, s ) {
 			local->defs.push_back( deque<string>() );
