@@ -240,6 +240,9 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 					*dst++ = buf;
 				}
 			}
+			catch( Thread::Interrupt const& ) {
+				throw;
+			}
 			catch( ... ) {}
 			thread.join();
 		}
@@ -443,6 +446,9 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			Thread thread( bind( evalStmt, s->lhs, global, local, ifd, fds[1], false, true ) );
 			try {
 				evalStmt( s->rhs, global, local, fds[0], ofd, true, false );
+			}
+			catch( Thread::Interrupt const& ) {
+				throw;
 			}
 			catch( ... ) {}
 			thread.join();
