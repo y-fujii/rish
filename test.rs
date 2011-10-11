@@ -19,10 +19,9 @@ fun at $n ($list) {
 	yield $list | enumerate | while fetch $i $e {
 		if test $i -eq $n {
 			yield $e
-			return 0
+			break 0
 		}
 	}
-	return 1
 }
 
 fun testDefer {

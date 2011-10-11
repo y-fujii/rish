@@ -42,6 +42,13 @@ int main( int argc, char** argv ) {
 	while( opt = getopt( argc, argv, "" ), opt != -1 ) {
 	}
 
+	struct sigaction sa;
+	memset( &sa, 0, sizeof( sa ) );
+
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags = SA_RESTART;
+	sigaction( SIGPIPE, &sa, NULL );
+
 	if( optind < argc ) {
 		while( optind < argc ) {
 			try {
