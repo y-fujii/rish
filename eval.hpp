@@ -230,21 +230,29 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
 			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 
-			// XXX
-			Thread thread( bind( evalStmt, e->body, global, local, ifd, fds[1], false, true ) );
-			try {
-				ScopeExit closer( bind( close, fds[0] ) );
-				UnixIStream ifs( fds[0] );
-				string buf;
-				while( getline( ifs, buf ) ) {
-					*dst++ = buf;
+			struct _ {
+				static void readAll( int ifd, DstIter& dst ) {
+					ScopeExit closer( bind( close, ifd ) );
+					UnixIStream ifs( ifd );
+					string buf;
+					while( getline( ifs, buf ) ) {
+						*dst++ = buf;
+					}
 				}
+			};
+			Thread reader( bind( _::readAll, fds[0], ref( dst ) ) );
+
+			try {
+				ScopeExit closer( bind( close, fds[1] ) );
+				evalStmt( e->body, global, local, ifd, fds[1] );
 			}
-			catch( Thread::Interrupt const& ) {
+			catch( BreakException const& ) {
+			}
+			catch( ReturnException const& ) {
+				reader.join();
 				throw;
 			}
-			catch( ... ) {}
-			thread.join();
+			reader.join();
 		}
 		VARIANT_DEFAULT {
 			assert( false );
@@ -309,8 +317,8 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			return evalStmt( s->rhs, global, local, ifd, ofd );
 		}
 		VARIANT_CASE( Bg, s ) {
-			// XXX: detach?
 			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd, false, false ) );
+			thread.detach();
 			return 0;
 		}
 		VARIANT_CASE( RedirFr, s ) {
