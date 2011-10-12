@@ -53,7 +53,7 @@ struct ReturnException {
 	int const retv;
 };
 
-int evalStmt( ast::Stmt*, Global*, Local*, int, int, bool = false, bool = false );
+int evalStmt( ast::Stmt*, Global*, Local*, int, int );
 
 
 inline deque<string>& findVariable( string const& name, Local* local ) {
@@ -246,11 +246,7 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 				ScopeExit closer( bind( close, fds[1] ) );
 				evalStmt( e->body, global, local, ifd, fds[1] );
 			}
-			catch( BreakException const& ) {
-			}
 			catch( ReturnException const& ) {
-				reader.join();
-				throw;
 			}
 			reader.join();
 		}
@@ -302,11 +298,8 @@ DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, bool ic, bool oc ) {
+int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd ) {
 	using namespace ast;
-
-	ScopeExit icloser( bind( close, ifd ), ic );
-	ScopeExit ocloser( bind( close, ofd ), oc );
 
 	Thread::checkIntr();
 
@@ -317,7 +310,7 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			return evalStmt( s->rhs, global, local, ifd, ofd );
 		}
 		VARIANT_CASE( Bg, s ) {
-			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd, false, false ) );
+			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd ) );
 			thread.detach();
 			return 0;
 		}
@@ -326,16 +319,18 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
+			ScopeExit closer( bind( close, fd ) );
 			checkSysCall( fcntl( fd, F_SETFD, FD_CLOEXEC ) );
-			return evalStmt( s->body, global, local, fd, ofd, true, false );
+			return evalStmt( s->body, global, local, fd, ofd );
 		}
 		VARIANT_CASE( RedirTo, s ) {
 			deque<string> args;
 			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
+			ScopeExit closer( bind( close, fd ) );
 			checkSysCall( fcntl( fd, F_SETFD, FD_CLOEXEC ) );
-			return evalStmt( s->body, global, local, ifd, fd, false, true );
+			return evalStmt( s->body, global, local, ifd, fd );
 		}
 		VARIANT_CASE( Command, s ) {
 			deque<string> args;
@@ -451,17 +446,29 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd, boo
 			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 
 			// XXX
-			Thread thread( bind( evalStmt, s->lhs, global, local, ifd, fds[1], false, true ) );
+			struct _ {
+				static void evalLhs( ast::Stmt* s, Global* g, Local* l, int i, int o ) {
+					try {
+						ScopeExit closer( bind( close, o ) );
+						evalStmt( s, g, l, i, o );
+					}
+					catch( ReturnException const& ) {
+					}
+				}
+			};
+			Thread thread( bind( _::evalLhs, s->lhs, global, local, ifd, fds[1] ) );
+
+			int retv;
 			try {
-				evalStmt( s->rhs, global, local, fds[0], ofd, true, false );
+				ScopeExit closer( bind( close, fds[0] ) );
+				retv = evalStmt( s->rhs, global, local, fds[0], ofd );
 			}
-			catch( Thread::Interrupt const& ) {
-				throw;
+			catch( ReturnException const& e ) {
+				retv = e.retv;
 			}
-			catch( ... ) {}
 			thread.join();
 
-			return 0;
+			return retv;
 		}
 		VARIANT_CASE( Defer, s ) {
 			local->defs.push_back( deque<string>() );
