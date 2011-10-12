@@ -95,9 +95,21 @@ struct Thread {
 		}
 	}
 
+	~Thread() {
+		if( !_detach ) {
+			try {
+				interrupt();
+				join();
+			}
+			catch( ... ) {}
+		}
+	}
+
 	template<class T>
 	explicit Thread( T const& cb ):
-		_callback( new function<void ()>( cb ) ) {
+		_callback( new function<void ()>( cb ) ),
+		_detach( false )
+	{
 		if( pthread_create( &_thread, NULL, _wrap, _callback ) != 0 ) {
 			delete _callback;
 			throw IOError();
@@ -125,6 +137,10 @@ struct Thread {
 		if( pthread_kill( _thread, SIGUSR1 ) != 0 ) {
 			throw IOError();
 		}
+	}
+
+	void detach() {
+		_detach = true;
 	}
 
 	private:
@@ -156,6 +172,7 @@ struct Thread {
 
 		pthread_t _thread;
 		function<void ()>* const _callback;
+		bool _detach;
 };
 
 inline int checkSysCall( int retv ) {
