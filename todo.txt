@@ -9,6 +9,7 @@ language:
 	- lambda expression with lexical scoped break, continue and return?
 	- eliminate unnecessary threads creation
 	- look up variable names at compile time
+	- function local current directory
 
 UI:
 	- job control
