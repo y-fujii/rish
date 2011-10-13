@@ -122,7 +122,7 @@ struct Variant {
 	int const dTag;
 
 	protected:
-		Variant( int t ): dTag( t ) {}
+		explicit Variant( int t ): dTag( t ) {}
 };
 
 template<class, class>
