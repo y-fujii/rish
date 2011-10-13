@@ -94,22 +94,45 @@ struct ScopeExit {
 		bool const _run;
 };
 
-template<class T>
-struct VariantBase {
+namespace tmp {
+	template<class T0, class T1>
+	struct Cons {
+		typedef T0 Head;
+		typedef T1 Tail;
+	};
+
+	struct Null {
+	};
+
+	template<class, class> struct Find;
+
+	template<class Tn, class T>
+	struct Find<Cons<T, Tn>, T> {
+		static int const value = 0;
+	};
+
+	template<class T1, class Tn, class T>
+	struct Find<Cons<T1, Tn>, T> {
+		static int const value = 1 + Find<Tn, T>::value;
+	};
+}
+
+template<class Tn>
+struct Variant {
 	int const dTag;
 
 	protected:
-		VariantBase(): dTag( -1 ) {
-		}
+		Variant( int t ): dTag( t ) {}
 };
 
-template<class T, int Tag>
-struct Variant: T {
-	static int const sTag = Tag;
+template<class, class>
+struct VariantImpl;
 
-	Variant() {
-		const_cast<int&>( VariantBase<T>::dTag ) = Tag;
-	}
+template<class Tn, class T>
+struct VariantImpl<Variant<Tn>, T>: Variant<Tn> {
+	static int const sTag = tmp::Find<Tn, T>::value;
+
+	VariantImpl(): Variant<Tn>( sTag ) {}
 };
 
 template<class T>
