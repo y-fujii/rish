@@ -16,21 +16,21 @@ struct Null;
 struct Concat;
 struct Null;
 typedef Variant<
-	tmp::Cons<Word,
-	tmp::Cons<Subst,
-	tmp::Cons<Var,
-	tmp::Cons<Pair,
-	tmp::Cons<Null,
-	tmp::Cons<Concat,
-	tmp::Null> > > > > >
+	tmeta::Cons<Word,
+	tmeta::Cons<Subst,
+	tmeta::Cons<Var,
+	tmeta::Cons<Pair,
+	tmeta::Cons<Null,
+	tmeta::Cons<Concat,
+	tmeta::Null> > > > > >
 > Expr;
 
 struct VarFix;
 struct VarVar;
 typedef Variant<
-	tmp::Cons<VarFix,
-	tmp::Cons<VarVar,
-	tmp::Null> >
+	tmeta::Cons<VarFix,
+	tmeta::Cons<VarVar,
+	tmeta::Null> >
 > LeftExpr;
 
 struct If;
@@ -50,23 +50,23 @@ struct Pipe;
 struct Defer;
 struct None;
 typedef Variant<
-	tmp::Cons<If,
-	tmp::Cons<Command,
-	tmp::Cons<Fun,
-	tmp::Cons<Let,
-	tmp::Cons<Fetch,
-	tmp::Cons<Yield,
-	tmp::Cons<Return,
-	tmp::Cons<Break,
-	tmp::Cons<While,
-	tmp::Cons<Bg,
-	tmp::Cons<Sequence,
-	tmp::Cons<RedirFr,
-	tmp::Cons<RedirTo,
-	tmp::Cons<Pipe,
-	tmp::Cons<Defer,
-	tmp::Cons<None,
-	tmp::Null> > > > > > > > > > > > > > > >
+	tmeta::Cons<If,
+	tmeta::Cons<Command,
+	tmeta::Cons<Fun,
+	tmeta::Cons<Let,
+	tmeta::Cons<Fetch,
+	tmeta::Cons<Yield,
+	tmeta::Cons<Return,
+	tmeta::Cons<Break,
+	tmeta::Cons<While,
+	tmeta::Cons<Bg,
+	tmeta::Cons<Sequence,
+	tmeta::Cons<RedirFr,
+	tmeta::Cons<RedirTo,
+	tmeta::Cons<Pipe,
+	tmeta::Cons<Defer,
+	tmeta::Cons<None,
+	tmeta::Null> > > > > > > > > > > > > > > >
 > Stmt;
 
 struct Word: VariantImpl<Expr, Word> {
