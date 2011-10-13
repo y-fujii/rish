@@ -227,8 +227,6 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 		VARIANT_CASE( Subst, e ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
-			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
-			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 
 			struct _ {
 				static void readAll( int ifd, DstIter& dst ) {
@@ -320,7 +318,6 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd ) {
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
 			ScopeExit closer( bind( close, fd ) );
-			checkSysCall( fcntl( fd, F_SETFD, FD_CLOEXEC ) );
 			return evalStmt( s->body, global, local, fd, ofd );
 		}
 		VARIANT_CASE( RedirTo, s ) {
@@ -329,7 +326,6 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd ) {
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
 			ScopeExit closer( bind( close, fd ) );
-			checkSysCall( fcntl( fd, F_SETFD, FD_CLOEXEC ) );
 			return evalStmt( s->body, global, local, ifd, fd );
 		}
 		VARIANT_CASE( Command, s ) {
@@ -442,8 +438,6 @@ int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd ) {
 		VARIANT_CASE( Pipe, s ) {
 			int fds[2];
 			checkSysCall( pipe( fds ) );
-			checkSysCall( fcntl( fds[0], F_SETFD, FD_CLOEXEC ) );
-			checkSysCall( fcntl( fds[1], F_SETFD, FD_CLOEXEC ) );
 
 			// XXX
 			struct _ {
