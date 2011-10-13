@@ -82,7 +82,10 @@ struct ScopeExit {
 
 	~ScopeExit() {
 		if( _run ) {
-			_callback();
+			try {
+				_callback();
+			}
+			catch( ... ) {}
 		}
 	}
 
