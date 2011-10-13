@@ -46,6 +46,37 @@ struct UnixIStream: std::istream {
 	}
 };
 
+#if defined( __linux__ )
+void closefrom( int lowfd ) {
+	assert( lowfd >= 0 );
+
+	DIR* dir = opendir( "/proc/self/fd" );
+	if( dir == NULL ) {
+		return;
+	}
+	ScopeExit closer( bind( closedir, dir ) );
+
+	while( true ) {
+		dirent entry;
+		dirent* result;
+		if( readdir_r( dir, &entry, &result ) != 0 ) {
+			return;
+		}
+		if( result == NULL ) {
+			break;
+		}
+		if( entry.d_type == DT_DIR ) {
+			continue;
+		}
+		int fd = -1;
+		sscanf( entry.d_name, "%d", &fd );
+		if( fd >= lowfd ) {
+			close( fd );
+		}
+	}
+}
+#endif
+
 template<class Container>
 int forkExec( Container const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
@@ -65,7 +96,7 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 		if( dup2( ofd, 1 ) < 0 ) {
 			_exit( 1 );
 		}
-		// closefrom( 3 );
+		closefrom( 3 );
 		execvp( argsRaw[0], const_cast<char* const*>( &argsRaw[0] ) );
 		_exit( 1 );
 	}
