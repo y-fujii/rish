@@ -94,7 +94,7 @@ struct ScopeExit {
 		bool const _run;
 };
 
-namespace tmp {
+namespace tmeta {
 	template<class T0, class T1>
 	struct Cons {
 		typedef T0 Head;
@@ -130,15 +130,14 @@ struct VariantImpl;
 
 template<class Tn, class T>
 struct VariantImpl<Variant<Tn>, T>: Variant<Tn> {
-	static int const sTag = tmp::Find<Tn, T>::value;
+	static int const sTag = tmeta::Find<Tn, T>::value;
 
 	VariantImpl(): Variant<Tn>( sTag ) {}
 };
 
 template<class T>
 struct FalseWrapper {
-	FalseWrapper( T const& v ): val( v ) {
-	}
+	FalseWrapper( T const& v ): val( v ) {}
 
 	operator bool() const {
 		return false;
