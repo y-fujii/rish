@@ -269,7 +269,7 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 			deque<string>& val = findVariable( e->var->name, local );
 			bgn = imod( bgn, val.size() );
 			end = imod( end, val.size() );
-			if( bgn <= end ) {
+			if( bgn < end ) {
 				dst = copy( val.begin() + bgn, val.begin() + end, dst );
 			}
 			else {
@@ -292,7 +292,6 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 
 			deque<string>& val = findVariable( e->var->name, local );
 			idx = imod( idx, val.size() );
-			cout << idx << endl;
 			*dst++ = val[idx];
 		}
 		VARIANT_CASE( Null, _ ) {
