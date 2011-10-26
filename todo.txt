@@ -1,5 +1,5 @@
 language:
-	- array slicing
+	x array slicing
 	- map/dict type?
 	- arithmetic expressions
 	- builtin commands for strings, such as regex operations
@@ -10,6 +10,7 @@ language:
 	- eliminate unnecessary threads creation
 	- look up variable names at compile time
 	- function local current directory
+	- zsh like ** expansion
 
 UI:
 	- job control
