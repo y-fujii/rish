@@ -62,6 +62,38 @@ fun ackermann $m $n {
 	}
 }
 
+fun qsort0 ($xs) {
+	if let $pv ($xs) = $xs {
+		qsort0 (yield $xs | while fetch $x {
+			if test $x -le $pv {
+				yield $x
+			}
+		})
+		yield $pv
+		qsort0 (yield $xs | while fetch $x {
+			if test $x -gt $pv {
+				yield $x
+			}
+		})
+	}
+}
+
+fun qsort1 {
+	if fetch $pv ($xs) {
+		yield $xs | while fetch $x {
+			if test $x -le $pv {
+				yield $x
+			}
+		} | qsort1
+		yield $pv
+		yield $xs | while fetch $x {
+			if test $x -gt $pv {
+				yield $x
+			}
+		} | qsort1
+	}
+}
+
 fun redirect {
 	test.rs >| cat | wc
 }
@@ -71,10 +103,12 @@ fun runTest {
 	echo P(yield a b c)(range 4)$var
 	factorialRec 16
 	factorialLoop 16
-	ackermann 3 3
+	ackermann 3 2
 	testDefer
 	at 4 (range 16)
 	redirect
+	echo (qsort0 0 3 2 6 -10 12312 23 2 98 8)
+	echo (yield 0 3 2 6 -10 12312 23 2 98 8 | qsort1)
 }
 
 runTest
