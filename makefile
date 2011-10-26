@@ -1,4 +1,5 @@
-CXX = clang++ -g -pedantic -Wall -Wextra -pthread -O3
+CXX = g++ -g -pedantic -Wall -Wextra -pthread -O3
+LEX = flex
 
 SRCS = \
 	lexer.l parser.y \

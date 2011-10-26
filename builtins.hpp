@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 //#include <tr1/regrex>
 #include "misc.hpp"
@@ -24,6 +25,39 @@ int changeDir( deque<string> const& args, int, int ) {
 	}
 	checkSysCall( chdir( args[0].c_str() ) );
 	return 0;
+}
+
+int setEnv( deque<string> const& args, int, int ) {
+	if( args.size() != 2 ) {
+		return 1;
+	}
+	checkSysCall( setenv( args[0].c_str(), args[1].c_str(), 1 ) );
+	return 0;
+}
+
+int getEnv( deque<string> const& args, int, int ofd ) {
+	if( args.size() != 1 ) {
+		return 1;
+	}
+	char* val = getenv( args[0].c_str() );
+	if( val == NULL ) {
+		return 1;
+	}
+	writeAll( ofd, string( val ) + '\n' );
+	return 0;
+}
+
+int wait( deque<string> const& args, int, int ) {
+	if( args.size() != 1 ) {
+		return 1;
+	}
+	pid_t pid;
+	if( (istringstream( args[0] ) >> pid).fail() ) {
+		return 1;
+	}
+	int status;
+	checkSysCall( waitpid( pid, &status, 0 ) );
+	return WEXITSTATUS( status );
 }
 
 int showList( deque<string> const& args, int, int ofd ) {
@@ -73,6 +107,13 @@ int strSize( deque<string> const& args, int, int ofd ) {
 	return 0;
 }
 
+int listSize( deque<string> const& args, int, int ofd ) {
+	ostringstream buf;
+	buf << args.size() << '\n';
+	writeAll( ofd, buf.str() );
+	return 0;
+}
+
 /*
 int strFind( deque<string> const& args, int ifd, int ofd ) {
 	smatch match;
@@ -107,15 +148,18 @@ template<class Map>
 void register_( Map& map ) {
 	map["std.cd"] = changeDir;
 	map["std.show-list"] = showList;
+	map["sys.setenv"] = setEnv;
+	map["sys.getenv"] = getEnv;
+	map["sys.wait"] = wait;
 	map["str.size"] = strSize;
 	/*
 	map["str.sub"] = strSub;
 	map["str.find"] = strFind;
 	map["str.match"] = strMatch;
 	map["str.replace"] = strReplace;
-	map["list.size"] = 
 	map["list.sub"] = 
 	*/
+	map["list.size"] = listSize;
 }
 
 
