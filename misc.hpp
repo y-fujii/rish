@@ -74,6 +74,15 @@ unsigned size( T const (&)[N] ) {
 	return N;
 }
 
+inline int imod( int a, int b ) {
+	if( a * b < 0 ) {
+		return a % b + b;
+	}
+	else {
+		return a % b;
+	}
+}
+
 struct ScopeExit {
 	template<class T>
 	explicit ScopeExit( T const& cb, bool r = true ):

@@ -194,20 +194,18 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Local* local ) {
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter dst ) {
+DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIter dst ) {
 	using namespace ast;
 
 	Thread::checkIntr();
 
-	VARIANT_SWITCH( Expr, eb ) {
+	VARIANT_SWITCH( Expr, expr ) {
 		VARIANT_CASE( Word, e ) {
 			*dst++ = e->word;
 		}
 		VARIANT_CASE( Pair, e ) {
 			evalExpr( e->lhs, global, local, ifd, dst );
 			evalExpr( e->rhs, global, local, ifd, dst );
-		}
-		VARIANT_CASE( Null, _ ) {
 		}
 		VARIANT_CASE( Concat, e ) {
 			deque<MetaString> lhs;
@@ -247,6 +245,57 @@ DstIter evalExpr( ast::Expr* eb, Global* global, Local* local, int ifd, DstIter 
 			catch( ReturnException const& ) {
 			}
 			reader.join();
+		}
+		VARIANT_CASE( Slice, e ) {
+			deque<MetaString> sBgn;
+			deque<MetaString> sEnd;
+			evalExpr( e->bgn, global, local, ifd, back_inserter( sBgn ) );
+			evalExpr( e->end, global, local, ifd, back_inserter( sEnd ) );
+			if( sBgn.size() != 1 || sEnd.size() != 1 ) {
+				// XXX
+				return dst;
+			}
+			int bgn;
+			if( (istringstream( string( sBgn.back().begin(), sBgn.back().end() ) ) >> bgn).fail() ) {
+				// XXX
+				return dst;
+			}
+			int end;
+			if( (istringstream( string( sEnd.back().begin(), sEnd.back().end() ) ) >> end).fail() ) {
+				// XXX
+				return dst;
+			}
+
+			deque<string>& val = findVariable( e->var->name, local );
+			bgn = imod( bgn, val.size() );
+			end = imod( end, val.size() );
+			if( bgn <= end ) {
+				dst = copy( val.begin() + bgn, val.begin() + end, dst );
+			}
+			else {
+				dst = copy( val.begin() + bgn, val.end(), dst );
+				dst = copy( val.begin(), val.begin() + end, dst );
+			}
+		}
+		VARIANT_CASE( Index, e ) {
+			deque<MetaString> sIdx;
+			evalExpr( e->idx, global, local, ifd, back_inserter( sIdx ) );
+			if( sIdx.size() != 1 ) {
+				// XXX
+				return dst;
+			}
+			int idx;
+			if( (istringstream( string( sIdx.back().begin(), sIdx.back().end() ) ) >> idx).fail() ) {
+				// XXX
+				return dst;
+			}
+
+			deque<string>& val = findVariable( e->var->name, local );
+			idx = imod( idx, val.size() );
+			cout << idx << endl;
+			*dst++ = val[idx];
+		}
+		VARIANT_CASE( Null, _ ) {
 		}
 		VARIANT_DEFAULT {
 			assert( false );
@@ -296,13 +345,13 @@ DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
 }
 
-int evalStmt( ast::Stmt* sb, Global* global, Local* local, int ifd, int ofd ) {
+int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) {
 	using namespace ast;
 
 	Thread::checkIntr();
 
 	//try {
-	VARIANT_SWITCH( Stmt, sb ) {
+	VARIANT_SWITCH( Stmt, stmt ) {
 		VARIANT_CASE( Sequence, s ) {
 			evalStmt( s->lhs, global, local, ifd, ofd );
 			return evalStmt( s->rhs, global, local, ifd, ofd );
