@@ -121,8 +121,8 @@ expr_prim
 	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
+	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( new Var( string( $3->begin(), $3->end() ) ), $4, $5 ); delete $3; }
+	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Index( new Var( string( $3->begin(), $3->end() ) ), $4 ); delete $3; }
 	/*
-	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( $3, $4, $5 ); }
-	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Slice( $3, $4, $4 ); }
 	| TK_FUN lexpr_prim '{' stmt_seq '}'			{ $$ = NULL; }
 	*/

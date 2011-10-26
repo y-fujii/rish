@@ -12,17 +12,20 @@ struct Word;
 struct Subst;
 struct Var;
 struct Pair;
-struct Null;
 struct Concat;
+struct Slice;
+struct Index;
 struct Null;
 typedef Variant<
 	tmeta::Cons<Word,
 	tmeta::Cons<Subst,
 	tmeta::Cons<Var,
 	tmeta::Cons<Pair,
-	tmeta::Cons<Null,
 	tmeta::Cons<Concat,
-	tmeta::Null> > > > > >
+	tmeta::Cons<Slice,
+	tmeta::Cons<Index,
+	tmeta::Cons<Null,
+	tmeta::Null> > > > > > > >
 > Expr;
 
 struct VarFix;
@@ -90,14 +93,27 @@ struct Pair: VariantImpl<Expr, Pair> {
 	Expr* rhs;
 };
 
-struct Null: VariantImpl<Expr, Null> {
-	Null() {}
-};
-
 struct Concat: VariantImpl<Expr, Concat> {
 	Concat( Expr* l, Expr* r ): lhs( l ), rhs( r ) {}
 	Expr* lhs;
 	Expr* rhs;
+};
+
+struct Slice: VariantImpl<Expr, Slice> {
+	Slice( Var* v, Expr* b, Expr* e ): var( v ), bgn( b ), end( e ) {}
+	Var* var;
+	Expr* bgn;
+	Expr* end;
+};
+
+struct Index: VariantImpl<Expr, Index> {
+	Index( Var* v, Expr* i ): var( v ), idx( i ) {}
+	Var* var;
+	Expr* idx;
+};
+
+struct Null: VariantImpl<Expr, Null> {
+	Null() {}
 };
 
 struct VarFix: VariantImpl<LeftExpr, VarFix> {
