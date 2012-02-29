@@ -54,7 +54,7 @@ void closefrom( int lowfd ) {
 	if( dir == NULL ) {
 		return;
 	}
-	ScopeExit closer( bind( closedir, dir ) );
+	auto closer = scopeExit( bind( closedir, dir ) );
 
 	while( true ) {
 		dirent entry;
