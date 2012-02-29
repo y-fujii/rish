@@ -37,13 +37,20 @@ inline int imod( int a, int b ) {
 	}
 }
 
-struct ScopeExit {
-	template<class T>
-	explicit ScopeExit( T const& cb, bool r = true ):
-		_callback( cb ), _run( r ) {
+template<class Func>
+struct ScopeExiter {
+	ScopeExiter( ScopeExiter<Func>&& lhs ):
+		_callback( std::move( lhs._callback ) ),
+		_run( lhs._run ) {
+		lhs._run = false;
 	}
 
-	~ScopeExit() {
+	explicit ScopeExiter( Func const& cb, bool r = true ):
+		_callback( cb ),
+		_run( r ) {
+	}
+
+	~ScopeExiter() {
 		if( _run ) {
 			try {
 				_callback();
@@ -53,9 +60,16 @@ struct ScopeExit {
 	}
 
 	private:
-		std::function<void ()> const _callback;
-		bool const _run;
+		ScopeExiter( ScopeExiter<Func> const& );
+		ScopeExiter<Func> const& operator=( ScopeExiter<Func> const& );
+		Func const _callback;
+		bool _run;
 };
+
+template<class Func>
+ScopeExiter<Func> scopeExit( Func const& cb ) {
+	return ScopeExiter<Func>( cb );
+}
 
 namespace tmeta {
 	template<class... Tn>

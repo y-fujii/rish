@@ -69,7 +69,7 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 	if( dir == NULL ) {
 		throw IOError();
 	}
-	ScopeExit closer( bind( closedir, dir ) );
+	auto closer = scopeExit( bind( closedir, dir ) );
 
 	while( true ) {
 		dirent entry;
@@ -95,7 +95,7 @@ DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt
 	if( slash == MetaString::npos ) {
 		deque<pair<string, int> > dirs;
 		listDir( root, back_inserter( dirs ) );
-		for( deque<pair<string, int> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+		for( auto it = dirs.cbegin(); it != dirs.cend(); ++it ) {
 			if( !(it->second & DT_DIR) && matchGlob( ptrn, it->first ) ) {
 				*dstIt++ = root + it->first;
 			}
@@ -112,7 +112,7 @@ DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt
 		else {
 			deque<pair<string, int> > dirs;
 			listDir( root, back_inserter( dirs ) );
-			for( deque<pair<string, int> >::const_iterator it = dirs.begin(); it != dirs.end(); ++it ) {
+			for( auto it = dirs.cbegin(); it != dirs.cend(); ++it ) {
 				if( (it->second & DT_DIR) && matchGlob( base, it->first ) ) {
 					if( rest.size() == 0 ) {
 						*dstIt++ = root + it->first + "/";

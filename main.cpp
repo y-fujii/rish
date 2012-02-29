@@ -103,7 +103,7 @@ int main( int argc, char** argv ) {
 		while( true ) {
 			char* line = readline( "| " );
 			if( line == NULL ) break;
-			ScopeExit deleter( bind( free, line ) );
+			auto deleter = scopeExit( bind( free, line ) );
 
 			size_t len = strlen( line );
 			if( len > 0 ) {
