@@ -229,7 +229,7 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 				int ifd;
 				DstIter& dst;
 				void operator()() {
-					ScopeExit closer( bind( close, ifd ) );
+					auto closer = scopeExit( bind( close, ifd ) );
 					UnixIStream ifs( ifd );
 					string buf;
 					while( getline( ifs, buf ) ) {
@@ -240,7 +240,7 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 			Thread reader( Reader{ fds[0], dst } );
 
 			try {
-				ScopeExit closer( bind( close, fds[1] ) );
+				auto closer = scopeExit( bind( close, fds[1] ) );
 				evalStmt( e->body, global, local, ifd, fds[1] );
 			}
 			catch( ReturnException const& ) {
@@ -383,7 +383,7 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
-			ScopeExit closer( bind( close, fd ) );
+			auto closer = scopeExit( bind( close, fd ) );
 			return evalStmt( s->body, global, local, fd, ofd );
 		}
 		VCASE( RedirTo, s ) {
@@ -391,7 +391,7 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
-			ScopeExit closer( bind( close, fd ) );
+			auto closer = scopeExit( bind( close, fd ) );
 			return evalStmt( s->body, global, local, ifd, fd );
 		}
 		VCASE( Command, s ) {
@@ -510,7 +510,7 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 				int o;
 				void operator()() {
 					try {
-						ScopeExit closer( bind( close, o ) );
+						auto closer = scopeExit( bind( close, o ) );
 						evalStmt( s, g, l, i, o );
 					}
 					catch( ReturnException const& ) {
@@ -521,7 +521,7 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 
 			int retv;
 			try {
-				ScopeExit closer( bind( close, fds[0] ) );
+				auto closer = scopeExit( bind( close, fds[0] ) );
 				retv = evalStmt( s->rhs, global, local, fds[0], ofd );
 			}
 			catch( ReturnException const& e ) {
