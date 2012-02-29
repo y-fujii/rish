@@ -51,10 +51,7 @@ int wait( deque<string> const& args, int, int ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
-	pid_t pid;
-	if( (istringstream( args[0] ) >> pid).fail() ) {
-		return 1;
-	}
+	pid_t pid = stoi( args[0] );
 	int status;
 	checkSysCall( waitpid( pid, &status, 0 ) );
 	return WEXITSTATUS( status );

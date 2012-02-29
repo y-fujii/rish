@@ -38,7 +38,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH TK_YIELD
-%token TK_DEFER
+%token TK_DEFER TK_FOR
 
 %start top
 
@@ -60,6 +60,7 @@ stmt_bg
 stmt_andor
 	: stmt_andor TK_AND2 stmt_not	{ $$ = new If( $1, $3, new None( 1 ) ); }
 	| stmt_andor TK_OR2 stmt_not	{ $$ = new If( $1, new None( 0 ), $3 ); }
+	| stmt_andor '&' stmt_not		{ $$ = new Parallel( $1, $3 ); }
 	| stmt_not
 
 stmt_not
@@ -79,9 +80,11 @@ stmt_pipe
 stmt_prim
 	: if_
 	| TK_WHILE stmt_andor '{' stmt_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
+	| TK_FOR lexpr_prim '{' stmt_seq '}' { $$ = nullptr; }
 	/*
-	| 'for' lexpr_prim ':' stmt_andor '->' expr_list
+	| TK_FOR lexpr_prim TK_IF stmt_andor { $$ = nullptr; }
 	*/
+	| TK_FOR lexpr_prim TK_IF stmt_andor '{' stmt_seq '}' { $$ = nullptr; }
 	| TK_BREAK expr_concat							{ $$ = new Break( $2 ); }
 	| TK_RETURN expr_concat							{ $$ = new Return( $2 ); }
 	| TK_LET lexpr_prim '=' expr_list				{ $$ = new Let( $2, $4 ); }

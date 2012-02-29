@@ -355,6 +355,30 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			evalStmt( s->lhs, global, local, ifd, ofd );
 			return evalStmt( s->rhs, global, local, ifd, ofd );
 		}
+		VARIANT_CASE( Parallel, s ) {
+			// XXX
+			struct _ {
+				static void evalLhs( ast::Stmt* s, Global* g, Local* l, int i, int o ) {
+					try {
+						evalStmt( s, g, l, i, o );
+					}
+					catch( ReturnException const& ) {
+					}
+				}
+			};
+			Thread thread( bind( _::evalLhs, s->lhs, global, local, ifd, ofd ) );
+
+			int retv;
+			try {
+				retv = evalStmt( s->rhs, global, local, ifd, ofd );
+			}
+			catch( ReturnException const& e ) {
+				retv = e.retv;
+			}
+			thread.join();
+
+			return retv;
+		}
 		VARIANT_CASE( Bg, s ) {
 			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd ) );
 			thread.detach();
@@ -452,6 +476,21 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 							return 1;
 						}
 					}
+					/*
+					deque<string> rhs( lhs->var.size() );
+					for( deque<string>::iterator it = rhs.begin(); it != rhs.end(); ++it ) {
+						while( true ) {
+							char c;
+							if( read( ifd, &c, 1 ) != 1 ) {
+								return 1;
+							}
+							if( c == '\n' ) {
+								break;
+							}
+							*it += c;
+						}
+					}
+					*/
 
 					return assign( lhs, rhs, local ) ? 0 : 1;
 				}

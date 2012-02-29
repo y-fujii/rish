@@ -1,8 +1,10 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
+#include <stdexcept>
 #include <algorithm>
 #include <vector>
+#include <sstream>
 #include <iostream>
 #include <tr1/functional>
 #include <stdint.h>
@@ -57,6 +59,14 @@ namespace std {
 		private:
 			T volatile _val;
 	};
+
+	inline int stoi( string const& str ) {
+		int i;
+		if( (istringstream( str ) >> i).fail() ) {
+			throw invalid_argument( "" );
+		}
+		return i;
+	}
 }
 
 /* this does not work on gcc-4.5.x
