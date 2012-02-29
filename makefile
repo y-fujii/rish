@@ -1,4 +1,5 @@
-CXX = g++ -g -pedantic -Wall -Wextra -pthread -O3
+CXX = clang++ -s -pedantic -Wall -Wextra -pthread -O3
+#CXX = clang++ -g -pedantic -Wall -Wextra -fno-rtti -pthread -O0
 LEX = flex
 
 SRCS = \

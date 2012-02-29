@@ -11,6 +11,7 @@ language:
 	- look up variable names at compile time
 	- function local current directory
 	- zsh like ** expansion
+	- CPS tree evaluation & lightweight thread & asynchronous I/O?
 
 UI:
 	- job control

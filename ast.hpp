@@ -47,6 +47,7 @@ struct Break;
 struct While;
 struct Bg;
 struct Sequence;
+struct Parallel;
 struct RedirFr;
 struct RedirTo;
 struct Pipe;
@@ -64,12 +65,13 @@ typedef Variant<
 	tmeta::Cons<While,
 	tmeta::Cons<Bg,
 	tmeta::Cons<Sequence,
+	tmeta::Cons<Parallel,
 	tmeta::Cons<RedirFr,
 	tmeta::Cons<RedirTo,
 	tmeta::Cons<Pipe,
 	tmeta::Cons<Defer,
 	tmeta::Cons<None,
-	tmeta::Null> > > > > > > > > > > > > > > >
+	tmeta::Null> > > > > > > > > > > > > > > > >
 > Stmt;
 
 struct Word: VariantImpl<Expr, Word> {
@@ -190,6 +192,12 @@ struct Bg: VariantImpl<Stmt, Bg> {
 
 struct Sequence: VariantImpl<Stmt, Sequence> {
 	Sequence( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
+	Stmt* lhs;
+	Stmt* rhs;
+};
+
+struct Parallel: VariantImpl<Stmt, Parallel> {
+	Parallel( Stmt* l, Stmt* r ): lhs( l ), rhs( r ) {}
 	Stmt* lhs;
 	Stmt* rhs;
 };
