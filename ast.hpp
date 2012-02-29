@@ -17,23 +17,21 @@ struct Slice;
 struct Index;
 struct Null;
 typedef Variant<
-	tmeta::Cons<Word,
-	tmeta::Cons<Subst,
-	tmeta::Cons<Var,
-	tmeta::Cons<Pair,
-	tmeta::Cons<Concat,
-	tmeta::Cons<Slice,
-	tmeta::Cons<Index,
-	tmeta::Cons<Null,
-	tmeta::Null> > > > > > > >
+	Word,
+	Subst,
+	Var,
+	Pair,
+	Concat,
+	Slice,
+	Index,
+	Null
 > Expr;
 
 struct VarFix;
 struct VarVar;
 typedef Variant<
-	tmeta::Cons<VarFix,
-	tmeta::Cons<VarVar,
-	tmeta::Null> >
+	VarFix,
+	VarVar
 > LeftExpr;
 
 struct If;
@@ -54,24 +52,23 @@ struct Pipe;
 struct Defer;
 struct None;
 typedef Variant<
-	tmeta::Cons<If,
-	tmeta::Cons<Command,
-	tmeta::Cons<Fun,
-	tmeta::Cons<Let,
-	tmeta::Cons<Fetch,
-	tmeta::Cons<Yield,
-	tmeta::Cons<Return,
-	tmeta::Cons<Break,
-	tmeta::Cons<While,
-	tmeta::Cons<Bg,
-	tmeta::Cons<Sequence,
-	tmeta::Cons<Parallel,
-	tmeta::Cons<RedirFr,
-	tmeta::Cons<RedirTo,
-	tmeta::Cons<Pipe,
-	tmeta::Cons<Defer,
-	tmeta::Cons<None,
-	tmeta::Null> > > > > > > > > > > > > > > > >
+	If,
+	Command,
+	Fun,
+	Let,
+	Fetch,
+	Yield,
+	Return,
+	Break,
+	While,
+	Bg,
+	Sequence,
+	Parallel,
+	RedirFr,
+	RedirTo,
+	Pipe,
+	Defer,
+	None
 > Stmt;
 
 struct Word: VariantImpl<Expr, Word> {

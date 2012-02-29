@@ -1,83 +1,27 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
+#include <string>
 #include <stdexcept>
 #include <algorithm>
 #include <vector>
 #include <sstream>
 #include <iostream>
-#include <tr1/functional>
+#include <functional>
 #include <stdint.h>
 #include <cassert>
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
 
-
-namespace std {
-	using namespace tr1;
-
-	template<class SrcIter, class DstIter, class Pred>
-	inline DstIter copy_if( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt, Pred pred ) {
-		while( srcIt != srcEnd ) {
-			if( pred( *srcIt ) ) {
-				*dstIt++ = *srcIt;
-			}
-			++srcIt;
-		}
-		return dstIt;
+// C++11 compat
+inline int stoi( std::string const& str ) {
+	int i;
+	if( (std::istringstream( str ) >> i).fail() ) {
+		throw std::invalid_argument( "" );
 	}
-
-	template<class Iter, class Func>
-	inline bool any_of( Iter bgn, Iter end, Func f ) {
-		return find_if( bgn, end, f ) != end;
-	}
-
-	template<class Iter, class Func>
-	inline bool all_of( Iter bgn, Iter end, Func f ) {
-		return find_if( bgn, end, not1( f ) ) == end;
-	}
-
-	template<class T>
-	struct atomic {
-		explicit atomic( T const& v ): _val( v ) {
-		}
-
-		T load() volatile {
-			__sync_synchronize();
-			T volatile v = _val;
-			__sync_synchronize();
-			return v;
-		}
-
-		void store( T const& v ) volatile {
-			__sync_synchronize();
-			_val = v;
-			__sync_synchronize();
-		}
-
-		private:
-			T volatile _val;
-	};
-
-	inline int stoi( string const& str ) {
-		int i;
-		if( (istringstream( str ) >> i).fail() ) {
-			throw invalid_argument( "" );
-		}
-		return i;
-	}
+	return i;
 }
-
-/* this does not work on gcc-4.5.x
-struct {
-	template<class T>
-	operator T*() const {
-		return 0;
-	}
-} const nullptr = {};
-*/
-#define nullptr (0)
 
 template<class T, unsigned N>
 unsigned size( T const (&)[N] ) {
@@ -114,29 +58,24 @@ struct ScopeExit {
 };
 
 namespace tmeta {
-	template<class T0, class T1>
-	struct Cons {
-		typedef T0 Head;
-		typedef T1 Tail;
-	};
-
-	struct Null {
+	template<class... Tn>
+	struct List {
 	};
 
 	template<class, class> struct Find;
 
-	template<class Tn, class T>
-	struct Find<Cons<T, Tn>, T> {
+	template<class... Tn, class T>
+	struct Find<List<T, Tn...>, T> {
 		static int const value = 0;
 	};
 
-	template<class T1, class Tn, class T>
-	struct Find<Cons<T1, Tn>, T> {
-		static int const value = 1 + Find<Tn, T>::value;
+	template<class T1, class... Tn, class T>
+	struct Find<List<T1, Tn...>, T> {
+		static int const value = 1 + Find<List<Tn...>, T>::value;
 	};
 }
 
-template<class Tn>
+template<class... Tn>
 struct Variant {
 	int const dTag;
 
@@ -147,11 +86,11 @@ struct Variant {
 template<class, class>
 struct VariantImpl;
 
-template<class Tn, class T>
-struct VariantImpl<Variant<Tn>, T>: Variant<Tn> {
-	static int const sTag = tmeta::Find<Tn, T>::value;
+template<class... Tn, class T>
+struct VariantImpl<Variant<Tn...>, T>: Variant<Tn...> {
+	static int const sTag = tmeta::Find<tmeta::List<Tn...>, T>::value;
 
-	VariantImpl(): Variant<Tn>( sTag ) {}
+	VariantImpl(): Variant<Tn...>( sTag ) {}
 };
 
 template<class T>
@@ -165,18 +104,23 @@ struct FalseWrapper {
 	T val;
 };
 
-#define VARIANT_SWITCH( type, rhs ) \
-	if( FalseWrapper<type*> _variant_switch_value_ = (rhs) ) {} else \
+template<class T>
+FalseWrapper<T> falseWrap( T const& v ) {
+	return FalseWrapper<T>( v );
+}
+
+#define VSWITCH( rhs ) \
+	if( auto _variant_switch_value_ = falseWrap( rhs ) ) {} else \
 	switch( _variant_switch_value_.val->dTag ) {
 
-#define VARIANT_CASE( type, lhs ) \
+#define VCASE( type, lhs ) \
 		break; \
 	} \
 	case type::sTag: { \
 		type* lhs = static_cast<type*>( _variant_switch_value_.val ); \
 		(void)(lhs);
 
-#define VARIANT_DEFAULT \
+#define VDEFAULT \
 		break; \
 	} \
 	default:

@@ -82,7 +82,7 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 		}
 		string name( entry.d_name );
 		if( name != "." && name != ".." ) {
-			*dstIt++ = make_pair<string, int>( name, entry.d_type );
+			*dstIt++ = make_pair( name, int( entry.d_type ) );
 		}
 	}
 

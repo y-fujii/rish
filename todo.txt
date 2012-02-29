@@ -12,6 +12,7 @@ language:
 	- function local current directory
 	- zsh like ** expansion
 	- CPS tree evaluation & lightweight thread & asynchronous I/O?
+	- In C++11, std::string is not ref-counted. we may wish to use shared_ptr<string>.
 
 UI:
 	- job control

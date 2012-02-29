@@ -1,5 +1,5 @@
-CXX = clang++ -s -pedantic -Wall -Wextra -pthread -O3
-#CXX = clang++ -g -pedantic -Wall -Wextra -fno-rtti -pthread -O0
+#CXX = clang++ -std=c++11 -stdlib=libc++ -pedantic -Wall -Wextra -fno-rtti -pthread -O3 -s -I$(HOME)/usr/src/libcxx/include
+CXX = g++46 -std=c++0x -pedantic -Wall -Wextra -fno-rtti -pthread -O3 -s
 LEX = flex
 
 SRCS = \

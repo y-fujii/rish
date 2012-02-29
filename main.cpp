@@ -1,7 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
 #include <memory>
-#include <tr1/memory>
 #include <iostream>
 #include <fstream>
 #include <cassert>

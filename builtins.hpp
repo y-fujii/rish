@@ -2,6 +2,7 @@
 #pragma once
 
 #include <deque>
+#include <string>
 #include <cassert>
 #include <cmath>
 #include <sstream>
