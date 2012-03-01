@@ -52,7 +52,7 @@ int wait( deque<string> const& args, int, int ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
-	pid_t pid = stoi( args[0] );
+	pid_t pid = readValue<int>( args[0] );
 	int status;
 	checkSysCall( waitpid( pid, &status, 0 ) );
 	return WEXITSTATUS( status );
@@ -64,7 +64,7 @@ int showList( deque<string> const& args, int, int ofd ) {
 
 	int sum1 = 0;
 	int sum2 = 0;
-	for( deque<string>::const_iterator it = args.begin(); it != args.end(); ++it ) {
+	for( auto it = args.cbegin(); it != args.cend(); ++it ) {
 		sum1 += it->size();
 		sum2 += it->size() * it->size();
 	}
@@ -97,7 +97,7 @@ int showList( deque<string> const& args, int, int ofd ) {
 
 int strSize( deque<string> const& args, int, int ofd ) {
 	ostringstream buf;
-	for( deque<string>::const_iterator it = args.begin(); it != args.end(); ++it ) {
+	for( auto it = args.cbegin(); it != args.cend(); ++it ) {
 		buf << it->size() << '\n';
 	}
 
