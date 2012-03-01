@@ -225,27 +225,23 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 
-			struct Reader {
-				int ifd;
-				DstIter& dst;
-				void operator()() {
-					auto closer = scopeExit( bind( close, ifd ) );
-					UnixIStream ifs( ifd );
-					string buf;
-					while( getline( ifs, buf ) ) {
-						*dst++ = buf;
-					}
+			auto reader = [&]() -> void {
+				auto closer = scopeExit( bind( close, fds[0] ) );
+				UnixIStream ifs( fds[0] );
+				string buf;
+				while( getline( ifs, buf ) ) {
+					*dst++ = buf;
 				}
 			};
-			Thread reader( Reader{ fds[0], dst } );
-
-			try {
-				auto closer = scopeExit( bind( close, fds[1] ) );
-				evalStmt( e->body, global, local, ifd, fds[1] );
-			}
-			catch( ReturnException const& ) {
-			}
-			reader.join();
+			auto writer = [&]() -> void {
+				try {
+					auto closer = scopeExit( bind( close, fds[1] ) );
+					evalStmt( e->body, global, local, ifd, fds[1] );
+				}
+				catch( ReturnException const& ) {
+				}
+			};
+			parallel( reader, writer );
 		}
 		VCASE( Slice, e ) {
 			deque<MetaString> sBgn;
@@ -345,33 +341,25 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			return evalStmt( s->rhs, global, local, ifd, ofd );
 		}
 		VCASE( Parallel, s ) {
-			// XXX
-			struct LhsEvaluator {
-				ast::Stmt* s;
-				Global* g;
-				Local* l;
-				int i;
-				int o;
-				void operator()() {
-					try {
-						evalStmt( s, g, l, i, o );
-					}
-					catch( ReturnException const& ) {
-					}
+			int lret, rret;
+			auto evalLhs = [&]() -> void {
+				try {
+					lret = evalStmt( s->lhs, global, local, ifd, ofd );
+				}
+				catch( ReturnException const& e ) {
+					lret = e.retv;
 				}
 			};
-			Thread thread( LhsEvaluator{ s->lhs, global, local, ifd, ofd } );
-
-			int retv;
-			try {
-				retv = evalStmt( s->rhs, global, local, ifd, ofd );
-			}
-			catch( ReturnException const& e ) {
-				retv = e.retv;
-			}
-			thread.join();
-
-			return retv;
+			auto evalRhs = [&]() -> void {
+				try {
+					rret = evalStmt( s->rhs, global, local, ifd, ofd );
+				}
+				catch( ReturnException const& e ) {
+					rret = e.retv;
+				}
+			};
+			parallel( evalLhs, evalRhs );
+			return lret || rret;
 		}
 		VCASE( Bg, s ) {
 			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd ) );
@@ -501,35 +489,27 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 
-			// XXX
-			struct LhsEvaluator {
-				ast::Stmt* s;
-				Global* g;
-				Local* l;
-				int i;
-				int o;
-				void operator()() {
-					try {
-						auto closer = scopeExit( bind( close, o ) );
-						evalStmt( s, g, l, i, o );
-					}
-					catch( ReturnException const& ) {
-					}
+			int lret, rret;
+			auto evalLhs = [&]() -> void {
+				try {
+					auto closer = scopeExit( bind( close, fds[1] ) );
+					lret = evalStmt( s->lhs, global, local, ifd, fds[1] );
+				}
+				catch( ReturnException const& e ) {
+					lret = e.retv;
 				}
 			};
-			Thread thread( LhsEvaluator{ s->lhs, global, local, ifd, fds[1] } );
-
-			int retv;
-			try {
-				auto closer = scopeExit( bind( close, fds[0] ) );
-				retv = evalStmt( s->rhs, global, local, fds[0], ofd );
-			}
-			catch( ReturnException const& e ) {
-				retv = e.retv;
-			}
-			thread.join();
-
-			return retv;
+			auto evalRhs = [&]() -> void {
+				try {
+					auto closer = scopeExit( bind( close, fds[0] ) );
+					rret = evalStmt( s->rhs, global, local, fds[0], ofd );
+				}
+				catch( ReturnException const& e ) {
+					rret = e.retv;
+				}
+			};
+			parallel( evalLhs, evalRhs );
+			return lret || rret;
 		}
 		VCASE( Defer, s ) {
 			local->defs.push_back( deque<string>() );

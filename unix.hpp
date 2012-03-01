@@ -206,6 +206,13 @@ struct Thread {
 		bool _detach;
 };
 
+template<class Func0, class Func1>
+void parallel( Func0 const& f0, Func1 const& f1 ) {
+	Thread thread( f0 );
+	f1();
+	thread.join();
+}
+
 inline int checkSysCall( int retv ) {
 	if( retv < 0 ) {
 		if( errno == EINTR ) {
