@@ -14,14 +14,6 @@
 #include <signal.h>
 #include <pthread.h>
 
-// C++11 compat
-inline int stoi( std::string const& str ) {
-	int i;
-	if( (std::istringstream( str ) >> i).fail() ) {
-		throw std::invalid_argument( "" );
-	}
-	return i;
-}
 
 template<class T, unsigned N>
 unsigned size( T const (&)[N] ) {
@@ -35,6 +27,15 @@ inline int imod( int a, int b ) {
 	else {
 		return a % b;
 	}
+}
+
+template<class T>
+T readValue( std::string const& str ) {
+	T val;
+	if( (std::istringstream( str ) >> val).fail() ) {
+		throw std::invalid_argument( "" );
+	}
+	return val;
 }
 
 template<class Func>

@@ -252,8 +252,8 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 				// XXX
 				return dst;
 			}
-			int bgn = stoi( string( sBgn.back().begin(), sBgn.back().end() ) );
-			int end = stoi( string( sEnd.back().begin(), sEnd.back().end() ) );
+			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
+			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
 
 			auto& val = findVariable( e->var->name, local );
 			bgn = imod( bgn, val.size() );
@@ -273,7 +273,7 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 				// XXX
 				return dst;
 			}
-			int idx = stoi( string( sIdx.back().begin(), sIdx.back().end() ) );
+			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
 
 			auto& val = findVariable( e->var->name, local );
 			idx = imod( idx, val.size() );
@@ -397,7 +397,7 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			if( args.size() != 1 ) {
 				return 1;
 			}
-			throw ReturnException( stoi( args[0] ) ) ;
+			throw ReturnException( readValue<int>( args[0] ) ) ;
 		}
 		VCASE( Fun, s ) {
 			deque<string> args;
@@ -433,10 +433,7 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			if( args.size() != 1 ) {
 				return 1;
 			}
-			int retv;
-			if( (istringstream( args[0] ) >> retv).fail() ) {
-				return 1;
-			}
+			int retv = readValue<int>( args[0] );
 			throw BreakException( retv );
 		}
 		VCASE( Let, s ) {
