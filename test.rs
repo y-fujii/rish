@@ -98,6 +98,16 @@ fun redirect {
 	test.rs >| cat | wc
 }
 
+fun returnInPipe {
+	range 16 | while fetch $i {
+		yield $i
+		if test $i -eq 8 {
+			return 0
+		}
+	}
+	yield "last stmt"
+}
+
 fun runTest {
 	let $var = S
 	echo P(yield a b c)(range 4)$var
@@ -109,6 +119,7 @@ fun runTest {
 	redirect
 	echo (qsort0 0 3 2 6 -10 12312 23 2 98 8)
 	echo (yield 0 3 2 6 -10 12312 23 2 98 8 | qsort1)
+	returnInPipe
 }
 
 runTest

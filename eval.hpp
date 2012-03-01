@@ -238,10 +238,12 @@ DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 					auto closer = scopeExit( bind( close, fds[1] ) );
 					evalStmt( e->body, global, local, ifd, fds[1] );
 				}
+				catch( BreakException const& ) {
+				}
 				catch( ReturnException const& ) {
 				}
 			};
-			parallel( reader, writer );
+			parallel( writer, reader );
 		}
 		VCASE( Slice, e ) {
 			deque<MetaString> sBgn;
@@ -341,25 +343,36 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			return evalStmt( s->rhs, global, local, ifd, ofd );
 		}
 		VCASE( Parallel, s ) {
-			int lret, rret;
+			bool lret = false;
+			bool rret = false;
+			int lval = 0;
+			int rval = 0;
 			auto evalLhs = [&]() -> void {
 				try {
-					lret = evalStmt( s->lhs, global, local, ifd, ofd );
+					lval = evalStmt( s->lhs, global, local, ifd, ofd );
 				}
 				catch( ReturnException const& e ) {
-					lret = e.retv;
+					lret = true;
+					lval = e.retv;
 				}
 			};
 			auto evalRhs = [&]() -> void {
 				try {
-					rret = evalStmt( s->rhs, global, local, ifd, ofd );
+					rval = evalStmt( s->rhs, global, local, ifd, ofd );
 				}
 				catch( ReturnException const& e ) {
-					rret = e.retv;
+					lret = true;
+					rval = e.retv;
 				}
 			};
 			parallel( evalLhs, evalRhs );
-			return lret || rret;
+			if( lret ) {
+				throw ReturnException( lval );
+			}
+			if( rret ) {
+				throw ReturnException( rval );
+			}
+			return lval || rval;
 		}
 		VCASE( Bg, s ) {
 			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd ) );
@@ -486,27 +499,38 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			int fds[2];
 			checkSysCall( pipe( fds ) );
 
-			int lret, rret;
+			bool lret = false;
+			bool rret = false;
+			int lval = 0;
+			int rval = 0;
 			auto evalLhs = [&]() -> void {
 				try {
 					auto closer = scopeExit( bind( close, fds[1] ) );
-					lret = evalStmt( s->lhs, global, local, ifd, fds[1] );
+					lval = evalStmt( s->lhs, global, local, ifd, fds[1] );
 				}
 				catch( ReturnException const& e ) {
-					lret = e.retv;
+					lret = true;
+					lval = e.retv;
 				}
 			};
 			auto evalRhs = [&]() -> void {
 				try {
 					auto closer = scopeExit( bind( close, fds[0] ) );
-					rret = evalStmt( s->rhs, global, local, fds[0], ofd );
+					rval = evalStmt( s->rhs, global, local, fds[0], ofd );
 				}
 				catch( ReturnException const& e ) {
-					rret = e.retv;
+					rret = true;
+					rval = e.retv;
 				}
 			};
 			parallel( evalLhs, evalRhs );
-			return lret || rret;
+			if( lret ) {
+				throw ReturnException( lval );
+			}
+			if( rret ) {
+				throw ReturnException( rval );
+			}
+			return lval || rval;
 		}
 		VCASE( Defer, s ) {
 			local->defs.push_back( deque<string>() );
