@@ -104,8 +104,8 @@ else_
 	| 									{ $$ = new None( 0 ); }
 
 lexpr_prim
-	: lexpr_list						{ $$ = new VarFix( $1->begin(), $1->end() ); delete $1; }
-	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( $1->begin(), $1->end(), new Var( *$3 ), $5->begin(), $5->end() ); delete $1; delete $3; delete $5; }
+	: lexpr_list						{ $$ = new VarFix( move( *$1 ) ); delete $1; }
+	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( move( *$1 ), new Var( *$3 ), move( *$5 ) ); delete $1; delete $3; delete $5; }
 
 lexpr_list
 	: lexpr_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
