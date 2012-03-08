@@ -116,15 +116,13 @@ struct Null: VariantImpl<Expr, Null> {
 };
 
 struct VarFix: VariantImpl<LeftExpr, VarFix> {
-	template<class Iter>
-	VarFix( Iter bgn, Iter end ): var( bgn, end ) {}
+	VarFix( deque<Expr*>&& v ): var( v ) {}
 	deque<Expr*> var;
 };
 
 struct VarVar: VariantImpl<LeftExpr, VarVar> {
-	template<class Iter>
-	VarVar( Iter bgnL, Iter endL, Var* vM, Iter bgnR, Iter endR ):
-		varL( bgnL, endL ), varM( vM ), varR( bgnR, endR )  {}
+	VarVar( deque<Expr*>&& vL, Var* vM, deque<Expr*>&& vR ):
+		varL( vL ), varM( vM ), varR( vR )  {}
 	deque<Expr*> varL;
 	Var* varM;
 	deque<Expr*> varR;

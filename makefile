@@ -1,5 +1,5 @@
 #CXX = clang++ -std=c++11 -stdlib=libc++ -pedantic -Wall -Wextra -fno-rtti -pthread -O3 -s -I$(HOME)/usr/src/libcxx/include
-CXX = g++46 -std=c++0x -pedantic -Wall -Wextra -fno-rtti -pthread -O3 -s
+CXX = g++46 -std=c++0x -pedantic -Wall -Wextra -fno-rtti -pthread -O3 -s -DNDEBUG
 LEX = flex
 
 SRCS = \
@@ -8,7 +8,7 @@ SRCS = \
 	parser.hpp ast.hpp eval.hpp glob.hpp \
 	builtins.hpp main.cpp
 
-rish: $(SRCS)
+rish: $(SRCS) makefile
 	$(YACC) -dv parser.y; \
 	mv y.tab.h tokens.hpp; \
 	mv y.tab.c parser.cpp; \
