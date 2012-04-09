@@ -10,9 +10,6 @@
 #include <functional>
 #include <stdint.h>
 #include <cassert>
-#include <unistd.h>
-#include <signal.h>
-#include <pthread.h>
 
 
 template<class T, unsigned N>
