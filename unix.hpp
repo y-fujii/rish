@@ -155,12 +155,14 @@ struct Thread {
 		}
 	}
 
-	bool join() {
+	void join() {
 		void* result;
 		if( pthread_join( _thread, &result ) != 0 ) {
 			throw IOError();
 		}
-		return bool( reinterpret_cast<uintptr_t>( result ) );
+		if( !bool( reinterpret_cast<uintptr_t>( result ) ) ) {
+			throw std::exception();
+		}
 	}
 
 	// This function behaves like Java's Thread.interrupt() rather than boost::thread::interrupt()
