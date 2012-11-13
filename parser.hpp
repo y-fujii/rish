@@ -31,7 +31,7 @@ inline ast::Stmt* parse( istream& istr ) {
 template<class Iter>
 Iter lex( istream& istr, Iter dstIt ) {
 	lexerInit( &istr );
-	char c;
+	int c;
 	while( c = yylex(), c != 0 ) {
 		*dstIt++ = c;
 	}
