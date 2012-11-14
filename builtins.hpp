@@ -49,13 +49,30 @@ int getEnv( deque<string> const& args, int, int ofd ) {
 }
 
 int wait( deque<string> const& args, int, int ) {
-	if( args.size() != 1 ) {
-		return 1;
+	int retv = 0;
+	for( auto const& arg: args ) {
+		try {
+			if( arg.size() == 0 ) {
+				throw exception();
+			}
+			if( arg[0] == 'T' ) {
+				Thread t( arg );
+				t.join();
+			}
+			else {
+				pid_t pid = readValue<int>( arg );
+				int status;
+				checkSysCall( waitpid( pid, &status, 0 ) );
+				if( WEXITSTATUS( status ) != 0 ) {
+					throw exception();
+				}
+			}
+		}
+		catch( exception const& ) {
+			retv = 1;
+		}
 	}
-	pid_t pid = readValue<int>( args[0] );
-	int status;
-	checkSysCall( waitpid( pid, &status, 0 ) );
-	return WEXITSTATUS( status );
+	return retv;
 }
 
 int showList( deque<string> const& args, int, int ofd ) {
