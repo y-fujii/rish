@@ -10,6 +10,7 @@
 #include <sstream>
 #include <exception>
 #include <stdexcept>
+#include <iterator>
 #include <cassert>
 #include <unistd.h>
 #include <fcntl.h>
@@ -326,9 +327,28 @@ int execCommand( deque<string>& args, Global* global, int ifd, int ofd ) {
 
 template<class DstIter>
 DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIter dstIt ) {
-	deque<MetaString> tmp;
-	evalExpr( expr, global, local, ifd, back_inserter( tmp ) );
-	return accumulate( tmp.begin(), tmp.end(), dstIt, bind( expandGlob<DstIter>, _2, _1 ) );
+	struct Inserter: std::iterator<output_iterator_tag, Inserter> {
+		DstIter dstIt;
+
+		Inserter( DstIter it ): dstIt( it ) {
+		}
+		Inserter& operator*() {
+			return *this;
+		}
+		Inserter& operator++() {
+			return *this;
+		}
+		Inserter& operator++( int ) {
+			return *this;
+		}
+		Inserter operator=( MetaString const& str ) {
+			this->dstIt = expandGlob( str, this->dstIt );
+			return *this;
+		}
+	};
+	Inserter inserter( dstIt );
+	evalExpr( expr, global, local, ifd, inserter );
+	return inserter.dstIt;
 }
 
 int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) {
