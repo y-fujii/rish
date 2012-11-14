@@ -4,6 +4,7 @@
 #include <deque>
 #include <cassert>
 #include <sstream>
+#include <iomanip>
 #include <unistd.h>
 #include "misc.hpp"
 #include "glob.hpp"
@@ -151,8 +152,25 @@ struct Thread {
 		sigaddset( &sset, SIGUSR1 );  
 		if( pthread_sigmask( SIG_SETMASK, &sset, NULL ) != 0 ) {
 			delete _callback;
+			this->~Thread();
 			throw IOError();
 		}
+	}
+
+	explicit Thread( string const& name ):
+		_callback( nullptr ),
+		_detach( true )
+	{
+		static_assert( sizeof( pthread_t ) == sizeof( uintptr_t ), "" );
+
+		istringstream ifs( name );
+		ifs.exceptions( ios_base::failbit | ios_base::badbit );
+		char tee;
+		ifs >> tee;
+		if( tee != 'T' ) {
+			throw IOError();
+		}
+		ifs >> hex >> (uintptr_t&)( _thread );
 	}
 
 	void join() {
@@ -174,6 +192,16 @@ struct Thread {
 
 	void detach() {
 		_detach = true;
+	}
+
+	string name() const {
+		static_assert( sizeof( pthread_t ) == sizeof( uintptr_t ), "" );
+
+		ostringstream ofs;
+		ofs.exceptions( ios_base::failbit | ios_base::badbit );
+		ofs << 'T';
+		ofs << hex << setw( sizeof( pthread_t ) * 2 ) << setfill( '0' ) << uintptr_t( _thread );
+		return ofs.str();
 	}
 
 	private:

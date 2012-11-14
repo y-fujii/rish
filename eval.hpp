@@ -375,7 +375,9 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 			return lval || rval;
 		}
 		VCASE( Bg, s ) {
-			Thread thread( bind( evalStmt, s->body, global, local, ifd, ofd ) );
+			// XXX: stdin, stdout
+			Thread thread( bind( evalStmt, s->body, global, local, 0, 1 ) );
+			writeAll( ofd, thread.name() + '\n' );
 			thread.detach();
 			return 0;
 		}
