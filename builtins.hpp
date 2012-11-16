@@ -48,6 +48,15 @@ int getEnv( deque<string> const& args, int, int ofd ) {
 	return 0;
 }
 
+int cmdFork( deque<string> const& args, int, int ofd ) {
+	// XXX
+	pid_t pid = forkExec( args, 0, 1 );
+	ostringstream buf;
+	buf << pid << '\n';
+	writeAll( ofd, buf.str() );
+	return 0;
+}
+
 int wait( deque<string> const& args, int, int ) {
 	int retv = 0;
 	for( auto const& arg: args ) {
@@ -165,6 +174,7 @@ void register_( Map& map ) {
 	map["std.show-list"] = showList;
 	map["sys.setenv"] = setEnv;
 	map["sys.getenv"] = getEnv;
+	map["%"] = cmdFork;
 	map["sys.wait"] = wait;
 	map["str.size"] = strSize;
 	/*
