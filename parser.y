@@ -32,7 +32,7 @@
 %type<var> TK_VAR
 %type<expr> expr_prim expr_concat expr_list
 %type<lexpr> lexpr_prim
-%type<stmt> stmt_seq stmt_bg stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
+%type<stmt> stmt_seq stmt_bg stmt_par stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
 %type<stmt> if_ else_
 %type<exprs> lexpr_list
 
@@ -54,13 +54,16 @@ stmt_seq
 	| 								{ $$ = new None( 0 ); }
 
 stmt_bg
-	: '&' stmt_andor				{ $$ = new Bg( $2 ); }
+	: '&' stmt_par					{ $$ = new Bg( $2 ); }
+	| stmt_par
+
+stmt_par
+	: stmt_par '&' stmt_andor		{ $$ = new Parallel( $1, $3 ); }
 	| stmt_andor
 
 stmt_andor
 	: stmt_andor TK_AND2 stmt_not	{ $$ = new If( $1, $3, new None( 1 ) ); }
 	| stmt_andor TK_OR2 stmt_not	{ $$ = new If( $1, new None( 0 ), $3 ); }
-	| stmt_andor '&' stmt_not		{ $$ = new Parallel( $1, $3 ); }
 	| stmt_not
 
 stmt_not
@@ -79,24 +82,24 @@ stmt_pipe
 
 stmt_prim
 	: if_
-	| TK_WHILE stmt_andor '{' stmt_seq '}' else_	{ $$ = new While( $2, $4, $6 ); }
-	| TK_FOR lexpr_prim '{' stmt_seq '}' { $$ = nullptr; }
+	| TK_WHILE stmt_andor '{' stmt_seq '}' else_		{ $$ = new While( $2, $4, $6 ); }
+	| TK_FOR lexpr_prim '{' stmt_seq '}' else_			{ $$ = nullptr; }
 	/*
-	| TK_FOR lexpr_prim TK_IF stmt_andor { $$ = nullptr; }
+	| TK_FOR lexpr_prim TK_IF stmt_andor				{ $$ = nullptr; }
 	*/
-	| TK_FOR lexpr_prim TK_IF stmt_andor '{' stmt_seq '}' { $$ = nullptr; }
-	| TK_BREAK expr_concat							{ $$ = new Break( $2 ); }
-	| TK_RETURN expr_concat							{ $$ = new Return( $2 ); }
-	| TK_LET lexpr_prim '=' expr_list				{ $$ = new Let( $2, $4 ); }
-	| TK_FETCH lexpr_prim							{ $$ = new Fetch( $2 ); }
-	| TK_YIELD expr_list							{ $$ = new Yield( $2 ); }
-	| TK_DEFER expr_list							{ $$ = new Defer( $2 ); }
+	| TK_FOR lexpr_prim TK_IF stmt_andor '{' stmt_seq '}' else_ { $$ = nullptr; }
+	| TK_BREAK expr_concat								{ $$ = new Break( $2 ); }
+	| TK_RETURN expr_concat								{ $$ = new Return( $2 ); }
+	| TK_LET lexpr_prim '=' expr_list					{ $$ = new Let( $2, $4 ); }
+	| TK_FETCH lexpr_prim								{ $$ = new Fetch( $2 ); }
+	| TK_YIELD expr_list								{ $$ = new Yield( $2 ); }
+	| TK_DEFER expr_list								{ $$ = new Defer( $2 ); }
 	| TK_FUN expr_concat lexpr_prim '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
-	| '{' stmt_seq '}'								{ $$ = $2; };
-	| expr_concat expr_list							{ $$ = new Command( new Pair( $1, $2 ) ); }
+	| '{' stmt_seq '}'									{ $$ = $2; };
+	| expr_concat expr_list								{ $$ = new Command( new Pair( $1, $2 ) ); }
 
 if_
-	: TK_IF stmt_andor '{' stmt_seq '}' else_		{ $$ = new If( $2, $4, $6 ); }
+	: TK_IF stmt_andor '{' stmt_seq '}' else_			{ $$ = new If( $2, $4, $6 ); }
 
 else_
 	: TK_ELSE '{' stmt_seq '}'			{ $$ = $3; }
