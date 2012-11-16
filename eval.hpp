@@ -322,7 +322,10 @@ int execCommand( deque<string>& args, Global* global, int ifd, int ofd ) {
 		return bit->second( args, ifd, ofd );
 	}
 
-	return forkExec( args, ifd, ofd );
+	pid_t pid = forkExec( args, ifd, ofd );
+	int status;
+	checkSysCall( waitpid( pid, &status, 0 ) );
+	return WEXITSTATUS( status );
 }
 
 template<class DstIter>

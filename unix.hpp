@@ -79,7 +79,7 @@ void closefrom( int lowfd ) {
 #endif
 
 template<class Container>
-int forkExec( Container const& args, int ifd, int ofd ) {
+pid_t forkExec( Container const& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
 	vector<char const*> argsRaw( args.size() + 1 );
@@ -102,9 +102,7 @@ int forkExec( Container const& args, int ifd, int ofd ) {
 		_exit( 1 );
 	}
 
-	int status;
-	checkSysCall( waitpid( pid, &status, 0 ) );
-	return WEXITSTATUS( status );
+	return pid;
 }
 
 struct Thread {
