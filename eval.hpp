@@ -399,7 +399,10 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 		}
 		VCASE( Bg, s ) {
 			// XXX: stdin, stdout
-			Thread thread( bind( evalStmt, s->body, global, local, 0, 1 ) );
+			Stmt* body = s->body;
+			Thread thread( [=]() -> void {
+				bind( evalStmt, body, global, local, 0, 1 );
+			} );
 			writeAll( ofd, thread.name() + '\n' );
 			thread.detach();
 			return 0;
