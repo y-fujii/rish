@@ -189,6 +189,7 @@ struct Thread {
 	}
 
 	void detach() {
+		pthread_detach( _thread );
 		_detach = true;
 	}
 
