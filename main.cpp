@@ -54,10 +54,10 @@ int main( int argc, char** argv ) {
 				ifstream ofs( argv[optind] );
 				ast::Stmt* ast = parse( ofs );
 
-				Local local;
+				auto local = make_shared<Local>();
 				Global global;
 				builtins::register_( global.builtins );
-				evalStmt( ast, &global, &local, 0, 1 );
+				evalStmt( ast, global, local, 0, 1 );
 			}
 			catch( SyntaxError const& err ) {
 				cerr << "Syntax error on " << argv[optind] << ":" << err.line + 1 << "." << endl;
@@ -71,10 +71,10 @@ int main( int argc, char** argv ) {
 		try {
 			ast::Stmt* ast = parse( cin );
 
-			Local local;
+			auto local = make_shared<Local>();
 			Global global;
 			builtins::register_( global.builtins );
-			return evalStmt( ast, &global, &local, 0, 1 );
+			return evalStmt( ast, global, local, 0, 1 );
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
@@ -93,7 +93,7 @@ int main( int argc, char** argv ) {
 		sa.sa_flags = 0;
 		sigaction( SIGINT, &sa, NULL );
 
-		Local local;
+		auto local = make_shared<Local>();
 		Global global;
 		builtins::register_( global.builtins );
 		while( true ) {
@@ -110,7 +110,7 @@ int main( int argc, char** argv ) {
 				istringstream istr( line );
 				ast::Stmt* ast = parse( istr );
 
-				int retv = evalStmt( ast, &global, &local, 0, 1 );
+				int retv = evalStmt( ast, global, local, 0, 1 );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
