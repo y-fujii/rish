@@ -30,8 +30,6 @@ void handleSigINT( int ) {
 	writeAll( 0, data );
 	rl_initialize();
 	rl_redisplay();
-
-	Thread::_interrupted() = true;
 }
 
 int main( int argc, char** argv ) {
@@ -48,6 +46,8 @@ int main( int argc, char** argv ) {
 	sa.sa_flags = SA_RESTART;
 	sigaction( SIGPIPE, &sa, NULL );
 
+	ThreadSupport::setup();
+
 	if( optind < argc ) {
 		while( optind < argc ) {
 			try {
@@ -57,7 +57,6 @@ int main( int argc, char** argv ) {
 				Local local;
 				Global global;
 				builtins::register_( global.builtins );
-				Thread::_interrupted() = false;
 				evalStmt( ast, &global, &local, 0, 1 );
 			}
 			catch( SyntaxError const& err ) {
@@ -75,7 +74,6 @@ int main( int argc, char** argv ) {
 			Local local;
 			Global global;
 			builtins::register_( global.builtins );
-			Thread::_interrupted() = false;
 			return evalStmt( ast, &global, &local, 0, 1 );
 		}
 		catch( SyntaxError const& err ) {
@@ -84,8 +82,6 @@ int main( int argc, char** argv ) {
 		}
 	}
 	else {
-		Thread::setup();
-
 		struct sigaction sa;
 		memset( &sa, 0, sizeof( sa ) );
 
@@ -114,7 +110,6 @@ int main( int argc, char** argv ) {
 				istringstream istr( line );
 				ast::Stmt* ast = parse( istr );
 
-				Thread::_interrupted() = false;
 				int retv = evalStmt( ast, &global, &local, 0, 1 );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
@@ -123,7 +118,7 @@ int main( int argc, char** argv ) {
 			catch( SyntaxError const& ) {
 				cerr << "Syntax error." << endl;
 			}
-			catch( Thread::Interrupt const& ) {
+			catch( ThreadSupport::Interrupt const& ) {
 				cerr << "\nInterrupted." << endl;
 			}
 			catch( IOError const& ) {

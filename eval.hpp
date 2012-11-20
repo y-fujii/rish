@@ -197,7 +197,7 @@ template<class DstIter>
 DstIter evalExpr( ast::Expr* expr, Global* global, Local* local, int ifd, DstIter dst ) {
 	using namespace ast;
 
-	Thread::checkIntr();
+	ThreadSupport::checkIntr();
 
 	VSWITCH( expr ) {
 		VCASE( Word, e ) {
@@ -357,10 +357,9 @@ DstIter evalArgs( ast::Expr* expr, Global* global, Local* local, int ifd, DstIte
 int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) {
 	using namespace ast;
 
-	Thread::checkIntr();
+	ThreadSupport::checkIntr();
 
-	//try {
-	VSWITCH( stmt ) {
+	try { VSWITCH( stmt ) {
 		VCASE( Sequence, s ) {
 			evalStmt( s->lhs, global, local, ifd, ofd );
 			return evalStmt( s->rhs, global, local, ifd, ofd );
@@ -399,12 +398,9 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 		}
 		VCASE( Bg, s ) {
 			// XXX: stdin, stdout
-			Stmt* body = s->body;
-			Thread thread( [=]() -> void {
-				bind( evalStmt, body, global, local, 0, 1 );
-			} );
-			writeAll( ofd, thread.name() + '\n' );
-			thread.detach();
+			thread thr( evalStmt, s->body, global, local, 0, 1 );
+			writeAll( ofd, 'T' + ThreadSupport::name( thr ) + '\n' );
+			thr.detach();
 			return 0;
 		}
 		VCASE( RedirFr, s ) {
@@ -571,13 +567,10 @@ int evalStmt( ast::Stmt* stmt, Global* global, Local* local, int ifd, int ofd ) 
 		VDEFAULT {
 			assert( false );
 		}
-	}
-	/*
-	}
+	} }
 	catch( IOError const& ) {
 		return 1;
 	}
-	*/
 
 	assert( false );
 	return -1;

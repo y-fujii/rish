@@ -1,16 +1,21 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <string>
-#include <stdexcept>
 #include <algorithm>
-#include <vector>
-#include <sstream>
-#include <iostream>
-#include <functional>
-#include <stdint.h>
 #include <cassert>
+#include <cstdint>
+#include <functional>
+#include <future>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
 
+
+struct IOError: std::exception {
+};
 
 template<class T, unsigned N>
 unsigned size( T const (&)[N] ) {
@@ -33,6 +38,13 @@ T readValue( std::string const& str ) {
 		throw std::invalid_argument( "" );
 	}
 	return val;
+}
+
+template<class Func0, class Func1>
+void parallel( Func0 const& f0, Func1 const& f1 ) {
+	auto slave = std::async( std::launch::async, f0 );
+	f1();
+	slave.wait();
 }
 
 template<class Func>
@@ -89,6 +101,7 @@ namespace tmeta {
 
 template<class... Tn>
 struct Variant {
+	virtual ~Variant() {}
 	int const dTag;
 
 	protected:
@@ -136,6 +149,3 @@ FalseWrapper<T> falseWrap( T const& v ) {
 		break; \
 	} \
 	default:
-
-struct IOError: std::exception {
-};
