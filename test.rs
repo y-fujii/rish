@@ -108,6 +108,18 @@ fun returnInPipe {
 	yield "last stmt"
 }
 
+fun nested {
+	let $p = "OK"
+	let $q = "BAD"
+	fun inner {
+		let $q = "OK"
+		yield $p
+		yield $q
+	}
+	inner
+}
+
+
 fun runTest {
 	let $var = S
 	echo P(yield a b c)(range 4)$var
@@ -120,6 +132,7 @@ fun runTest {
 	echo (qsort0 0 3 2 6 -10 12312 23 2 98 8)
 	echo (yield 0 3 2 6 -10 12312 23 2 98 8 | qsort1)
 	returnInPipe
+	nested
 }
 
 runTest
