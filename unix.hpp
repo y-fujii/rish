@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iomanip>
 #include <unistd.h>
+#include <sys/select.h>
 #include "misc.hpp"
 #include "glob.hpp"
 
@@ -260,3 +261,118 @@ inline void writeAll( int ofd, string const& src ) {
 		i += checkSysCall( write( ofd, src.data() + i, src.size() - i ) );
 	}
 }
+
+struct Selector {
+	Selector( initializer_list<int> ifds, initializer_list<int> ofds ) {
+		FD_ZERO( &_result_ifds );
+		FD_ZERO( &_result_ofds );
+
+		FD_ZERO( &_ifds );
+		for( int fd: ifds ) {
+			FD_SET( fd, &_ifds );
+		}
+
+		FD_ZERO( &_ofds );
+		for( int fd: ofds ) {
+			FD_SET( fd, &_ofds );
+		}
+
+		int imax = *max_element( ifds.begin(), ifds.end() );
+		int omax = *max_element( ofds.begin(), ofds.end() );
+		_maxFd = max( imax, omax );
+	}
+
+	void wait() {
+		memcpy( &_result_ifds, &_ifds, sizeof( fd_set ) );
+		memcpy( &_result_ofds, &_ofds, sizeof( fd_set ) );
+		checkSysCall( select( _maxFd, &_result_ifds, &_result_ofds, nullptr, nullptr ) );
+	}
+
+	bool readable( int fd ) const {
+		return FD_ISSET( fd, &_result_ifds );
+	}
+
+	bool writable( int fd ) const {
+		return FD_ISSET( fd, &_result_ofds );
+	}
+
+	private:
+		fd_set _ifds;
+		fd_set _ofds;
+		fd_set _result_ifds;
+		fd_set _result_ofds;
+		int _maxFd;
+};
+
+inline bool readable( int fd ) {
+	fd_set fds;
+	FD_ZERO( &fds );
+	FD_SET( fd, &fds );
+
+	struct timeval timeout;
+	timeout.tv_sec  = 0;
+	timeout.tv_usec = 0;
+
+	checkSysCall( select( fd, &fds, nullptr, nullptr, &timeout ) );
+
+	return FD_ISSET( fd, &fds );
+}
+
+inline bool writable( int fd ) {
+	fd_set fds;
+	FD_ZERO( &fds );
+	FD_SET( fd, &fds );
+
+	struct timeval timeout;
+	timeout.tv_sec  = 0;
+	timeout.tv_usec = 0;
+
+	checkSysCall( select( fd, nullptr, &fds, nullptr, &timeout ) );
+
+	return FD_ISSET( fd, &fds );
+}
+
+template<class T>
+struct MsgQueue {
+	// guarantee atomicity
+	static_assert( PIPE_BUF >= sizeof( T* ), "" );
+
+	~MsgQueue() {
+		close( _ofd );
+
+		T* p;
+		while( read( _ifd, &p, sizeof( &p ) ) == sizeof( &p ) ) {
+			delete p;
+		}
+		close( _ifd );
+	}
+
+	MsgQueue() {
+		int fds[2];
+		checkSysCall( pipe( fds ) );
+		_ifd = fds[0];
+		_ofd = fds[1];
+	}
+
+	void put( std::unique_ptr<T>&& m ) {
+		T* p = m.release();
+		checkSysCall( write( _ofd, &p, sizeof( &p ) ) );
+	}
+
+	std::unique_ptr<T> get() {
+		T* p;
+		checkSysCall( read( _ifd, &p, sizeof( &p ) ) );
+		return std::unique_ptr<T>( p );
+	}
+
+	bool empty() {
+		return readable( _ifd );
+	}
+
+	int fd() const {
+		return _ifd;
+	}
+
+	private:
+		int _ifd, _ofd;
+};
