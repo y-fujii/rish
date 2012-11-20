@@ -65,8 +65,8 @@ int wait( deque<string> const& args, int, int ) {
 				throw exception();
 			}
 			if( arg[0] == 'T' ) {
-				Thread t( arg );
-				t.join();
+				pthread_t t = ThreadSupport::fromName( arg.substr( 1 ) );
+				pthread_join( t, nullptr );
 			}
 			else {
 				pid_t pid = readValue<int>( arg );
