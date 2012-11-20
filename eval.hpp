@@ -69,10 +69,10 @@ struct ReturnException {
 int evalStmt( ast::Stmt*, Global&, shared_ptr<Local>, int, int );
 
 
-inline deque<string>& findVariable( string const& name, Local& local ) {
+inline deque<string>& findVariable( ast::Var const* var, Local& local ) {
 	Local* it = &local;
 	while( it != nullptr ) {
-		auto v = it->vars.find( name );
+		auto v = it->vars.find( var->name );
 		if( v != it->vars.end() ) {
 			return v->second;
 		}
@@ -80,7 +80,7 @@ inline deque<string>& findVariable( string const& name, Local& local ) {
 	}
 
 	// new variable
-	return local.vars[name];
+	return local.vars[var->name];
 }
 
 // XXX
@@ -104,10 +104,10 @@ bool assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 	//ScopedLock( local->lock );
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VSWITCH( lhs->var[i] ) {
-			VCASE( Var, tvar ) {
-				auto& vvar = findVariable( tvar->name, local );
-				vvar.clear();
-				vvar.push_back( rhs[i] );
+			VCASE( Var, var ) {
+				auto& val = findVariable( var, local );
+				val.clear();
+				val.push_back( rhs[i] );
 			}
 			VDEFAULT {
 			}
@@ -153,24 +153,24 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 	//ScopedLock( local->lock );
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VSWITCH( lhs->varL[i] ) {
-			VCASE( Var, tvar ) {
-				auto& vvar = findVariable( tvar->name, local );
-				vvar.clear();
-				vvar.push_back( rhs[i + lBgn] );
+			VCASE( Var, var ) {
+				auto& val = findVariable( var, local );
+				val.clear();
+				val.push_back( rhs[i + lBgn] );
 			}
 			VDEFAULT {
 			}
 		}
 	}
-	auto& vvar = findVariable( lhs->varM->name, local );
-	vvar.clear();
-	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( vvar ) );
+	auto& val = findVariable( lhs->varM, local );
+	val.clear();
+	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( val ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VSWITCH( lhs->varR[i] ) {
-			VCASE( Var, tvar ) {
-				auto& vvar = findVariable( tvar->name, local );
-				vvar.clear();
-				vvar.push_back( rhs[i + rBgn] );
+			VCASE( Var, var ) {
+				auto& val = findVariable( var, local );
+				val.clear();
+				val.push_back( rhs[i + rBgn] );
 			}
 			VDEFAULT {
 			}
@@ -232,7 +232,7 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 			}
 		}
 		VCASE( Var, e ) {
-			auto& val = findVariable( e->name, *local );
+			auto& val = findVariable( e, *local );
 			dst = copy( val.begin(), val.end(), dst );
 		}
 		VCASE( Subst, e ) {
@@ -271,7 +271,7 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
 			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
 
-			auto& val = findVariable( e->var->name, *local );
+			auto& val = findVariable( e->var, *local );
 			bgn = imod( bgn, val.size() );
 			end = imod( end, val.size() );
 			if( bgn < end ) {
@@ -291,7 +291,7 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 			}
 			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
 
-			auto& val = findVariable( e->var->name, *local );
+			auto& val = findVariable( e->var, *local );
 			idx = imod( idx, val.size() );
 			*dst++ = val[idx];
 		}
@@ -304,7 +304,7 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 	return dst;
 }
 
-int execCommand( deque<string>& args, Global& global, shared_ptr<Local> parent, int ifd, int ofd ) {
+int execCommand( deque<string>& args, Global& global, int ifd, int ofd ) {
 	auto fit = global.funs.find( args[0] );
 	if( fit != global.funs.end() ) {
 		auto local = make_shared<Local>( fit->second.env );
@@ -323,7 +323,7 @@ int execCommand( deque<string>& args, Global& global, shared_ptr<Local> parent, 
 		}
 
 		for( auto it = local->defs.rbegin(); it != local->defs.rend(); ++it ) {
-			execCommand( *it, global, local, ifd, ofd );
+			execCommand( *it, global, ifd, ofd );
 		}
 
 		return retv;
@@ -439,7 +439,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 				return 0;
 			}
 
-			return execCommand( args, global, local, ifd, ofd );
+			return execCommand( args, global, ifd, ofd );
 		}
 		VCASE( Return, s ) {
 			deque<string> args;
