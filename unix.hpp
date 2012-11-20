@@ -30,7 +30,7 @@ struct ThreadSupport {
 	}
 
 	static void checkIntr() {
-		if( interrupted() ) {
+		if( _interrupted() ) {
 			_interrupted() = false;
 			throw Interrupt();
 		}
@@ -42,10 +42,6 @@ struct ThreadSupport {
 		if( pthread_kill( t.native_handle(), SIGUSR1 ) != 0 ) {
 			throw IOError();
 		}
-	}
-
-	static bool interrupted() {
-		return _interrupted();
 	}
 
 	static string name( thread& t ) {
@@ -85,9 +81,9 @@ struct ThreadSupport {
 		}
 };
 
-int checkSysCall( int retv ) {
+inline int checkSysCall( int retv ) {
 	if( retv < 0 ) {
-		if( errno == EINTR && ThreadSupport::interrupted() ) {
+		if( errno == EINTR && ThreadSupport::_interrupted() ) {
 			ThreadSupport::_interrupted() = false;
 			throw ThreadSupport::Interrupt();
 		}
