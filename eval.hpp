@@ -31,7 +31,7 @@ struct Evaluator {
 	using Builtin = function<int (deque<string> const&, int, int)>;
 
 	struct Local {
-		deque<string>& findVar( ast::Var* );
+		deque<string>& value( ast::Var* );
 		template<class Container> bool assign( ast::VarFix*, Container& );
 		template<class Container> bool assign( ast::VarVar*, Container& );
 		template<class Container> bool assign( ast::LeftExpr*, Container& );
@@ -74,7 +74,7 @@ struct Evaluator {
 };
 
 
-inline deque<string>& Evaluator::Local::findVar( ast::Var* var ) {
+inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
 	Local* it = this;
 	while( it != nullptr ) {
 		auto v = it->vars.find( var->name );
@@ -112,7 +112,7 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Container& rhs ) {
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VSWITCH( lhs->var[i] ) {
 			VCASE( Var, var ) {
-				auto& val = findVar( var );
+				auto& val = value( var );
 				val.clear();
 				val.push_back( rhs[i] );
 			}
@@ -163,7 +163,7 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VSWITCH( lhs->varL[i] ) {
 			VCASE( Var, var ) {
-				auto& val = findVar( var );
+				auto& val = value( var );
 				val.clear();
 				val.push_back( rhs[i + lBgn] );
 			}
@@ -171,13 +171,13 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
 			}
 		}
 	}
-	auto& val = findVar( lhs->varM );
+	auto& val = value( lhs->varM );
 	val.clear();
 	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( val ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VSWITCH( lhs->varR[i] ) {
 			VCASE( Var, var ) {
-				auto& val = findVar( var );
+				auto& val = value( var );
 				val.clear();
 				val.push_back( rhs[i + rBgn] );
 			}
@@ -235,7 +235,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			}
 		}
 		VCASE( Var, e ) {
-			auto& val = local->findVar( e );
+			auto& val = local->value( e );
 			dst = copy( val.begin(), val.end(), dst );
 		}
 		VCASE( Subst, e ) {
@@ -274,7 +274,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
 			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
 
-			auto& val = local->findVar( e->var );
+			auto& val = local->value( e->var );
 			bgn = imod( bgn, val.size() );
 			end = imod( end, val.size() );
 			if( bgn < end ) {
@@ -294,7 +294,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			}
 			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
 
-			auto& val = local->findVar( e->var );
+			auto& val = local->value( e->var );
 			idx = imod( idx, val.size() );
 			*dst++ = val[idx];
 		}
