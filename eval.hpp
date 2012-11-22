@@ -471,6 +471,14 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			closures[args[0]] = { s, local };
 			return 0;
 		}
+		VCASE( FunDel, s ) {
+			deque<string> args;
+			evalArgs( s->name, local, ifd, back_inserter( args ) );
+			if( args.size() != 1 ) {
+				return 1;
+			}
+			return closures.erase( args[0] ) != 0 ? 0 : 1;
+		}
 		VCASE( If, s ) {
 			if( evalStmt( s->cond, local, ifd, ofd ) == 0 ) {
 				return evalStmt( s->then, local, ifd, ofd );

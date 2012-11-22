@@ -37,6 +37,7 @@ typedef Variant<
 struct If;
 struct Command;
 struct Fun;
+struct FunDel;
 struct Let;
 struct Fetch;
 struct Yield;
@@ -55,6 +56,7 @@ typedef Variant<
 	If,
 	Command,
 	Fun,
+	FunDel,
 	Let,
 	Fetch,
 	Yield,
@@ -145,6 +147,11 @@ struct Fun: VariantImpl<Stmt, Fun> {
 	Expr* name;
 	LeftExpr* args;
 	Stmt* body;
+};
+
+struct FunDel: VariantImpl<Stmt, FunDel> {
+	FunDel( Expr* n ): name( n ) {}
+	Expr* name;
 };
 
 struct Let: VariantImpl<Stmt, Let> {

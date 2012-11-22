@@ -95,6 +95,7 @@ stmt_prim
 	| TK_YIELD expr_list								{ $$ = new Yield( $2 ); }
 	| TK_DEFER expr_list								{ $$ = new Defer( $2 ); }
 	| TK_FUN expr_concat lexpr_prim '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
+	| TK_FUN expr_concat '!'							{ $$ = new FunDel( $2 ); }
 	| '{' stmt_seq '}'									{ $$ = $2; };
 	| expr_concat expr_list								{ $$ = new Command( new Pair( $1, $2 ) ); }
 
