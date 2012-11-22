@@ -65,7 +65,6 @@ int wait( deque<string> const& args, int, int ) {
 				throw exception();
 			}
 			if( arg[0] == 'T' ) {
-				thread::native_handle_type handle = ThreadSupport::fromName( arg.substr( 1 ) );
 				// XXX
 				return 1;
 			}

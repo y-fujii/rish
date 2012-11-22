@@ -44,28 +44,6 @@ struct ThreadSupport {
 		}
 	}
 
-	static string name( thread& t ) {
-		static_assert( sizeof( thread::native_handle_type ) == sizeof( uintptr_t ), "" );
-
-		ostringstream ofs;
-		ofs.exceptions( ios_base::failbit | ios_base::badbit );
-		ofs << hex << setw( sizeof( uintptr_t ) * 2 ) << setfill( '0' ) << uintptr_t( t.native_handle() );
-		return ofs.str();
-	}
-
-	static thread::native_handle_type fromName( string const& name ) {
-		static_assert( sizeof( thread::native_handle_type ) == sizeof( uintptr_t ), "" );
-
-		istringstream ifs( name );
-		ifs.exceptions( ios_base::failbit | ios_base::badbit );
-		union {
-			thread::native_handle_type pth;
-			uintptr_t val;
-		} u;
-		ifs >> hex >> u.val;
-		return u.pth;
-	}
-
 	friend int checkSysCall( int );
 
 	private:
