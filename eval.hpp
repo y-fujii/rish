@@ -25,49 +25,48 @@
 using namespace std;
 
 
-using Builtin = function<int (deque<string> const&, int, int)>;
+struct Evaluator {
+	using Builtin = function<int (deque<string> const&, int, int)>;
 
-struct ThreadComparator {
-	bool operator()( thread const& x, thread const& y ) const {
-		return x.get_id() < y.get_id();
-	}
-};
+	struct Local {
+		shared_ptr<Local> outer;
+		map<string, deque<string>> vars;
+		deque<deque<string>> defs;
+	};
 
-struct Local {
-	shared_ptr<Local> outer;
-	map<string, deque<string>> vars;
-	deque<deque<string>> defs;
-	//pthread_mutex_t lock;
-};
-
-struct Global {
 	struct Closure {
 		ast::Fun* fun;
 		shared_ptr<Local> env;
 	};
 
-	map<string, Closure> funs;
+	struct BreakException {
+		BreakException( int r ): retv( r ) {}
+		int const retv;
+	};
+
+	struct ReturnException {
+		ReturnException( int r ): retv( r ) {}
+		int const retv;
+	};
+
+	int execCommand( deque<string>&, int, int );
+	deque<string>& findVariable( ast::Var*, Local& );
+	template<class Container> bool assign( ast::VarFix*, Container&, Local& );
+	template<class Container> bool assign( ast::VarVar*, Container&, Local& );
+	template<class Container> bool assign( ast::LeftExpr*, Container&, Local& );
+	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
+	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
+	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
+
+	map<string, Closure> closures;
 	map<string, Builtin> builtins;
-	set<thread, ThreadComparator> fgThreads;
-	set<thread, ThreadComparator> bgThreads;
-	//map<string, pair<ast::Fun*, Local*> > funs;
-	//pthread_mutex_t lock;
+	map<thread::id, thread> foregrounds;
+	map<thread::id, thread> backgrounds;
+	mutex mutexGlobal;
 };
 
-struct BreakException {
-	BreakException( int r ): retv( r ) {}
-	int const retv;
-};
 
-struct ReturnException {
-	ReturnException( int r ): retv( r ) {}
-	int const retv;
-};
-
-int evalStmt( ast::Stmt*, Global&, shared_ptr<Local>, int, int );
-
-
-inline deque<string>& findVariable( ast::Var const* var, Local& local ) {
+inline deque<string>& Evaluator::findVariable( ast::Var* var, Local& local ) {
 	Local* it = &local;
 	while( it != nullptr ) {
 		auto v = it->vars.find( var->name );
@@ -83,7 +82,7 @@ inline deque<string>& findVariable( ast::Var const* var, Local& local ) {
 
 // XXX
 template<class Container>
-bool assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
+bool Evaluator::assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 	using namespace ast;
 
 	if( rhs.size() != lhs->var.size() ) {
@@ -102,8 +101,6 @@ bool assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 		}
 	}
 
-	//ScopedLock( global->lock );
-	//ScopedLock( local->lock );
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VSWITCH( lhs->var[i] ) {
 			VCASE( Var, var ) {
@@ -121,7 +118,7 @@ bool assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 
 // XXX
 template<class Container>
-bool assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
+bool Evaluator::assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 	using namespace ast;
 
 	if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
@@ -155,8 +152,6 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 		}
 	}
 
-	//ScopedLock( global->lock );
-	//ScopedLock( local->lock );
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VSWITCH( lhs->varL[i] ) {
 			VCASE( Var, var ) {
@@ -187,7 +182,7 @@ bool assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 }
 
 template<class Container>
-bool assign( ast::LeftExpr* lhsb, Container& rhs, Local& local ) {
+bool Evaluator::assign( ast::LeftExpr* lhsb, Container& rhs, Local& local ) {
 	using namespace ast;
 
 	VSWITCH( lhsb ) {
@@ -207,7 +202,7 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Local& local ) {
 }
 
 template<class DstIter>
-DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int ifd, DstIter dst ) {
+DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, DstIter dst ) {
 	using namespace ast;
 
 	ThreadSupport::checkIntr();
@@ -217,14 +212,14 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 			*dst++ = e->word;
 		}
 		VCASE( Pair, e ) {
-			evalExpr( e->lhs, global, local, ifd, dst );
-			evalExpr( e->rhs, global, local, ifd, dst );
+			evalExpr( e->lhs, local, ifd, dst );
+			evalExpr( e->rhs, local, ifd, dst );
 		}
 		VCASE( Concat, e ) {
 			deque<MetaString> lhs;
 			deque<MetaString> rhs;
-			evalExpr( e->lhs, global, local, ifd, back_inserter( lhs ) );
-			evalExpr( e->rhs, global, local, ifd, back_inserter( rhs ) );
+			evalExpr( e->lhs, local, ifd, back_inserter( lhs ) );
+			evalExpr( e->rhs, local, ifd, back_inserter( rhs ) );
 			for( auto i = lhs.cbegin(); i != lhs.cend(); ++i ) {
 				for( auto j = rhs.cbegin(); j != rhs.cend(); ++j ) {
 					*dst++ = *i + *j;
@@ -250,7 +245,7 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 			auto writer = [&]() -> void {
 				try {
 					auto closer = scopeExit( bind( close, fds[1] ) );
-					evalStmt( e->body, global, local, ifd, fds[1] );
+					evalStmt( e->body, local, ifd, fds[1] );
 				}
 				catch( BreakException const& ) {
 				}
@@ -262,8 +257,8 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 		VCASE( Slice, e ) {
 			deque<MetaString> sBgn;
 			deque<MetaString> sEnd;
-			evalExpr( e->bgn, global, local, ifd, back_inserter( sBgn ) );
-			evalExpr( e->end, global, local, ifd, back_inserter( sEnd ) );
+			evalExpr( e->bgn, local, ifd, back_inserter( sBgn ) );
+			evalExpr( e->end, local, ifd, back_inserter( sEnd ) );
 			if( sBgn.size() != 1 || sEnd.size() != 1 ) {
 				// XXX
 				return dst;
@@ -284,7 +279,7 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 		}
 		VCASE( Index, e ) {
 			deque<MetaString> sIdx;
-			evalExpr( e->idx, global, local, ifd, back_inserter( sIdx ) );
+			evalExpr( e->idx, local, ifd, back_inserter( sIdx ) );
 			if( sIdx.size() != 1 ) {
 				// XXX
 				return dst;
@@ -304,16 +299,16 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 	return dst;
 }
 
-int execCommand( deque<string>& args, Global& global, int ifd, int ofd ) {
-	auto fit = global.funs.find( args[0] );
-	if( fit != global.funs.end() ) {
+inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
+	auto fit = closures.find( args[0] );
+	if( fit != closures.end() ) {
 		auto local = make_shared<Local>();
 		int retv;
 		try {
 			args.pop_front();
 			if( assign( fit->second.fun->args, args, *local ) ) {
 				local->outer = fit->second.env;
-				retv = evalStmt( fit->second.fun->body, global, local, ifd, ofd );
+				retv = evalStmt( fit->second.fun->body, local, ifd, ofd );
 			}
 			else {
 				return 1; // to be implemented
@@ -324,14 +319,14 @@ int execCommand( deque<string>& args, Global& global, int ifd, int ofd ) {
 		}
 
 		for( auto it = local->defs.rbegin(); it != local->defs.rend(); ++it ) {
-			execCommand( *it, global, ifd, ofd );
+			execCommand( *it, ifd, ofd );
 		}
 
 		return retv;
 	}
 
-	auto bit = global.builtins.find( args[0] );
-	if( bit != global.builtins.end() ) {
+	auto bit = builtins.find( args[0] );
+	if( bit != builtins.end() ) {
 		args.pop_front();
 		return bit->second( args, ifd, ofd );
 	}
@@ -343,7 +338,7 @@ int execCommand( deque<string>& args, Global& global, int ifd, int ofd ) {
 }
 
 template<class DstIter>
-DstIter evalArgs( ast::Expr* expr, Global& global, shared_ptr<Local> local, int ifd, DstIter dstIt ) {
+DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, int ifd, DstIter dstIt ) {
 	struct Inserter: std::iterator<output_iterator_tag, Inserter> {
 		DstIter dstIt;
 
@@ -364,19 +359,19 @@ DstIter evalArgs( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 		}
 	};
 	Inserter inserter( dstIt );
-	evalExpr( expr, global, local, ifd, inserter );
+	evalExpr( expr, local, ifd, inserter );
 	return inserter.dstIt;
 }
 
-int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd, int ofd ) {
+inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int ifd, int ofd ) {
 	using namespace ast;
 
 	ThreadSupport::checkIntr();
 
 	try { VSWITCH( stmt ) {
 		VCASE( Sequence, s ) {
-			evalStmt( s->lhs, global, local, ifd, ofd );
-			return evalStmt( s->rhs, global, local, ifd, ofd );
+			evalStmt( s->lhs, local, ifd, ofd );
+			return evalStmt( s->rhs, local, ifd, ofd );
 		}
 		VCASE( Parallel, s ) {
 			bool lret = false;
@@ -385,7 +380,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 			int rval = 0;
 			auto evalLhs = [&]() -> void {
 				try {
-					lval = evalStmt( s->lhs, global, local, ifd, ofd );
+					lval = evalStmt( s->lhs, local, ifd, ofd );
 				}
 				catch( ReturnException const& e ) {
 					lret = true;
@@ -394,7 +389,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 			};
 			auto evalRhs = [&]() -> void {
 				try {
-					rval = evalStmt( s->rhs, global, local, ifd, ofd );
+					rval = evalStmt( s->rhs, local, ifd, ofd );
 				}
 				catch( ReturnException const& e ) {
 					lret = true;
@@ -412,44 +407,48 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 		}
 		VCASE( Bg, s ) {
 			// XXX: stdin, stdout
-			thread thr( evalStmt, s->body, ref( global ), local, 0, 1 );
+			Stmt* body = s->body;
+			thread thr( [=]() -> void {
+				this->evalStmt( body, local, 0, 1 );
+			} );
+			thread::id id = thr.get_id();
+			backgrounds[id] = move( thr );
 
 			ostringstream ofs;
 			ofs.exceptions( ios_base::failbit | ios_base::badbit );
-			ofs << 'T' << thr.get_id() << '\n';
+			ofs << 'T' << id << '\n';
 			writeAll( ofd, ofs.str() );
 
-			global.bgThreads.insert( move( thr ) );
 			return 0;
 		}
 		VCASE( RedirFr, s ) {
 			deque<string> args;
-			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
+			evalArgs( s->file, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_RDONLY );
 			checkSysCall( fd );
 			auto closer = scopeExit( bind( close, fd ) );
-			return evalStmt( s->body, global, local, fd, ofd );
+			return evalStmt( s->body, local, fd, ofd );
 		}
 		VCASE( RedirTo, s ) {
 			deque<string> args;
-			evalArgs( s->file, global, local, ifd, back_inserter( args ) );
+			evalArgs( s->file, local, ifd, back_inserter( args ) );
 			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
 			auto closer = scopeExit( bind( close, fd ) );
-			return evalStmt( s->body, global, local, ifd, fd );
+			return evalStmt( s->body, local, ifd, fd );
 		}
 		VCASE( Command, s ) {
 			deque<string> args;
-			evalArgs( s->args, global, local, ifd, back_inserter( args ) );
+			evalArgs( s->args, local, ifd, back_inserter( args ) );
 			if( args.size() == 0 ) {
 				return 0;
 			}
 
-			return execCommand( args, global, ifd, ofd );
+			return execCommand( args, ifd, ofd );
 		}
 		VCASE( Return, s ) {
 			deque<string> args;
-			evalArgs( s->retv, global, local, ifd, back_inserter( args ) );
+			evalArgs( s->retv, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				return 1;
 			}
@@ -457,35 +456,35 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 		}
 		VCASE( Fun, s ) {
 			deque<string> args;
-			evalArgs( s->name, global, local, ifd, back_inserter( args ) );
+			evalArgs( s->name, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				return 1;
 			}
-			global.funs[args[0]] = { s, local };
+			closures[args[0]] = { s, local };
 			return 0;
 		}
 		VCASE( If, s ) {
-			if( evalStmt( s->cond, global, local, ifd, ofd ) == 0 ) {
-				return evalStmt( s->then, global, local, ifd, ofd );
+			if( evalStmt( s->cond, local, ifd, ofd ) == 0 ) {
+				return evalStmt( s->then, local, ifd, ofd );
 			}
 			else {
-				return evalStmt( s->elze, global, local, ifd, ofd );
+				return evalStmt( s->elze, local, ifd, ofd );
 			}
 		}
 		VCASE( While, s ) {
 			try {
-				while( evalStmt( s->cond, global, local, ifd, ofd ) == 0 ) {
-					evalStmt( s->body, global, local, ifd, ofd );
+				while( evalStmt( s->cond, local, ifd, ofd ) == 0 ) {
+					evalStmt( s->body, local, ifd, ofd );
 				}
 			}
 			catch( BreakException const& e ) {
 				return e.retv;
 			}
-			return evalStmt( s->elze, global, local, ifd, ofd );
+			return evalStmt( s->elze, local, ifd, ofd );
 		}
 		VCASE( Break, s ) {
 			deque<string> args;
-			evalArgs( s->retv, global, local, ifd, back_inserter( args ) );
+			evalArgs( s->retv, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				return 1;
 			}
@@ -494,7 +493,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 		}
 		VCASE( Let, s ) {
 			deque<string> vals;
-			evalArgs( s->rhs, global, local, ifd, back_inserter( vals ) );
+			evalArgs( s->rhs, local, ifd, back_inserter( vals ) );
 			return assign( s->lhs, vals, *local ) ? 0 : 1;
 		}
 		VCASE( Fetch, s ) {
@@ -525,7 +524,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 		}
 		VCASE( Yield, s ) {
 			deque<string> vals;
-			evalArgs( s->rhs, global, local, ifd, back_inserter( vals ) );
+			evalArgs( s->rhs, local, ifd, back_inserter( vals ) );
 			ostringstream buf;
 			for( auto it = vals.cbegin(); it != vals.cend(); ++it ) {
 				buf << *it << '\n';
@@ -544,7 +543,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 			auto evalLhs = [&]() -> void {
 				try {
 					auto closer = scopeExit( bind( close, fds[1] ) );
-					lval = evalStmt( s->lhs, global, local, ifd, fds[1] );
+					lval = evalStmt( s->lhs, local, ifd, fds[1] );
 				}
 				catch( ReturnException const& e ) {
 					lret = true;
@@ -554,7 +553,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 			auto evalRhs = [&]() -> void {
 				try {
 					auto closer = scopeExit( bind( close, fds[0] ) );
-					rval = evalStmt( s->rhs, global, local, fds[0], ofd );
+					rval = evalStmt( s->rhs, local, fds[0], ofd );
 				}
 				catch( ReturnException const& e ) {
 					rret = true;
@@ -572,7 +571,7 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 		}
 		VCASE( Defer, s ) {
 			local->defs.push_back( deque<string>() );
-			evalArgs( s->args, global, local, ifd, back_inserter( local->defs.back() ) );
+			evalArgs( s->args, local, ifd, back_inserter( local->defs.back() ) );
 			return 0;
 		}
 		VCASE( None, s ) {
