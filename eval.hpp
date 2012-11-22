@@ -88,6 +88,10 @@ template<class Container>
 bool assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 	using namespace ast;
 
+	if( rhs.size() != lhs->var.size() ) {
+		return false;
+	}
+
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VSWITCH( lhs->var[i] ) {
 			VCASE( Word, word ) {
@@ -121,6 +125,10 @@ bool assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 template<class Container>
 bool assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 	using namespace ast;
+
+	if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
+		return false;
+	}
 
 	size_t const lBgn = 0;
 	size_t const mBgn = lhs->varL.size();
@@ -186,15 +194,9 @@ bool assign( ast::LeftExpr* lhsb, Container& rhs, Local& local ) {
 
 	VSWITCH( lhsb ) {
 		VCASE( VarFix, lhs ) {
-			if( rhs.size() != lhs->var.size() ) {
-				return false;
-			}
 			return assign( lhs, rhs, local );
 		}
 		VCASE( VarVar, lhs ) {
-			if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
-				return false;
-			}
 			return assign( lhs, rhs, local );
 		}
 		VDEFAULT {
@@ -501,7 +503,6 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 							return 1;
 						}
 					}
-
 					return assign( lhs, rhs, *local ) ? 0 : 1;
 				}
 				VCASE( VarVar, lhs ) {
@@ -511,10 +512,6 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 					while( getline( ifs, buf ) ) {
 						rhs.push_back( buf );
 					}
-					if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
-						return 1;
-					}
-
 					return assign( lhs, rhs, *local ) ? 0 : 1;
 				}
 				VDEFAULT {
