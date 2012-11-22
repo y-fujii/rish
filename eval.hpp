@@ -29,7 +29,7 @@ using Builtin = function<int (deque<string> const&, int, int)>;
 
 struct ThreadComparator {
 	bool operator()( thread const& x, thread const& y ) const {
-		return const_cast<thread&>( x ).native_handle() < const_cast<thread&>( y ).native_handle();
+		return x.get_id() < y.get_id();
 	}
 };
 
@@ -413,7 +413,12 @@ int evalStmt( ast::Stmt* stmt, Global& global, shared_ptr<Local> local, int ifd,
 		VCASE( Bg, s ) {
 			// XXX: stdin, stdout
 			thread thr( evalStmt, s->body, ref( global ), local, 0, 1 );
-			writeAll( ofd, 'T' + ThreadSupport::name( thr ) + '\n' );
+
+			ostringstream ofs;
+			ofs.exceptions( ios_base::failbit | ios_base::badbit );
+			ofs << 'T' << thr.get_id() << '\n';
+			writeAll( ofd, ofs.str() );
+
 			global.bgThreads.insert( move( thr ) );
 			return 0;
 		}
