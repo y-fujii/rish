@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <thread>
 #include <vector>
 
 
@@ -39,6 +40,12 @@ T readValue( std::string const& str ) {
 	}
 	return val;
 }
+
+struct ThreadComparator {
+	bool operator()( std::thread const& x, std::thread const& y ) const {
+		return x.get_id() < y.get_id();
+	}
+};
 
 template<class Func0, class Func1>
 void parallel( Func0 const& f0, Func1 const& f1 ) {
