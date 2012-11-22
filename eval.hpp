@@ -26,6 +26,8 @@ using namespace std;
 
 
 struct Evaluator {
+	Evaluator(): stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
+
 	using Builtin = function<int (deque<string> const&, int, int)>;
 
 	struct Local {
@@ -58,12 +60,17 @@ struct Evaluator {
 	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
+	int evalStmt( ast::Stmt*, shared_ptr<Local> ); // XXX
 
 	map<string, Closure> closures;
 	map<string, Builtin> builtins;
 	map<thread::id, thread> foregrounds;
 	map<thread::id, thread> backgrounds;
 	mutex mutexGlobal;
+
+	int stdin;
+	int stdout;
+	int stderr;
 };
 
 
@@ -410,7 +417,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			// XXX: stdin, stdout
 			Stmt* body = s->body;
 			thread thr( [=]() -> void {
-				this->evalStmt( body, local, 0, 1 );
+				this->evalStmt( body, local, this->stdin, this->stdout );
 			} );
 			thread::id id = thr.get_id();
 			backgrounds[id] = move( thr );
@@ -588,4 +595,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 
 	assert( false );
 	return -1;
+}
+
+inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local ) {
+	return evalStmt( stmt, local, stdin, stdout );
 }

@@ -57,7 +57,7 @@ int main( int argc, char** argv ) {
 				auto local = make_shared<Evaluator::Local>();
 				Evaluator eval;
 				builtins::register_( eval.builtins );
-				eval.evalStmt( ast, local, 0, 1 );
+				eval.evalStmt( ast, local );
 			}
 			catch( SyntaxError const& err ) {
 				cerr << "Syntax error on " << argv[optind] << ":" << err.line + 1 << "." << endl;
@@ -74,7 +74,7 @@ int main( int argc, char** argv ) {
 			auto local = make_shared<Evaluator::Local>();
 			Evaluator eval;
 			builtins::register_( eval.builtins );
-			return eval.evalStmt( ast, local, 0, 1 );
+			return eval.evalStmt( ast, local );
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
@@ -110,7 +110,7 @@ int main( int argc, char** argv ) {
 				istringstream istr( line );
 				ast::Stmt* ast = parse( istr );
 
-				int retv = eval.evalStmt( ast, local, 0, 1 );
+				int retv = eval.evalStmt( ast, local );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
