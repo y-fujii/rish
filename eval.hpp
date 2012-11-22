@@ -29,6 +29,11 @@ struct Evaluator {
 	using Builtin = function<int (deque<string> const&, int, int)>;
 
 	struct Local {
+		deque<string>& findVar( ast::Var* );
+		template<class Container> bool assign( ast::VarFix*, Container& );
+		template<class Container> bool assign( ast::VarVar*, Container& );
+		template<class Container> bool assign( ast::LeftExpr*, Container& );
+
 		shared_ptr<Local> outer;
 		map<string, deque<string>> vars;
 		deque<deque<string>> defs;
@@ -50,10 +55,6 @@ struct Evaluator {
 	};
 
 	int execCommand( deque<string>&, int, int );
-	deque<string>& findVariable( ast::Var*, Local& );
-	template<class Container> bool assign( ast::VarFix*, Container&, Local& );
-	template<class Container> bool assign( ast::VarVar*, Container&, Local& );
-	template<class Container> bool assign( ast::LeftExpr*, Container&, Local& );
 	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
@@ -66,8 +67,8 @@ struct Evaluator {
 };
 
 
-inline deque<string>& Evaluator::findVariable( ast::Var* var, Local& local ) {
-	Local* it = &local;
+inline deque<string>& Evaluator::Local::findVar( ast::Var* var ) {
+	Local* it = this;
 	while( it != nullptr ) {
 		auto v = it->vars.find( var->name );
 		if( v != it->vars.end() ) {
@@ -77,12 +78,12 @@ inline deque<string>& Evaluator::findVariable( ast::Var* var, Local& local ) {
 	}
 
 	// new variable
-	return local.vars[var->name];
+	return vars[var->name];
 }
 
 // XXX
 template<class Container>
-bool Evaluator::assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
+bool Evaluator::Local::assign( ast::VarFix* lhs, Container& rhs ) {
 	using namespace ast;
 
 	if( rhs.size() != lhs->var.size() ) {
@@ -104,7 +105,7 @@ bool Evaluator::assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 	for( size_t i = 0; i < rhs.size(); ++i ) {
 		VSWITCH( lhs->var[i] ) {
 			VCASE( Var, var ) {
-				auto& val = findVariable( var, local );
+				auto& val = findVar( var );
 				val.clear();
 				val.push_back( rhs[i] );
 			}
@@ -118,7 +119,7 @@ bool Evaluator::assign( ast::VarFix* lhs, Container& rhs, Local& local ) {
 
 // XXX
 template<class Container>
-bool Evaluator::assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
+bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
 	using namespace ast;
 
 	if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
@@ -155,7 +156,7 @@ bool Evaluator::assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VSWITCH( lhs->varL[i] ) {
 			VCASE( Var, var ) {
-				auto& val = findVariable( var, local );
+				auto& val = findVar( var );
 				val.clear();
 				val.push_back( rhs[i + lBgn] );
 			}
@@ -163,13 +164,13 @@ bool Evaluator::assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 			}
 		}
 	}
-	auto& val = findVariable( lhs->varM, local );
+	auto& val = findVar( lhs->varM );
 	val.clear();
 	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( val ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VSWITCH( lhs->varR[i] ) {
 			VCASE( Var, var ) {
-				auto& val = findVariable( var, local );
+				auto& val = findVar( var );
 				val.clear();
 				val.push_back( rhs[i + rBgn] );
 			}
@@ -182,15 +183,15 @@ bool Evaluator::assign( ast::VarVar* lhs, Container& rhs, Local& local ) {
 }
 
 template<class Container>
-bool Evaluator::assign( ast::LeftExpr* lhsb, Container& rhs, Local& local ) {
+bool Evaluator::Local::assign( ast::LeftExpr* lhsb, Container& rhs ) {
 	using namespace ast;
 
 	VSWITCH( lhsb ) {
 		VCASE( VarFix, lhs ) {
-			return assign( lhs, rhs, local );
+			return assign( lhs, rhs );
 		}
 		VCASE( VarVar, lhs ) {
-			return assign( lhs, rhs, local );
+			return assign( lhs, rhs );
 		}
 		VDEFAULT {
 			assert( false );
@@ -227,7 +228,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			}
 		}
 		VCASE( Var, e ) {
-			auto& val = findVariable( e, *local );
+			auto& val = local->findVar( e );
 			dst = copy( val.begin(), val.end(), dst );
 		}
 		VCASE( Subst, e ) {
@@ -266,7 +267,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
 			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
 
-			auto& val = findVariable( e->var, *local );
+			auto& val = local->findVar( e->var );
 			bgn = imod( bgn, val.size() );
 			end = imod( end, val.size() );
 			if( bgn < end ) {
@@ -286,7 +287,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			}
 			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
 
-			auto& val = findVariable( e->var, *local );
+			auto& val = local->findVar( e->var );
 			idx = imod( idx, val.size() );
 			*dst++ = val[idx];
 		}
@@ -306,7 +307,7 @@ inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
 		int retv;
 		try {
 			args.pop_front();
-			if( assign( fit->second.fun->args, args, *local ) ) {
+			if( local->assign( fit->second.fun->args, args ) ) {
 				local->outer = fit->second.env;
 				retv = evalStmt( fit->second.fun->body, local, ifd, ofd );
 			}
@@ -494,7 +495,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 		VCASE( Let, s ) {
 			deque<string> vals;
 			evalArgs( s->rhs, local, ifd, back_inserter( vals ) );
-			return assign( s->lhs, vals, *local ) ? 0 : 1;
+			return local->assign( s->lhs, vals ) ? 0 : 1;
 		}
 		VCASE( Fetch, s ) {
 			VSWITCH( s->lhs ) {
@@ -506,7 +507,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 							return 1;
 						}
 					}
-					return assign( lhs, rhs, *local ) ? 0 : 1;
+					return local->assign( lhs, rhs ) ? 0 : 1;
 				}
 				VCASE( VarVar, lhs ) {
 					deque<string> rhs;
@@ -515,7 +516,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 					while( getline( ifs, buf ) ) {
 						rhs.push_back( buf );
 					}
-					return assign( lhs, rhs, *local ) ? 0 : 1;
+					return local->assign( lhs, rhs ) ? 0 : 1;
 				}
 				VDEFAULT {
 					assert( false );
