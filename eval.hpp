@@ -34,8 +34,6 @@ struct ThreadComparator {
 };
 
 struct Local {
-	Local( shared_ptr<Local> o = nullptr ): outer( o ) {}
-
 	shared_ptr<Local> outer;
 	map<string, deque<string>> vars;
 	deque<deque<string>> defs;
@@ -309,11 +307,12 @@ DstIter evalExpr( ast::Expr* expr, Global& global, shared_ptr<Local> local, int 
 int execCommand( deque<string>& args, Global& global, int ifd, int ofd ) {
 	auto fit = global.funs.find( args[0] );
 	if( fit != global.funs.end() ) {
-		auto local = make_shared<Local>( fit->second.env );
+		auto local = make_shared<Local>();
 		int retv;
 		try {
 			args.pop_front();
 			if( assign( fit->second.fun->args, args, *local ) ) {
+				local->outer = fit->second.env;
 				retv = evalStmt( fit->second.fun->body, global, local, ifd, ofd );
 			}
 			else {

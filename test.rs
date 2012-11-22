@@ -111,12 +111,14 @@ fun returnInPipe {
 fun nested {
 	let $p = "OK"
 	let $q = "BAD"
-	fun inner {
+	let $r = "OK"
+	fun inner $r {
 		let $q = "OK"
 		yield $p
 		yield $q
 	}
-	inner
+	inner "BAD"
+	yield $r
 }
 
 
