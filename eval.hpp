@@ -235,6 +235,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			}
 		}
 		VCASE( Var, e ) {
+			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e );
 			dst = copy( val.begin(), val.end(), dst );
 		}
@@ -274,6 +275,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
 			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
 
+			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var );
 			bgn = imod( bgn, val.size() );
 			end = imod( end, val.size() );
@@ -294,6 +296,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			}
 			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
 
+			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var );
 			idx = imod( idx, val.size() );
 			*dst++ = val[idx];
@@ -308,15 +311,20 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 }
 
 inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
+	mutexGlobal.lock(); // XXX
 	auto fit = closures.find( args[0] );
 	if( fit != closures.end() ) {
+		ast::Fun* fun = fit->second.fun;
+		shared_ptr<Local> env = fit->second.env;
+		mutexGlobal.unlock();
+
 		auto local = make_shared<Local>();
 		int retv;
 		try {
 			args.pop_front();
-			if( local->assign( fit->second.fun->args, args ) ) {
-				local->outer = fit->second.env;
-				retv = evalStmt( fit->second.fun->body, local, ifd, ofd );
+			if( local->assign( fun->args, args ) ) {
+				local->outer = move( env );
+				retv = evalStmt( fun->body, local, ifd, ofd );
 			}
 			else {
 				return 1; // to be implemented
@@ -332,6 +340,7 @@ inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
 
 		return retv;
 	}
+	mutexGlobal.unlock();
 
 	auto bit = builtins.find( args[0] );
 	if( bit != builtins.end() ) {
@@ -420,13 +429,15 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 				this->evalStmt( body, local, this->stdin, this->stdout );
 			} );
 			thread::id id = thr.get_id();
-			backgrounds[id] = move( thr );
+			{
+				lock_guard<mutex> lock( mutexGlobal );
+				backgrounds[id] = move( thr );
+			}
 
 			ostringstream ofs;
 			ofs.exceptions( ios_base::failbit | ios_base::badbit );
 			ofs << 'T' << id << '\n';
 			writeAll( ofd, ofs.str() );
-
 			return 0;
 		}
 		VCASE( RedirFr, s ) {
@@ -468,6 +479,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			if( args.size() != 1 ) {
 				return 1;
 			}
+
+			lock_guard<mutex> lock( mutexGlobal );
 			closures[args[0]] = { s, local };
 			return 0;
 		}
@@ -477,6 +490,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			if( args.size() != 1 ) {
 				return 1;
 			}
+
+			lock_guard<mutex> lock( mutexGlobal );
 			return closures.erase( args[0] ) != 0 ? 0 : 1;
 		}
 		VCASE( If, s ) {
@@ -510,6 +525,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 		VCASE( Let, s ) {
 			deque<string> vals;
 			evalArgs( s->rhs, local, ifd, back_inserter( vals ) );
+
+			lock_guard<mutex> lock( mutexGlobal );
 			return local->assign( s->lhs, vals ) ? 0 : 1;
 		}
 		VCASE( Fetch, s ) {
@@ -522,6 +539,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 							return 1;
 						}
 					}
+
+					lock_guard<mutex> lock( mutexGlobal );
 					return local->assign( lhs, rhs ) ? 0 : 1;
 				}
 				VCASE( VarVar, lhs ) {
@@ -531,6 +550,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 					while( getline( ifs, buf ) ) {
 						rhs.push_back( buf );
 					}
+
+					lock_guard<mutex> lock( mutexGlobal );
 					return local->assign( lhs, rhs ) ? 0 : 1;
 				}
 				VDEFAULT {
@@ -586,8 +607,11 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			return lval || rval;
 		}
 		VCASE( Defer, s ) {
-			local->defs.push_back( deque<string>() );
-			evalArgs( s->args, local, ifd, back_inserter( local->defs.back() ) );
+			deque<string> args;
+			evalArgs( s->args, local, ifd, back_inserter( args ) );
+
+			lock_guard<mutex> lock( mutexGlobal );
+			local->defs.push_back( move( args ) );
 			return 0;
 		}
 		VCASE( None, s ) {
