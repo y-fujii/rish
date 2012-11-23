@@ -50,7 +50,7 @@ template<class Func0, class Func1>
 void parallel( Func0 const& f0, Func1 const& f1 ) {
 	auto slave = std::async( std::launch::async, f0 );
 	f1();
-	slave.wait();
+	slave.get();
 }
 
 template<class Func>
