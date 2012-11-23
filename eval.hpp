@@ -56,9 +56,8 @@ struct Evaluator {
 		int const retv;
 	};
 
-	static int const retvSuccess  =  0;
-	static int const retvArgError = -1;
-	static int const retvSysError = -2;
+	struct ArgError {
+	};
 
 	int execCommand( deque<string>&&, int, int );
 	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
@@ -92,7 +91,6 @@ inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
 	return vars[var->name];
 }
 
-// XXX
 template<class Container>
 bool Evaluator::Local::assign( ast::VarFix* lhs, Container&& rhs ) {
 	using namespace ast;
@@ -129,7 +127,6 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Container&& rhs ) {
 	return true;
 }
 
-// XXX
 template<class Container>
 bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
 	using namespace ast;
@@ -275,8 +272,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			evalExpr( e->bgn, local, ifd, back_inserter( sBgn ) );
 			evalExpr( e->end, local, ifd, back_inserter( sEnd ) );
 			if( sBgn.size() != 1 || sEnd.size() != 1 ) {
-				// XXX
-				return dst;
+				throw ArgError();
 			}
 			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
 			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
@@ -297,8 +293,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			deque<MetaString> sIdx;
 			evalExpr( e->idx, local, ifd, back_inserter( sIdx ) );
 			if( sIdx.size() != 1 ) {
-				// XXX
-				return dst;
+				throw ArgError();
 			}
 			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
 
@@ -319,7 +314,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
-	mutexGlobal.lock(); // XXX
+	mutexGlobal.lock();
 	auto fit = closures.find( args[0] );
 	if( fit != closures.end() ) {
 		ast::Fun* fun = fit->second.fun;
@@ -329,7 +324,7 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 		args.pop_front();
 		auto local = make_shared<Local>();
 		if( !local->assign( fun->args, move( args ) ) ) {
-			return retvArgError; // or allow overloaded functions?
+			throw ArgError(); // or allow overloaded functions?
 		}
 		local->outer = move( env );
 
@@ -458,7 +453,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->file, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return retvArgError;
+				throw ArgError();
 			}
 
 			int fd = open( args[0].c_str(), O_RDONLY );
@@ -470,7 +465,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->file, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return retvArgError;
+				throw ArgError();
 			}
 
 			int fd = open( args[0].c_str(), O_WRONLY | O_CREAT, 0644 );
@@ -491,7 +486,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->retv, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return retvArgError;
+				throw ArgError();
 			}
 
 			throw ReturnException( readValue<int>( args[0] ) ) ;
@@ -500,7 +495,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->name, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return retvArgError;
+				throw ArgError();
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -511,7 +506,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->name, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return retvArgError;
+				throw ArgError();
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -540,7 +535,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->retv, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return retvArgError;
+				throw ArgError();
 			}
 			int retv = readValue<int>( args[0] );
 			throw BreakException( retv );
@@ -644,11 +639,14 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			assert( false );
 		}
 	} }
+	catch( ArgError const& ) {
+		return -1;
+	}
 	catch( IOError const& ) {
-		return retvSysError;
+		return -2;
 	}
 	catch( ios_base::failure const& ) {
-		return retvSysError;
+		return -2;
 	}
 
 	assert( false );
