@@ -1,26 +1,27 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <deque>
-#include <string>
 #include <cassert>
 #include <cmath>
-#include <sstream>
+#include <deque>
 #include <iomanip>
-#include <unistd.h>
+#include <sstream>
+#include <string>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/ioctl.h>
 //#include <tr1/regrex>
 #include "misc.hpp"
-#include "unix.hpp"
 #include "glob.hpp"
+#include "eval.hpp"
+#include "unix.hpp"
 
 using namespace std;
 
 namespace builtins {
 
 
-int changeDir( deque<string> const& args, int, int ) {
+int changeDir( deque<string> const& args, Evaluator&, int, int ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
@@ -28,7 +29,7 @@ int changeDir( deque<string> const& args, int, int ) {
 	return 0;
 }
 
-int setEnv( deque<string> const& args, int, int ) {
+int setEnv( deque<string> const& args, Evaluator&, int, int ) {
 	if( args.size() != 2 ) {
 		return 1;
 	}
@@ -36,7 +37,7 @@ int setEnv( deque<string> const& args, int, int ) {
 	return 0;
 }
 
-int getEnv( deque<string> const& args, int, int ofd ) {
+int getEnv( deque<string> const& args, Evaluator&, int, int ofd ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
@@ -48,7 +49,7 @@ int getEnv( deque<string> const& args, int, int ofd ) {
 	return 0;
 }
 
-int cmdFork( deque<string> const& args, int, int ofd ) {
+int cmdFork( deque<string> const& args, Evaluator&, int, int ofd ) {
 	// XXX
 	pid_t pid = forkExec( args, 0, 1 );
 	ostringstream buf;
@@ -57,34 +58,45 @@ int cmdFork( deque<string> const& args, int, int ofd ) {
 	return 0;
 }
 
-int wait( deque<string> const& args, int, int ) {
+int join( deque<string> const& args, Evaluator& eval, int, int ) {
+	static_assert( sizeof( thread::id ) == sizeof( unsigned ), "" );
+
+	for( auto const& arg: args ) {
+		union U {
+			U() {}
+			thread::id tid;
+			unsigned val;
+		} u;
+		u.val = readValue<unsigned>( arg );
+
+		eval.mutexGlobal.lock();
+		auto it = eval.backgrounds.find( u.tid );
+		if( it != eval.backgrounds.end() ) {
+			thread thr = move( it->second );
+			eval.backgrounds.erase( it );
+			eval.mutexGlobal.unlock();
+
+			thr.join();
+		}
+		else {
+			eval.mutexGlobal.unlock();
+		}
+	}
+	return 0;
+}
+
+int wait( deque<string> const& args, Evaluator&, int, int ) {
 	int retv = 0;
 	for( auto const& arg: args ) {
-		try {
-			if( arg.size() == 0 ) {
-				throw exception();
-			}
-			if( arg[0] == 'T' ) {
-				// XXX
-				return 1;
-			}
-			else {
-				pid_t pid = readValue<int>( arg );
-				int status;
-				checkSysCall( waitpid( pid, &status, 0 ) );
-				if( WEXITSTATUS( status ) != 0 ) {
-					throw exception();
-				}
-			}
-		}
-		catch( exception const& ) {
-			retv = 1;
-		}
+		pid_t pid = readValue<int>( arg );
+		int status;
+		checkSysCall( waitpid( pid, &status, 0 ) );
+		retv = WEXITSTATUS( status );
 	}
 	return retv;
 }
 
-int showList( deque<string> const& args, int, int ofd ) {
+int showList( deque<string> const& args, Evaluator&, int, int ofd ) {
 	struct winsize ws;
 	checkSysCall( ioctl( ofd, TIOCGWINSZ, &ws ) );
 
@@ -121,7 +133,7 @@ int showList( deque<string> const& args, int, int ofd ) {
 	return 0;
 }
 
-int strSize( deque<string> const& args, int, int ofd ) {
+int strSize( deque<string> const& args, Evaluator&, int, int ofd ) {
 	ostringstream buf;
 	for( auto it = args.cbegin(); it != args.cend(); ++it ) {
 		buf << it->size() << '\n';
@@ -131,7 +143,7 @@ int strSize( deque<string> const& args, int, int ofd ) {
 	return 0;
 }
 
-int listSize( deque<string> const& args, int, int ofd ) {
+int listSize( deque<string> const& args, Evaluator&, int, int ofd ) {
 	ostringstream buf;
 	buf << args.size() << '\n';
 	writeAll( ofd, buf.str() );
@@ -175,6 +187,7 @@ void register_( Map& map ) {
 	map["sys.setenv"] = setEnv;
 	map["sys.getenv"] = getEnv;
 	map["%"] = cmdFork;
+	map["sys.join"] = join;
 	map["sys.wait"] = wait;
 	map["str.size"] = strSize;
 	/*
