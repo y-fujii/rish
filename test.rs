@@ -121,6 +121,11 @@ fun nested {
 	yield $r
 }
 
+fun runBg {
+	let $t = (& { sleep 2 ; yield "finished thread" })
+	sys.join $t
+	yield "finished join"
+}
 
 fun runTest {
 	let $var = S
@@ -135,6 +140,7 @@ fun runTest {
 	echo (yield 0 3 2 6 -10 12312 23 2 98 8 | qsort1)
 	returnInPipe
 	nested
+	runBg
 }
 
 runTest

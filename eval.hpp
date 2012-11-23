@@ -28,7 +28,7 @@ using namespace std;
 struct Evaluator {
 	Evaluator(): stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
 
-	using Builtin = function<int (deque<string> const&, int, int)>;
+	using Builtin = function<int (deque<string> const&, Evaluator&, int, int)>;
 
 	struct Local {
 		deque<string>& value( ast::Var* );
@@ -351,7 +351,7 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 	auto bit = builtins.find( args[0] );
 	if( bit != builtins.end() ) {
 		args.pop_front();
-		return bit->second( args, ifd, ofd );
+		return bit->second( args, *this, ifd, ofd );
 	}
 
 	pid_t pid = forkExec( args, ifd, ofd );
@@ -442,7 +442,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 
 			ostringstream ofs;
 			ofs.exceptions( ios_base::failbit | ios_base::badbit );
-			ofs << 'T' << id << '\n';
+			ofs << id << '\n';
 			writeAll( ofd, ofs.str() );
 			return 0;
 		}
