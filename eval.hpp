@@ -56,6 +56,10 @@ struct Evaluator {
 		int const retv;
 	};
 
+	static int const retvSuccess  =  0;
+	static int const retvArgError = -1;
+	static int const retvSysError = -2;
+
 	int execCommand( deque<string>&&, int, int );
 	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
@@ -351,7 +355,12 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 	auto bit = builtins.find( args[0] );
 	if( bit != builtins.end() ) {
 		args.pop_front();
-		return bit->second( args, *this, ifd, ofd );
+		try {
+			return bit->second( args, *this, ifd, ofd );
+		}
+		catch( std::exception const& ) {
+			return 1;
+		}
 	}
 
 	pid_t pid = forkExec( args, ifd, ofd );
@@ -429,7 +438,6 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			return lval || rval;
 		}
 		VCASE( Bg, s ) {
-			// XXX: stdin, stdout
 			Stmt* body = s->body;
 			thread thr( [=]() -> void {
 				this->evalStmt( body, local, this->stdin, this->stdout );
@@ -449,7 +457,11 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 		VCASE( RedirFr, s ) {
 			deque<string> args;
 			evalArgs( s->file, local, ifd, back_inserter( args ) );
-			int fd = open( args.back().c_str(), O_RDONLY );
+			if( args.size() != 1 ) {
+				return retvArgError;
+			}
+
+			int fd = open( args[0].c_str(), O_RDONLY );
 			checkSysCall( fd );
 			auto closer = scopeExit( bind( close, fd ) );
 			return evalStmt( s->body, local, fd, ofd );
@@ -457,7 +469,11 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 		VCASE( RedirTo, s ) {
 			deque<string> args;
 			evalArgs( s->file, local, ifd, back_inserter( args ) );
-			int fd = open( args.back().c_str(), O_WRONLY | O_CREAT, 0644 );
+			if( args.size() != 1 ) {
+				return retvArgError;
+			}
+
+			int fd = open( args[0].c_str(), O_WRONLY | O_CREAT, 0644 );
 			checkSysCall( fd );
 			auto closer = scopeExit( bind( close, fd ) );
 			return evalStmt( s->body, local, ifd, fd );
@@ -475,15 +491,16 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->retv, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return 1;
+				return retvArgError;
 			}
+
 			throw ReturnException( readValue<int>( args[0] ) ) ;
 		}
 		VCASE( Fun, s ) {
 			deque<string> args;
 			evalArgs( s->name, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return 1;
+				return retvArgError;
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -494,7 +511,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->name, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return 1;
+				return retvArgError;
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -523,7 +540,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> args;
 			evalArgs( s->retv, local, ifd, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				return 1;
+				return retvArgError;
 			}
 			int retv = readValue<int>( args[0] );
 			throw BreakException( retv );
@@ -628,7 +645,10 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 		}
 	} }
 	catch( IOError const& ) {
-		return 1;
+		return retvSysError;
+	}
+	catch( ios_base::failure const& ) {
+		return retvSysError;
 	}
 
 	assert( false );
