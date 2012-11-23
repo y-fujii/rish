@@ -32,9 +32,9 @@ struct Evaluator {
 
 	struct Local {
 		deque<string>& value( ast::Var* );
-		template<class Container> bool assign( ast::VarFix*, Container& );
-		template<class Container> bool assign( ast::VarVar*, Container& );
-		template<class Container> bool assign( ast::LeftExpr*, Container& );
+		template<class Container> bool assign( ast::VarFix*, Container&& );
+		template<class Container> bool assign( ast::VarVar*, Container&& );
+		template<class Container> bool assign( ast::LeftExpr*, Container&& );
 
 		shared_ptr<Local> outer;
 		map<string, deque<string>> vars;
@@ -56,7 +56,7 @@ struct Evaluator {
 		int const retv;
 	};
 
-	int execCommand( deque<string>&, int, int );
+	int execCommand( deque<string>&&, int, int );
 	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
@@ -90,8 +90,9 @@ inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
 
 // XXX
 template<class Container>
-bool Evaluator::Local::assign( ast::VarFix* lhs, Container& rhs ) {
+bool Evaluator::Local::assign( ast::VarFix* lhs, Container&& rhs ) {
 	using namespace ast;
+	static_assert( !std::is_lvalue_reference<Container>::value, "" );
 
 	if( rhs.size() != lhs->var.size() ) {
 		return false;
@@ -114,7 +115,7 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Container& rhs ) {
 			VCASE( Var, var ) {
 				auto& val = value( var );
 				val.clear();
-				val.push_back( rhs[i] );
+				val.push_back( move( rhs[i] ) );
 			}
 			VDEFAULT {
 			}
@@ -126,8 +127,9 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Container& rhs ) {
 
 // XXX
 template<class Container>
-bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
+bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
 	using namespace ast;
+	static_assert( !std::is_lvalue_reference<Container>::value, "" );
 
 	if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
 		return false;
@@ -165,7 +167,7 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
 			VCASE( Var, var ) {
 				auto& val = value( var );
 				val.clear();
-				val.push_back( rhs[i + lBgn] );
+				val.push_back( move( rhs[i + lBgn] ) );
 			}
 			VDEFAULT {
 			}
@@ -173,13 +175,13 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
 	}
 	auto& val = value( lhs->varM );
 	val.clear();
-	copy( &rhs[mBgn], &rhs[rBgn], back_inserter( val ) );
+	move( &rhs[mBgn], &rhs[rBgn], back_inserter( val ) );
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VSWITCH( lhs->varR[i] ) {
 			VCASE( Var, var ) {
 				auto& val = value( var );
 				val.clear();
-				val.push_back( rhs[i + rBgn] );
+				val.push_back( move( rhs[i + rBgn] ) );
 			}
 			VDEFAULT {
 			}
@@ -190,15 +192,15 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container& rhs ) {
 }
 
 template<class Container>
-bool Evaluator::Local::assign( ast::LeftExpr* lhsb, Container& rhs ) {
+bool Evaluator::Local::assign( ast::LeftExpr* lhsb, Container&& rhs ) {
 	using namespace ast;
 
 	VSWITCH( lhsb ) {
 		VCASE( VarFix, lhs ) {
-			return assign( lhs, rhs );
+			return assign( lhs, forward<Container>( rhs ) );
 		}
 		VCASE( VarVar, lhs ) {
-			return assign( lhs, rhs );
+			return assign( lhs, forward<Container>( rhs ) );
 		}
 		VDEFAULT {
 			assert( false );
@@ -310,7 +312,7 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 	return dst;
 }
 
-inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
+inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 	assert( args.size() >= 1 );
 
 	mutexGlobal.lock(); // XXX
@@ -322,7 +324,7 @@ inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
 
 		args.pop_front();
 		auto local = make_shared<Local>();
-		if( !local->assign( fun->args, args ) ) {
+		if( !local->assign( fun->args, move( args ) ) ) {
 			return 1; // to be implemented
 		}
 		local->outer = move( env );
@@ -336,8 +338,11 @@ inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
 		}
 
 		for( auto it = local->defs.rbegin(); it != local->defs.rend(); ++it ) {
-			execCommand( *it, ifd, ofd );
+			execCommand( move( *it ), ifd, ofd );
 		}
+		// loca.defs is not required anymore but local itself may be referenced
+		// by other closures.
+		local->defs = deque<deque<string>>();
 
 		return retv;
 	}
@@ -464,7 +469,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 				return 0;
 			}
 
-			return execCommand( args, ifd, ofd );
+			return execCommand( move( args ), ifd, ofd );
 		}
 		VCASE( Return, s ) {
 			deque<string> args;
@@ -528,7 +533,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			evalArgs( s->rhs, local, ifd, back_inserter( vals ) );
 
 			lock_guard<mutex> lock( mutexGlobal );
-			return local->assign( s->lhs, vals ) ? 0 : 1;
+			return local->assign( s->lhs, move( vals ) ) ? 0 : 1;
 		}
 		VCASE( Fetch, s ) {
 			VSWITCH( s->lhs ) {
@@ -542,7 +547,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 					}
 
 					lock_guard<mutex> lock( mutexGlobal );
-					return local->assign( lhs, rhs ) ? 0 : 1;
+					return local->assign( lhs, move( rhs ) ) ? 0 : 1;
 				}
 				VCASE( VarVar, lhs ) {
 					deque<string> rhs;
@@ -553,7 +558,7 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 					}
 
 					lock_guard<mutex> lock( mutexGlobal );
-					return local->assign( lhs, rhs ) ? 0 : 1;
+					return local->assign( lhs, move( rhs ) ) ? 0 : 1;
 				}
 				VDEFAULT {
 					assert( false );
