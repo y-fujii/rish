@@ -329,7 +329,7 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 		args.pop_front();
 		auto local = make_shared<Local>();
 		if( !local->assign( fun->args, move( args ) ) ) {
-			return 1; // to be implemented
+			return retvArgError; // or allow overloaded functions?
 		}
 		local->outer = move( env );
 
