@@ -311,6 +311,8 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 }
 
 inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
+	assert( args.size() >= 1 );
+
 	mutexGlobal.lock(); // XXX
 	auto fit = closures.find( args[0] );
 	if( fit != closures.end() ) {
@@ -318,17 +320,16 @@ inline int Evaluator::execCommand( deque<string>& args, int ifd, int ofd ) {
 		shared_ptr<Local> env = fit->second.env;
 		mutexGlobal.unlock();
 
+		args.pop_front();
 		auto local = make_shared<Local>();
+		if( !local->assign( fun->args, args ) ) {
+			return 1; // to be implemented
+		}
+		local->outer = move( env );
+
 		int retv;
 		try {
-			args.pop_front();
-			if( local->assign( fun->args, args ) ) {
-				local->outer = move( env );
-				retv = evalStmt( fun->body, local, ifd, ofd );
-			}
-			else {
-				return 1; // to be implemented
-			}
+			retv = evalStmt( fun->body, local, ifd, ofd );
 		}
 		catch( ReturnException const& e ) {
 			retv = e.retv;
