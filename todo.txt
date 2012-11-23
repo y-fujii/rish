@@ -7,16 +7,19 @@ language:
 	- pipe object
 	- multiple pipes support like select(), epoll()
 	- lambda expression with lexical scoped break, continue and return?
-	- eliminate unnecessary threads creation
-	- look up variable names at compile time
 	- function local current directory
 	- zsh like ** expansion
-	- CPS tree evaluation & lightweight thread & asynchronous I/O?
-	- In C++11, std::string is not ref-counted. we may wish to use shared_ptr<string>.
 
 UI:
 	- job control
-	- (att|det)atching process using named pipe for std(in|out|err)
+	- (att|det)atch process to std(in|out|err), pipes and files at any time
 	- incremental completion
+	- completion from command output text
 	- quicksilver like command name completion
-	- sandbox mode
+
+implementation:
+	- decent thread stopping mechanism
+	- error values for rish internal error
+	- eliminate unnecessary threads creation
+	- static variable names resolution and lock-less variable access
+	- efficient MetaString structure to handle GB data in a normal way
