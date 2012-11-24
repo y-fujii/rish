@@ -64,6 +64,8 @@ struct Evaluator {
 	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
 	int evalStmt( ast::Stmt*, shared_ptr<Local> ); // XXX
+	void join();
+	void interrupt();
 
 	map<string, Closure> closures;
 	map<string, Builtin> builtins;
@@ -655,4 +657,37 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 
 inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local ) {
 	return evalStmt( stmt, local, stdin, stdout );
+}
+
+inline void Evaluator::join() {
+	while( true ) {
+		map<thread::id, thread> fg;
+		map<thread::id, thread> bg;
+		{
+			lock_guard<mutex> lock( mutexGlobal );
+			swap( fg, foregrounds );
+			swap( bg, backgrounds );
+		}
+
+		if( fg.empty() && bg.empty() ) {
+			break;
+		}
+
+		for( auto& t: fg ) {
+			t.second.join();
+		}
+		for( auto& t: bg ) {
+			t.second.join();
+		}
+	}
+}
+
+inline void Evaluator::interrupt() {
+	lock_guard<mutex> lock( mutexGlobal );
+	for( auto& t: foregrounds ) {
+		pthread_kill( t.second.native_handle(), SIGUSR1 );
+	}
+	for( auto& t: backgrounds ) {
+		pthread_kill( t.second.native_handle(), SIGUSR1 );
+	}
 }
