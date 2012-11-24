@@ -54,10 +54,11 @@ int main( int argc, char** argv ) {
 				ifstream ofs( argv[optind] );
 				ast::Stmt* ast = parse( ofs );
 
-				auto local = make_shared<Evaluator::Local>();
 				Evaluator eval;
 				builtins::register_( eval.builtins );
+				auto local = make_shared<Evaluator::Local>();
 				eval.evalStmt( ast, local );
+				eval.join();
 			}
 			catch( SyntaxError const& err ) {
 				cerr << "Syntax error on " << argv[optind] << ":" << err.line + 1 << "." << endl;
@@ -71,10 +72,11 @@ int main( int argc, char** argv ) {
 		try {
 			ast::Stmt* ast = parse( cin );
 
-			auto local = make_shared<Evaluator::Local>();
 			Evaluator eval;
 			builtins::register_( eval.builtins );
-			return eval.evalStmt( ast, local );
+			auto local = make_shared<Evaluator::Local>();
+			eval.evalStmt( ast, local );
+			eval.join();
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
@@ -93,9 +95,9 @@ int main( int argc, char** argv ) {
 		sa.sa_flags = 0;
 		sigaction( SIGINT, &sa, NULL );
 
-		auto local = make_shared<Evaluator::Local>();
 		Evaluator eval;
 		builtins::register_( eval.builtins );
+		auto local = make_shared<Evaluator::Local>();
 		while( true ) {
 			char* line = readline( "| " );
 			if( line == NULL ) break;
@@ -128,6 +130,8 @@ int main( int argc, char** argv ) {
 				cerr << "I/O error." << endl;
 			}
 		}
+
+		eval.join();
 	}
 
 	return 0;
