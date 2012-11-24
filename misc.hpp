@@ -14,8 +14,10 @@
 #include <type_traits>
 #include <vector>
 
+using namespace std;
 
-struct IOError: std::exception {
+
+struct IOError: exception {
 };
 
 template<class T, unsigned N>
@@ -33,20 +35,23 @@ inline int imod( int a, int b ) {
 }
 
 template<class T, class... Args>
-inline std::unique_ptr<T>&& make_unique( Args&&... args ) {
-	return std::unique_ptr<T>( new T( std::forward( args )... ) );
+inline unique_ptr<T>&& make_unique( Args&&... args ) {
+	return unique_ptr<T>( new T( forward<Args>( args )... ) );
 }
 
 template<class T, class U>
-inline U&&
-forward2( U&& u, typename std::enable_if< std::is_lvalue_reference<T>::value>::type* = 0 ) {
-	return u;
-}
-
-template<class T, class U>
-inline typename std::remove_reference<U>::type&&
-forward2( U&& u, typename std::enable_if<!std::is_lvalue_reference<T>::value>::type* = 0 ) {
-	return std::move( u );
+inline typename conditional<
+	is_lvalue_reference<T>::value,
+	U&&,
+	typename remove_reference<U>::type&&
+>::type
+forward2( U&& u ) {
+	using Result = typename conditional<
+		is_lvalue_reference<T>::value,
+		U&&,
+		typename remove_reference<U>::type&&
+	>::type;
+	return static_cast<Result>( u );
 }
 
 template<class T, class SrcIter, class DstIter>
@@ -58,37 +63,44 @@ DstIter forward2( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt ) {
 }
 
 template<class T>
-T readValue( std::string const& str ) {
+T readValue( string const& str ) {
+	istringstream ifs( str );
+	ifs.exceptions( ios_base::failbit | ios_base::badbit );
+
 	T val;
-	if( (std::istringstream( str ) >> val).fail() ) {
-		throw std::invalid_argument( "" );
-	}
+	ifs >> val;
 	return val;
 }
 
 struct ThreadComparator {
-	bool operator()( std::thread const& x, std::thread const& y ) const {
+	bool operator()( thread const& x, thread const& y ) const {
 		return x.get_id() < y.get_id();
 	}
 };
 
 template<class Func0, class Func1>
 void parallel( Func0 const& f0, Func1 const& f1 ) {
-	auto slave = std::async( std::launch::async, f0 );
+	auto slave = async( launch::async, f0 );
 	f1();
 	slave.get();
 }
 
 template<class Func>
 struct ScopeExiter {
+	ScopeExiter( ScopeExiter<Func> const& ) = delete;
+	ScopeExiter<Func>& operator=( ScopeExiter<Func> const& ) = delete;
+
+	ScopeExiter(): _run( false ) {}
+
 	ScopeExiter( ScopeExiter<Func>&& lhs ):
-		_callback( std::move( lhs._callback ) ),
+		_callback( move( lhs._callback ) ),
 		_run( lhs._run ) {
 		lhs._run = false;
 	}
 
-	explicit ScopeExiter( Func const& cb, bool r = true ):
-		_callback( cb ),
+	template<class T>
+	explicit ScopeExiter( T&& cb, bool r = true ):
+		_callback( forward<T>( cb ) ),
 		_run( r ) {
 	}
 
@@ -102,15 +114,13 @@ struct ScopeExiter {
 	}
 
 	private:
-		ScopeExiter( ScopeExiter<Func> const& );
-		ScopeExiter<Func> const& operator=( ScopeExiter<Func> const& );
 		Func const _callback;
 		bool _run;
 };
 
-template<class Func>
-ScopeExiter<Func> scopeExit( Func const& cb ) {
-	return ScopeExiter<Func>( cb );
+template<class T>
+ScopeExiter<typename remove_reference<T>::type> scopeExit( T&& cb ) {
+	return ScopeExiter<typename remove_reference<T>::type>( forward<T>( cb ) );
 }
 
 namespace tmeta {
