@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 
@@ -29,6 +30,31 @@ inline int imod( int a, int b ) {
 	else {
 		return a % b;
 	}
+}
+
+template<class T, class... Args>
+inline std::unique_ptr<T>&& make_unique( Args&&... args ) {
+	return std::unique_ptr<T>( new T( std::forward( args )... ) );
+}
+
+template<class T, class U>
+inline U&&
+forward2( U&& u, typename std::enable_if< std::is_lvalue_reference<T>::value>::type* = 0 ) {
+	return u;
+}
+
+template<class T, class U>
+inline typename std::remove_reference<U>::type&&
+forward2( U&& u, typename std::enable_if<!std::is_lvalue_reference<T>::value>::type* = 0 ) {
+	return std::move( u );
+}
+
+template<class T, class SrcIter, class DstIter>
+DstIter forward2( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt ) {
+	while( srcIt != srcEnd ) {
+		*dstIt++ = forward2<T>( *srcIt++ );
+	}
+	return dstIt;
 }
 
 template<class T>
