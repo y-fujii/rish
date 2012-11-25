@@ -14,7 +14,7 @@
 	unique_ptr<ast::Stmt> parserResult;
 
 	extern "C" int yyerror( char const* ) {
-		// XXX: memory leaked on yyval.word, yyval.var
+		// XXX: memory leak
 		throw SyntaxError( lexerGetLineNo() );
 	}
 %}
