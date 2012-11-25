@@ -1,6 +1,7 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
+#include <memory>
 #include <iostream>
 #include "ast.hpp"
 #include "misc.hpp"
@@ -10,7 +11,7 @@ void lexerInit( istream* );
 size_t lexerGetLineNo();
 int yylex();
 int yyparse();
-extern ast::Stmt* parserResult;
+extern unique_ptr<ast::Stmt> parserResult;
 
 
 struct SyntaxError: exception {
@@ -19,13 +20,13 @@ struct SyntaxError: exception {
 	size_t line;
 };
 
-inline ast::Stmt* parse( istream& istr ) {
+inline unique_ptr<ast::Stmt> parse( istream& istr ) {
 	parserResult = nullptr;
 	lexerInit( &istr );
 	yyparse();
-	assert( parserResult != nullptr );
+	assert( parserResult );
 
-	return parserResult;
+	return std::move( parserResult );
 }
 
 template<class Iter>
@@ -37,3 +38,20 @@ Iter lex( istream& istr, Iter dstIt ) {
 	}
 	return dstIt;
 }
+
+template<class T>
+struct StupidPtr {
+	// POD
+
+	StupidPtr& operator=( T* p ) {
+		_ptr = p;
+		return *this;
+	}
+
+	operator unique_ptr<T>() {
+		return unique_ptr<T>( _ptr );
+	}
+
+	private:
+		T* _ptr;
+};

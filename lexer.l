@@ -8,8 +8,8 @@
 	#include "misc.hpp"
 	#include "glob.hpp"
 	#include "ast.hpp"
-	#include "tokens.hpp"
 	#include "parser.hpp"
+	#include "tokens.hpp"
 
 	using namespace std;
 
@@ -74,19 +74,20 @@
 
 <C>[^()$" \t\n]+ { INSERT_CARET(); }
 <N,I>[^()$" \t\n]+ {
-	yylval.word = new MetaString( yytext, yytext + yyleng );
-	MetaString::iterator it = yylval.word->begin();
-	assert( it != yylval.word->end() );
+	MetaString* dst = new MetaString( yytext, yytext + yyleng );
+	MetaString::iterator it = dst->begin();
+	assert( it != dst->end() );
 	if( *it == '~' ) {
 		*it |= metaMask;
 	}
-	while( it != yylval.word->end() ) {
+	while( it != dst->end() ) {
 		if( *it == '*' || *it == '?' ) {
 			*it |= metaMask;
 		}
 		++it;
 	}
 
+	yylval.word = dst;
 	BEGIN( C );
 	return TK_WORD;
 }

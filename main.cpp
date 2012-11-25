@@ -52,12 +52,12 @@ int main( int argc, char** argv ) {
 		while( optind < argc ) {
 			try {
 				ifstream ofs( argv[optind] );
-				ast::Stmt* ast = parse( ofs );
+				unique_ptr<ast::Stmt> ast = parse( ofs );
 
 				Evaluator eval;
 				builtins::register_( eval.builtins );
 				auto local = make_shared<Evaluator::Local>();
-				eval.evalStmt( ast, local );
+				eval.evalStmt( ast.get(), local );
 				eval.join();
 			}
 			catch( SyntaxError const& err ) {
@@ -70,12 +70,12 @@ int main( int argc, char** argv ) {
 	}
 	else if( !isatty( 0 ) ) {
 		try {
-			ast::Stmt* ast = parse( cin );
+			unique_ptr<ast::Stmt> ast = parse( cin );
 
 			Evaluator eval;
 			builtins::register_( eval.builtins );
 			auto local = make_shared<Evaluator::Local>();
-			eval.evalStmt( ast, local );
+			eval.evalStmt( ast.get(), local );
 			eval.join();
 		}
 		catch( SyntaxError const& err ) {
@@ -110,9 +110,9 @@ int main( int argc, char** argv ) {
 
 			try {
 				istringstream istr( line );
-				ast::Stmt* ast = parse( istr );
+				unique_ptr<ast::Stmt> ast = parse( istr );
 
-				int retv = eval.evalStmt( ast, local );
+				int retv = eval.evalStmt( ast.get(), local );
 				if( retv != 0 ) {
 					cerr << "The command returned " << retv << "." << endl;
 				}
