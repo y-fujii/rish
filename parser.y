@@ -11,7 +11,7 @@
 	using namespace std;
 	using namespace ast;
 
-	ast::Stmt* parserResult;
+	unique_ptr<ast::Stmt> parserResult;
 
 	extern "C" int yyerror( char const* ) {
 		// XXX: memory leaked on yyval.word, yyval.var
@@ -22,10 +22,10 @@
 %union {
 	MetaString* word;
 	std::string* var;
-	ast::Expr* expr;
-	ast::LeftExpr* lexpr;
-	ast::Stmt* stmt;
-	std::deque<ast::Expr*>* exprs;
+	StupidPtr<ast::Expr> expr;
+	StupidPtr<ast::LeftExpr> lexpr;
+	StupidPtr<ast::Stmt> stmt;
+	std::deque<unique_ptr<ast::Expr>>* exprs;
 }
 
 %type<word> TK_WORD
@@ -62,12 +62,12 @@ stmt_par
 	| stmt_andor
 
 stmt_andor
-	: stmt_andor TK_AND2 stmt_not	{ $$ = new If( $1, $3, new None( 1 ) ); }
-	| stmt_andor TK_OR2 stmt_not	{ $$ = new If( $1, new None( 0 ), $3 ); }
+	: stmt_andor TK_AND2 stmt_not	{ $$ = new If( $1, $3, make_unique<None>( 1 ) ); }
+	| stmt_andor TK_OR2 stmt_not	{ $$ = new If( $1, make_unique<None>( 0 ), $3 ); }
 	| stmt_not
 
 stmt_not
-	: '!' stmt_redir				{ $$ = new If( $2, new None( 1 ), new None( 0 ) ); }
+	: '!' stmt_redir				{ $$ = new If( $2, make_unique<None>( 1 ), make_unique<None>( 0 ) ); }
 	| stmt_redir
 
 stmt_redir
@@ -97,7 +97,7 @@ stmt_prim
 	| TK_FUN expr_concat lexpr_prim '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
 	| TK_FUN expr_concat '!'							{ $$ = new FunDel( $2 ); }
 	| '{' stmt_seq '}'									{ $$ = $2; };
-	| expr_concat expr_list								{ $$ = new Command( new Pair( $1, $2 ) ); }
+	| expr_concat expr_list								{ $$ = new Command( make_unique<Pair>( $1, $2 ) ); }
 
 if_
 	: TK_IF stmt_andor '{' stmt_seq '}' else_			{ $$ = new If( $2, $4, $6 ); }
@@ -109,12 +109,12 @@ else_
 
 lexpr_prim
 	: lexpr_list						{ $$ = new VarFix( move( *$1 ) ); delete $1; }
-	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( move( *$1 ), new Var( *$3 ), move( *$5 ) ); delete $1; delete $3; delete $5; }
+	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( move( *$1 ), make_unique<Var>( *$3 ), move( *$5 ) ); delete $1; delete $3; delete $5; }
 
 lexpr_list
-	: lexpr_list TK_VAR					{ $1->push_back( new Var( *$2 ) ); delete $2; $$ = $1; }
-	| lexpr_list TK_WORD				{ $1->push_back( new Word( *$2 ) ); delete $2; $$ = $1; }
-	|									{ $$ = new deque<Expr*>(); }
+	: lexpr_list TK_VAR					{ $1->push_back( make_unique<Var>( *$2 ) ); delete $2; $$ = $1; }
+	| lexpr_list TK_WORD				{ $1->push_back( make_unique<Word>( *$2 ) ); delete $2; $$ = $1; }
+	|									{ $$ = new deque<unique_ptr<Expr>>(); }
 
 expr_list
 	: expr_concat expr_list				{ $$ = new Pair( $1, $2 ); }
@@ -128,8 +128,8 @@ expr_prim
 	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
-	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( new Var( string( $3->begin(), $3->end() ) ), $4, $5 ); delete $3; }
-	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Index( new Var( string( $3->begin(), $3->end() ) ), $4 ); delete $3; }
+	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( make_unique<Var>( string( $3->begin(), $3->end() ) ), $4, $5 ); delete $3; }
+	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Index( make_unique<Var>( string( $3->begin(), $3->end() ) ), $4 ); delete $3; }
 	/*
 	| TK_FUN lexpr_prim '{' stmt_seq '}'			{ $$ = NULL; }
 	*/

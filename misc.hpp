@@ -35,7 +35,7 @@ inline int imod( int a, int b ) {
 }
 
 template<class T, class... Args>
-inline unique_ptr<T>&& make_unique( Args&&... args ) {
+inline unique_ptr<T> make_unique( Args&&... args ) {
 	return unique_ptr<T>( new T( forward<Args>( args )... ) );
 }
 
@@ -162,8 +162,6 @@ struct VariantImpl<Variant<Tn...>, T>: Variant<Tn...> {
 
 template<class T>
 struct FalseWrapper {
-	FalseWrapper( T const& v ): val( v ) {}
-
 	operator bool() const {
 		return false;
 	}
@@ -172,8 +170,9 @@ struct FalseWrapper {
 };
 
 template<class T>
-FalseWrapper<T> falseWrap( T const& v ) {
-	return FalseWrapper<T>( v );
+FalseWrapper<T> falseWrap( T v ) {
+	static_assert( is_pointer<T>::value, "" );
+	return FalseWrapper<T>{ v };
 }
 
 #define VSWITCH( rhs ) \
