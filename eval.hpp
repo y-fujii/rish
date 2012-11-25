@@ -196,10 +196,10 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
 }
 
 template<class Container>
-bool Evaluator::Local::assign( ast::LeftExpr* lhsb, Container&& rhs ) {
+bool Evaluator::Local::assign( ast::LeftExpr* lhs, Container&& rhs ) {
 	using namespace ast;
 
-	VSWITCH( lhsb ) {
+	VSWITCH( lhs ) {
 		VCASE( VarFix, lhs ) {
 			return assign( lhs, forward<Container>( rhs ) );
 		}

@@ -1,9 +1,10 @@
 /* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
 
 %{
-	#include <iostream>
-	#include <exception>
 	#include <cassert>
+	#include <exception>
+	#include <iostream>
+	#include <memory>
 	#include <string.h>
 	#include "misc.hpp"
 	#include "glob.hpp"
@@ -67,15 +68,15 @@
 
 <C>\$[a-zA-Z0-9_]+ { INSERT_CARET(); }
 <N,I>\$[a-zA-Z0-9_]+ {
-	BEGIN( C );
 	yylval.var = new string( yytext + 1, yyleng - 1 );
+	BEGIN( C );
 	return TK_VAR;
 }
 
 <C>[^()$" \t\n]+ { INSERT_CARET(); }
 <N,I>[^()$" \t\n]+ {
-	MetaString* dst = new MetaString( yytext, yytext + yyleng );
-	MetaString::iterator it = dst->begin();
+	auto dst = make_unique<MetaString>( yytext, yytext + yyleng );
+	auto it = dst->begin();
 	assert( it != dst->end() );
 	if( *it == '~' ) {
 		*it |= metaMask;
@@ -87,13 +88,13 @@
 		++it;
 	}
 
-	yylval.word = dst;
+	yylval.word = dst.release();
 	BEGIN( C );
 	return TK_WORD;
 }
 
 <N,C,I>\"(\\.|[^\\"])*\" {
-	MetaString* dst = new MetaString();
+	auto dst = make_unique<MetaString>();
 	for( int i = 1; i < yyleng - 1; ++i ) {
 		char c;
 		if( yytext[i] == '\\' ) {
@@ -111,7 +112,6 @@
 					case 'v': c = '\v';   break;
 					case 'e': c = '\x1b'; break;
 					default:
-						delete dst;
 						throw SyntaxError( lexerLineNo );
 				}
 			}
@@ -124,8 +124,8 @@
 		}
 		dst->push_back( c );
 	}
-	yylval.word = dst;
 
+	yylval.word = dst.release();
 	BEGIN( N );
 	return TK_WORD;
 }
