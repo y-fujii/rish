@@ -229,7 +229,7 @@ struct Bg: VariantImpl<Stmt, Bg> {
 	Bg( unique_ptr<Stmt>&& b ):
 		body( move( b ) ) {}
 
-	unique_ptr<Stmt> body;
+	shared_ptr<Stmt> body;
 };
 
 struct Sequence: VariantImpl<Stmt, Sequence> {

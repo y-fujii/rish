@@ -435,9 +435,10 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			return lval || rval;
 		}
 		VCASE( Bg, s ) {
-			Stmt* body = s->body.get();
+			shared_ptr<Stmt> body = s->body;
 			thread thr( [=]() -> void {
-				this->evalStmt( body, local, this->stdin, this->stdout );
+				// keep the reference to AST
+				this->evalStmt( body.get(), local, this->stdin, this->stdout );
 			} );
 			thread::id id = thr.get_id();
 			{
