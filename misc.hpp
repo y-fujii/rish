@@ -20,18 +20,13 @@ using namespace std;
 struct IOError: exception {
 };
 
-template<class T, unsigned N>
-unsigned size( T const (&)[N] ) {
+template<class T, size_t N>
+constexpr size_t size( T const (&)[N] ) {
 	return N;
 }
 
-inline int imod( int a, int b ) {
-	if( a * b < 0 ) {
-		return a % b + b;
-	}
-	else {
-		return a % b;
-	}
+constexpr int imod( int a, int b ) {
+	return (a * b < 0) ? (a % b + b) : (a % b);
 }
 
 template<class T, class... Args>
@@ -119,7 +114,7 @@ struct ScopeExiter {
 };
 
 template<class T>
-ScopeExiter<typename remove_reference<T>::type> scopeExit( T&& cb ) {
+inline ScopeExiter<typename remove_reference<T>::type> scopeExit( T&& cb ) {
 	return ScopeExiter<typename remove_reference<T>::type>( forward<T>( cb ) );
 }
 
@@ -170,7 +165,7 @@ struct FalseWrapper {
 };
 
 template<class T>
-FalseWrapper<T> falseWrap( T v ) {
+inline FalseWrapper<T> falseWrap( T v ) {
 	static_assert( is_pointer<T>::value, "" );
 	return FalseWrapper<T>{ v };
 }

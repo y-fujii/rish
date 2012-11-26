@@ -347,7 +347,9 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 
 		return retv;
 	}
-	mutexGlobal.unlock();
+	else {
+		mutexGlobal.unlock();
+	}
 
 	auto bit = builtins.find( args[0] );
 	if( bit != builtins.end() ) {
