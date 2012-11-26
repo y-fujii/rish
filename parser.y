@@ -28,12 +28,12 @@
 	std::deque<unique_ptr<ast::Expr>>* exprs;
 }
 
-%type<word> TK_WORD
-%type<var> TK_VAR
-%type<expr> expr_prim expr_concat expr_list
+%type<word>  TK_WORD
+%type<var>   TK_VAR
+%type<expr>  expr_prim expr_concat expr_list
 %type<lexpr> lexpr_prim
-%type<stmt> stmt_seq stmt_bg stmt_par stmt_andor stmt_not stmt_redir stmt_pipe stmt_prim
-%type<stmt> if_ else_
+%type<stmt>  stmt_seq stmt_bg stmt_par stmt_andor stmt_not stmt_redir stmt_pipe
+%type<stmt>  stmt_prim if_ else_
 %type<exprs> lexpr_list
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
