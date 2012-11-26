@@ -59,15 +59,15 @@ int cmdFork( deque<string> const& args, Evaluator&, int, int ofd ) {
 }
 
 int join( deque<string> const& args, Evaluator& eval, int, int ) {
-	static_assert( sizeof( thread::id ) == sizeof( unsigned ), "" );
+	static_assert( sizeof( thread::id ) == sizeof( uintptr_t ), "" );
 
 	for( auto const& arg: args ) {
 		union U {
 			U() {}
 			thread::id tid;
-			unsigned val;
+			uintptr_t val;
 		} u;
-		u.val = readValue<unsigned>( arg );
+		u.val = readValue<uintptr_t>( arg );
 
 		eval.mutexGlobal.lock();
 		auto it = eval.backgrounds.find( u.tid );
