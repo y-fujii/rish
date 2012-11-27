@@ -52,12 +52,12 @@ struct Evaluator {
 	};
 
 	struct BreakException {
-		BreakException( int r ): retv( r ) {}
+		explicit BreakException( int r ): retv( r ) {}
 		int const retv;
 	};
 
 	struct ReturnException {
-		ReturnException( int r ): retv( r ) {}
+		explicit ReturnException( int r ): retv( r ) {}
 		int const retv;
 	};
 
@@ -382,7 +382,7 @@ DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 	struct Inserter: std::iterator<output_iterator_tag, Inserter> {
 		DstIter dstIt;
 
-		Inserter( DstIter it ): dstIt( it ) {
+		explicit Inserter( DstIter it ): dstIt( it ) {
 		}
 		Inserter& operator*() {
 			return *this;
