@@ -1,4 +1,5 @@
 language:
+	- documentation, documentation, and documentation
 	- assignment support with array slicing
 	- map/dict type?
 	- arithmetic expressions
