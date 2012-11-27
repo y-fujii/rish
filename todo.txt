@@ -1,14 +1,16 @@
 language:
-	x array slicing
+	- assignment support with array slicing
 	- map/dict type?
 	- arithmetic expressions
-	- builtin commands for strings, such as regex operations
+	- built-in commands for strings, such as regex operations
 	- pipe/redirection for non-stdin/stdout
 	- pipe object
 	- multiple pipes support like select(), epoll()
 	- lambda expression with lexical scoped break, continue and return?
 	- function local current directory
 	- zsh like ** expansion
+	- restrict wildcard expansion iff strings are started with "./", "../" or "/" ?
+		- How about started with $VAR ?
 
 UI:
 	- job control
@@ -18,8 +20,22 @@ UI:
 	- quicksilver like command name completion
 
 implementation:
+	- fix completely-broken REPL
 	- decent thread stopping mechanism
 	- error values for rish internal error
 	- eliminate unnecessary threads creation
 	- static variable names resolution and lock-less variable access
 	- efficient MetaString structure to handle GB data in a normal way
+
+not near future ideas:
+	- JSON-like data structure support?
+		- add ability to manipulate structured data like PowerShell without
+		  sacrificing simplicity.
+		- pattern matching expression for JSON-like data structures?
+			- ref: *Duce, XQuery, etc.
+		- pipeline-oriented style does not seem to be very suitable for
+		  recursive data structures. support only JSON-to-sequence and
+		  sequence-to-JSON transformation with pattern matching?
+	- tmux, screen like features?
+	- HTML5 terminal?
+		- ref: TermKit, etc.
