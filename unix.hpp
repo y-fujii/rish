@@ -143,15 +143,16 @@ inline void writeAll( int ofd, string const& src ) {
 	}
 }
 
-template<class Container>
-pid_t forkExec( Container const& args, int ifd, int ofd ) {
-	assert( args.size() >= 1 );
+template<class Iter>
+pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd ) {
+	size_t size = distance( argsB, argsE );
+	assert( size >= 1 );
 
-	vector<char const*> argsRaw( args.size() + 1 );
-	for( size_t i = 0; i < args.size(); ++i ) {
-		argsRaw[i] = args[i].c_str();
+	vector<char const*> argsRaw( size + 1 );
+	for( size_t i = 0; i < size; ++i ) {
+		argsRaw[i] = argsB[i].c_str();
 	}
-	argsRaw[args.size()] = NULL;
+	argsRaw[size] = NULL;
 
 	pid_t pid = vfork();
 	checkSysCall( pid );

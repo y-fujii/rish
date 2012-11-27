@@ -13,7 +13,7 @@
 #include "ast.hpp"
 #include "parser.hpp"
 #include "eval.hpp"
-#include "builtins.hpp"
+//#include "builtins.hpp"
 
 using namespace std;
 
@@ -55,7 +55,7 @@ int main( int argc, char** argv ) {
 				unique_ptr<ast::Stmt> ast = parse( ofs );
 
 				Evaluator eval;
-				builtins::register_( eval.builtins );
+				//builtins::register_( eval.builtins );
 				auto local = make_shared<Evaluator::Local>();
 				eval.evalStmt( ast.get(), local );
 				eval.join();
@@ -73,7 +73,7 @@ int main( int argc, char** argv ) {
 			unique_ptr<ast::Stmt> ast = parse( cin );
 
 			Evaluator eval;
-			builtins::register_( eval.builtins );
+			//builtins::register_( eval.builtins );
 			auto local = make_shared<Evaluator::Local>();
 			eval.evalStmt( ast.get(), local );
 			eval.join();
@@ -96,7 +96,7 @@ int main( int argc, char** argv ) {
 		sigaction( SIGINT, &sa, NULL );
 
 		Evaluator eval;
-		builtins::register_( eval.builtins );
+		//builtins::register_( eval.builtins );
 		auto local = make_shared<Evaluator::Local>();
 		while( true ) {
 			char* line = readline( "| " );

@@ -28,13 +28,17 @@ using namespace std;
 struct Evaluator {
 	Evaluator(): stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
 
-	using Builtin = function<int ( deque<string> const&, Evaluator&, int, int )>;
+	using Builtin = function<int (
+		move_iterator<deque<string>::iterator>,
+		move_iterator<deque<string>::iterator>,
+		Evaluator&, int, int
+	)>;
 
 	struct Local {
 		deque<string>& value( ast::Var* );
-		template<class Container> bool assign( ast::VarFix*, Container&& );
-		template<class Container> bool assign( ast::VarVar*, Container&& );
-		template<class Container> bool assign( ast::LeftExpr*, Container&& );
+		template<class Iter> bool assign( ast::VarFix*, Iter, Iter );
+		template<class Iter> bool assign( ast::VarVar*, Iter, Iter );
+		template<class Iter> bool assign( ast::LeftExpr*, Iter, Iter );
 
 		shared_ptr<Local> outer;
 		map<string, deque<string>> vars;
@@ -60,9 +64,9 @@ struct Evaluator {
 	struct ArgError {
 	};
 
-	int execCommand( deque<string>&&, int, int );
-	template<class DstIter> DstIter evalExpr( ast::Expr*, shared_ptr<Local>, int, DstIter );
-	template<class DstIter> DstIter evalArgs( ast::Expr*, shared_ptr<Local>, int, DstIter );
+	template<class Iter> int callCommand( Iter, Iter, int, int );
+	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, int, Iter );
+	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, int, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
 	int evalStmt( ast::Stmt*, shared_ptr<Local> ); // XXX
 	void join();
@@ -94,19 +98,19 @@ inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
 	return vars[var->name];
 }
 
-template<class Container>
-bool Evaluator::Local::assign( ast::VarFix* lhs, Container&& rhs ) {
+template<class Iter>
+bool Evaluator::Local::assign( ast::VarFix* lhs, Iter rhsB, Iter rhsE ) {
 	using namespace ast;
-	static_assert( !std::is_lvalue_reference<Container>::value, "" );
 
-	if( rhs.size() != lhs->var.size() ) {
+	if( lhs->var.size() != size_t( rhsE - rhsB ) ) {
 		return false;
 	}
 
-	for( size_t i = 0; i < rhs.size(); ++i ) {
+	// test
+	for( size_t i = 0; i < lhs->var.size(); ++i ) {
 		VSWITCH( lhs->var[i].get() ) {
 			VCASE( Word, word ) {
-				if( word->word != MetaString( rhs[i] ) ) {
+				if( word->word != MetaString( rhsB[i] ) ) {
 					return false;
 				}
 			}
@@ -115,12 +119,11 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Container&& rhs ) {
 		}
 	}
 
-	for( size_t i = 0; i < rhs.size(); ++i ) {
+	// assign
+	for( size_t i = 0; i < lhs->var.size(); ++i ) {
 		VSWITCH( lhs->var[i].get() ) {
 			VCASE( Var, var ) {
-				auto& val = value( var );
-				val.clear();
-				val.push_back( move( rhs[i] ) );
+				value( var ) = { rhsB[i] };
 			}
 			VDEFAULT {
 			}
@@ -130,23 +133,23 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Container&& rhs ) {
 	return true;
 }
 
-template<class Container>
-bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
+template<class Iter>
+bool Evaluator::Local::assign( ast::VarVar* lhs, Iter rhsB, Iter rhsE ) {
 	using namespace ast;
-	static_assert( !std::is_lvalue_reference<Container>::value, "" );
 
-	if( rhs.size() < lhs->varL.size() + lhs->varR.size() ) {
+	if( lhs->varL.size() + lhs->varR.size() > size_t( rhsE - rhsB ) ) {
 		return false;
 	}
 
-	size_t const lBgn = 0;
-	size_t const mBgn = lhs->varL.size();
-	size_t const rBgn = rhs.size() - lhs->varR.size();
+	Iter rhsL = rhsB;
+	Iter rhsM = rhsB + lhs->varL.size();
+	Iter rhsR = rhsE - lhs->varR.size();
 
+	// test varL
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VSWITCH( lhs->varL[i].get() ) {
 			VCASE( Word, word ) {
-				if( word->word != MetaString( rhs[i + lBgn] ) ) {
+				if( word->word != MetaString( rhsL[i] ) ) {
 					return false;
 				}
 			}
@@ -154,10 +157,12 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
 			}
 		}
 	}
+
+	// test varR
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VSWITCH( lhs->varR[i].get() ) {
 			VCASE( Word, word ) {
-				if( word->word != MetaString( rhs[i + rBgn] ) ) {
+				if( word->word != MetaString( rhsR[i] ) ) {
 					return false;
 				}
 			}
@@ -166,26 +171,27 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
 		}
 	}
 
+	// assign varL
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		VSWITCH( lhs->varL[i].get() ) {
 			VCASE( Var, var ) {
-				auto& val = value( var );
-				val.clear();
-				val.push_back( move( rhs[i + lBgn] ) );
+				value( var ) = { rhsL[i] };
 			}
 			VDEFAULT {
 			}
 		}
 	}
+
+	// assign varM
 	auto& val = value( lhs->varM.get() );
-	val.clear();
-	move( &rhs[mBgn], &rhs[rBgn], back_inserter( val ) );
+	val.resize( rhsR - rhsM );
+	copy( rhsM, rhsR, val.begin() );
+
+	// assign varR
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		VSWITCH( lhs->varR[i].get() ) {
 			VCASE( Var, var ) {
-				auto& val = value( var );
-				val.clear();
-				val.push_back( move( rhs[i + rBgn] ) );
+				value( var ) = { rhsR[i] };
 			}
 			VDEFAULT {
 			}
@@ -195,16 +201,16 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Container&& rhs ) {
 	return true;
 }
 
-template<class Container>
-bool Evaluator::Local::assign( ast::LeftExpr* lhs, Container&& rhs ) {
+template<class Iter>
+bool Evaluator::Local::assign( ast::LeftExpr* lhs, Iter rhsB, Iter rhsE ) {
 	using namespace ast;
 
 	VSWITCH( lhs ) {
 		VCASE( VarFix, lhs ) {
-			return assign( lhs, forward<Container>( rhs ) );
+			return assign( lhs, rhsB, rhsE );
 		}
 		VCASE( VarVar, lhs ) {
-			return assign( lhs, forward<Container>( rhs ) );
+			return assign( lhs, rhsB, rhsE );
 		}
 		VDEFAULT {
 			assert( false );
@@ -234,9 +240,9 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 			deque<MetaString> rhs;
 			evalExpr( e->lhs.get(), local, ifd, back_inserter( lhs ) );
 			evalExpr( e->rhs.get(), local, ifd, back_inserter( rhs ) );
-			for( auto i = lhs.cbegin(); i != lhs.cend(); ++i ) {
-				for( auto j = rhs.cbegin(); j != rhs.cend(); ++j ) {
-					*dst++ = *i + *j;
+			for( auto const& lv: lhs ) {
+				for( auto const& rv: rhs ) {
+					*dst++ = lv + rv;
 				}
 			}
 		}
@@ -314,18 +320,18 @@ DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 	return dst;
 }
 
-inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
-	assert( args.size() >= 1 );
+template<class Iter>
+int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
+	assert( argsE - argsB >= 1 );
 
 	mutexGlobal.lock();
-	auto fit = closures.find( args[0] );
+	auto fit = closures.find( argsB[0] );
 	if( fit != closures.end() ) {
 		Closure cl = fit->second;
 		mutexGlobal.unlock();
 
-		args.pop_front();
 		auto local = make_shared<Local>();
-		if( !local->assign( cl.args.get(), move( args ) ) ) {
+		if( !local->assign( cl.args.get(), argsB + 1, argsE ) ) {
 			throw ArgError(); // or allow overloaded functions?
 		}
 		local->outer = move( cl.env );
@@ -339,7 +345,11 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 		}
 
 		for( auto it = local->defs.rbegin(); it != local->defs.rend(); ++it ) {
-			execCommand( move( *it ), ifd, ofd );
+			callCommand(
+				make_move_iterator( it->begin() ),
+				make_move_iterator( it->end() ),
+				ifd, ofd
+			);
 		}
 		// loca.defs is not required anymore but local itself may be referenced
 		// by other closures.
@@ -351,18 +361,17 @@ inline int Evaluator::execCommand( deque<string>&& args, int ifd, int ofd ) {
 		mutexGlobal.unlock();
 	}
 
-	auto bit = builtins.find( args[0] );
+	auto bit = builtins.find( argsB[0] );
 	if( bit != builtins.end() ) {
-		args.pop_front();
 		try {
-			return bit->second( args, *this, ifd, ofd );
+			return bit->second( argsB + 1, argsE, *this, ifd, ofd );
 		}
 		catch( std::exception const& ) {
 			return 1;
 		}
 	}
 
-	pid_t pid = forkExec( args, ifd, ofd );
+	pid_t pid = forkExec( argsB, argsE, ifd, ofd );
 	int status;
 	checkSysCall( waitpid( pid, &status, 0 ) );
 	return WEXITSTATUS( status );
@@ -485,7 +494,11 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 				return 0;
 			}
 
-			return execCommand( move( args ), ifd, ofd );
+			return callCommand(
+				make_move_iterator( args.begin() ),
+				make_move_iterator( args.end() ),
+				ifd, ofd
+			);
 		}
 		VCASE( Return, s ) {
 			deque<string> args;
@@ -550,21 +563,29 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			evalArgs( s->rhs.get(), local, ifd, back_inserter( vals ) );
 
 			lock_guard<mutex> lock( mutexGlobal );
-			return local->assign( s->lhs.get(), move( vals ) ) ? 0 : 1;
+			return local->assign(
+				s->lhs.get(),
+				make_move_iterator( vals.begin() ),
+				make_move_iterator( vals.end() )
+			) ? 0 : 1;
 		}
 		VCASE( Fetch, s ) {
 			VSWITCH( s->lhs.get() ) {
 				VCASE( VarFix, lhs ) {
 					UnixIStream ifs( ifd, 1 );
 					deque<string> rhs( lhs->var.size() );
-					for( auto it = rhs.begin(); it != rhs.end(); ++it ) {
-						if( !getline( ifs, *it ) ) {
+					for( auto& v: rhs ) {
+						if( !getline( ifs, v ) ) {
 							return 1;
 						}
 					}
 
 					lock_guard<mutex> lock( mutexGlobal );
-					return local->assign( lhs, move( rhs ) ) ? 0 : 1;
+					return local->assign(
+						lhs,
+						make_move_iterator( rhs.begin() ),
+						make_move_iterator( rhs.end() )
+					) ? 0 : 1;
 				}
 				VCASE( VarVar, lhs ) {
 					deque<string> rhs;
@@ -575,7 +596,11 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 					}
 
 					lock_guard<mutex> lock( mutexGlobal );
-					return local->assign( lhs, move( rhs ) ) ? 0 : 1;
+					return local->assign(
+						lhs,
+						make_move_iterator( rhs.begin() ),
+						make_move_iterator( rhs.end() )
+					) ? 0 : 1;
 				}
 				VDEFAULT {
 					assert( false );
@@ -586,8 +611,8 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			deque<string> vals;
 			evalArgs( s->rhs.get(), local, ifd, back_inserter( vals ) );
 			ostringstream buf;
-			for( auto it = vals.cbegin(); it != vals.cend(); ++it ) {
-				buf << *it << '\n';
+			for( auto const& v: vals ) {
+				buf << v << '\n';
 			}
 			writeAll( ofd, buf.str() );
 			return 0;
