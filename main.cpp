@@ -123,7 +123,7 @@ int main( int argc, char** argv ) {
 			catch( ThreadSupport::Interrupt const& ) {
 				cerr << "\nInterrupted." << endl;
 			}
-			catch( IOError const& ) {
+			catch( system_error const& ) {
 				cerr << "I/O error." << endl;
 			}
 			catch( ios_base::failure const& ) {

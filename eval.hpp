@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -685,7 +686,7 @@ tailRec:
 	catch( ArgError const& ) {
 		return -1;
 	}
-	catch( IOError const& ) {
+	catch( system_error const& ) {
 		return -2;
 	}
 	catch( ios_base::failure const& ) {

@@ -1,9 +1,10 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
+#include <cstdint>
 #include <deque>
 #include <string>
-#include <stdint.h>
+#include <system_error>
 #include <dirent.h>
 #include <sys/param.h>
 #include "misc.hpp"
@@ -67,15 +68,16 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 	char const* r = root.size() == 0 ? "." : root.c_str();
 	DIR* dir = opendir( r );
 	if( dir == NULL ) {
-		throw IOError();
+		throw system_error( errno, system_category() );
 	}
 	auto closer = scopeExit( bind( closedir, dir ) );
 
 	while( true ) {
 		dirent entry;
 		dirent* result;
-		if( readdir_r( dir, &entry, &result ) != 0 ) {
-			throw IOError();
+		int ec = readdir_r( dir, &entry, &result );
+		if( ec != 0 ) {
+			throw system_error( ec, system_category() );
 		}
 		if( result == NULL ) {
 			break;
