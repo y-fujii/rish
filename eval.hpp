@@ -225,15 +225,17 @@ template<class DstIter>
 DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, DstIter dst ) {
 	using namespace ast;
 
-	ThreadSupport::checkIntr();
-
+tailRec:
 	VSWITCH( expr ) {
 		VCASE( Word, e ) {
 			*dst++ = e->word;
 		}
 		VCASE( Pair, e ) {
 			evalExpr( e->lhs.get(), local, ifd, dst );
-			evalExpr( e->rhs.get(), local, ifd, dst );
+
+			// evalExpr( e->rhs.get(), local, ifd, dst );
+			expr = e->rhs.get();
+			goto tailRec;
 		}
 		VCASE( Concat, e ) {
 			deque<MetaString> lhs;
@@ -407,7 +409,6 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 	using namespace ast;
 
 tailRec:
-
 	ThreadSupport::checkIntr();
 
 	try { VSWITCH( stmt ) {

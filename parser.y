@@ -32,8 +32,8 @@
 %type<var>   TK_VAR
 %type<expr>  expr_prim expr_concat expr_list
 %type<lexpr> lexpr_prim
-%type<stmt>  stmt_seq stmt_bg stmt_par stmt_andor stmt_not stmt_redir stmt_pipe
-%type<stmt>  stmt_prim if_ else_
+%type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
+%type<stmt>  stmt_redir stmt_pipe stmt_prim if_ else_
 %type<exprs> lexpr_list
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
@@ -47,11 +47,14 @@
 top
 	: stmt_seq						{ ::parserResult = $1; }
 
+/* use right recursion for tail-call optimized evaluator */
 stmt_seq
-	: stmt_seq ';' stmt_bg			{ $$ = new Sequence( $1, $3 ); }
-	| stmt_seq ';'
+	: stmt_empty ';' stmt_seq		{ $$ = new Sequence( $1, $3 ); }
+	| stmt_empty
+
+stmt_empty
+	:								{ $$ = new None( 0 ); }
 	| stmt_bg
-	| 								{ $$ = new None( 0 ); }
 
 stmt_bg
 	: '&' stmt_par					{ $$ = new Bg( $2 ); }
@@ -61,9 +64,10 @@ stmt_par
 	: stmt_par '&' stmt_andor		{ $$ = new Parallel( $1, $3 ); }
 	| stmt_andor
 
+/* use right recursion for tail-call optimized evaluator */
 stmt_andor
-	: stmt_andor TK_AND2 stmt_not	{ $$ = new If( $1, $3, make_unique<None>( 1 ) ); }
-	| stmt_andor TK_OR2 stmt_not	{ $$ = new If( $1, make_unique<None>( 0 ), $3 ); }
+	: stmt_not TK_AND2 stmt_andor	{ $$ = new If( $1, $3, make_unique<None>( 1 ) ); }
+	| stmt_not TK_OR2  stmt_andor	{ $$ = new If( $1, make_unique<None>( 0 ), $3 ); }
 	| stmt_not
 
 stmt_not
@@ -116,6 +120,7 @@ lexpr_list
 	| lexpr_list TK_WORD				{ $1->push_back( make_unique<Word>( *$2 ) ); delete $2; $$ = $1; }
 	|									{ $$ = new deque<unique_ptr<Expr>>(); }
 
+/* use right recursion for tail-call optimized evaluator */
 expr_list
 	: expr_concat expr_list				{ $$ = new Pair( $1, $2 ); }
 	| 									{ $$ = new Null(); }
@@ -130,6 +135,3 @@ expr_prim
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
 	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( make_unique<Var>( string( $3->begin(), $3->end() ) ), $4, $5 ); delete $3; }
 	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Index( make_unique<Var>( string( $3->begin(), $3->end() ) ), $4 ); delete $3; }
-	/*
-	| TK_FUN lexpr_prim '{' stmt_seq '}'			{ $$ = NULL; }
-	*/
