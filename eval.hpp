@@ -429,6 +429,9 @@ tailRec:
 				try {
 					lval = evalStmt( s->lhs.get(), local, ifd, ofd );
 				}
+				catch( BreakException const& e ) {
+					lval = e.retv;
+				}
 				catch( ReturnException const& e ) {
 					lret = true;
 					lval = e.retv;
@@ -437,6 +440,9 @@ tailRec:
 			auto evalRhs = [&]() -> void {
 				try {
 					rval = evalStmt( s->rhs.get(), local, ifd, ofd );
+				}
+				catch( BreakException const& e ) {
+					rval = e.retv;
 				}
 				catch( ReturnException const& e ) {
 					lret = true;
@@ -550,13 +556,13 @@ tailRec:
 			}
 		}
 		VCASE( While, s ) {
-			try {
-				while( evalStmt( s->cond.get(), local, ifd, ofd ) == 0 ) {
+			while( evalStmt( s->cond.get(), local, ifd, ofd ) == 0 ) {
+				try {
 					evalStmt( s->body.get(), local, ifd, ofd );
 				}
-			}
-			catch( BreakException const& e ) {
-				return e.retv;
+				catch( BreakException const& e ) {
+					return e.retv;
+				}
 			}
 
 			// return evalStmt( s->elze.get(), local, ifd, ofd );
@@ -644,6 +650,9 @@ tailRec:
 					auto closer = scopeExit( bind( close, fds[1] ) );
 					lval = evalStmt( s->lhs.get(), local, ifd, fds[1] );
 				}
+				catch( BreakException const& e ) {
+					lval = e.retv;
+				}
 				catch( ReturnException const& e ) {
 					lret = true;
 					lval = e.retv;
@@ -653,6 +662,9 @@ tailRec:
 				try {
 					auto closer = scopeExit( bind( close, fds[0] ) );
 					rval = evalStmt( s->rhs.get(), local, fds[0], ofd );
+				}
+				catch( BreakException const& e ) {
+					rval = e.retv;
 				}
 				catch( ReturnException const& e ) {
 					rret = true;
