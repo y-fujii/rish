@@ -25,7 +25,7 @@ struct ThreadSupport {
 		sa.sa_flags = 0;
 		sa.sa_handler = _sigHandler;
 		if( sigaction( SIGUSR1, &sa, NULL ) < 0 ) {
-			throw IOError();
+			throw system_error( errno, system_category() );
 		}
 	}
 
@@ -36,11 +36,10 @@ struct ThreadSupport {
 		}
 	}
 
-	// This function behaves like Java's Thread.interrupt() rather than
-	// boost::thread::interrupt()
 	static void interrupt( thread& t ) {
-		if( pthread_kill( t.native_handle(), SIGUSR1 ) != 0 ) {
-			throw IOError();
+		int ec = pthread_kill( t.native_handle(), SIGUSR1 );
+		if( ec != 0 ) {
+			throw system_error( ec, system_category() );
 		}
 	}
 
@@ -66,7 +65,7 @@ inline int checkSysCall( int retv ) {
 			throw ThreadSupport::Interrupt();
 		}
 		else {
-			throw IOError();
+			throw system_error( errno, system_category() );
 		}
 	}
 	return retv;

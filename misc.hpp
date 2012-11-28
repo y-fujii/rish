@@ -17,9 +17,6 @@
 using namespace std;
 
 
-struct IOError: exception {
-};
-
 template<class T, size_t N>
 constexpr size_t size( T const (&)[N] ) {
 	return N;
@@ -34,29 +31,6 @@ inline unique_ptr<T> make_unique( Args&&... args ) {
 	return unique_ptr<T>( new T( forward<Args>( args )... ) );
 }
 
-template<class T, class U>
-inline typename conditional<
-	is_lvalue_reference<T>::value,
-	U&&,
-	typename remove_reference<U>::type&&
->::type
-forward2( U&& u ) {
-	using Result = typename conditional<
-		is_lvalue_reference<T>::value,
-		U&&,
-		typename remove_reference<U>::type&&
-	>::type;
-	return static_cast<Result>( u );
-}
-
-template<class T, class SrcIter, class DstIter>
-DstIter forward2( SrcIter srcIt, SrcIter srcEnd, DstIter dstIt ) {
-	while( srcIt != srcEnd ) {
-		*dstIt++ = forward2<T>( *srcIt++ );
-	}
-	return dstIt;
-}
-
 template<class T>
 T readValue( string const& str ) {
 	istringstream ifs( str );
@@ -66,12 +40,6 @@ T readValue( string const& str ) {
 	ifs >> val;
 	return val;
 }
-
-struct ThreadComparator {
-	bool operator()( thread const& x, thread const& y ) const {
-		return x.get_id() < y.get_id();
-	}
-};
 
 template<class Func0, class Func1>
 void parallel( Func0 const& f0, Func1 const& f1 ) {
