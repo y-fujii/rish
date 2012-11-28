@@ -406,12 +406,17 @@ DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int ifd, int ofd ) {
 	using namespace ast;
 
+tailRec:
+
 	ThreadSupport::checkIntr();
 
 	try { VSWITCH( stmt ) {
 		VCASE( Sequence, s ) {
 			evalStmt( s->lhs.get(), local, ifd, ofd );
-			return evalStmt( s->rhs.get(), local, ifd, ofd );
+
+			// return evalStmt( s->rhs.get(), local, ifd, ofd );
+			stmt = s->rhs.get();
+			goto tailRec;
 		}
 		VCASE( Parallel, s ) {
 			bool lret = false;
@@ -532,10 +537,14 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 		}
 		VCASE( If, s ) {
 			if( evalStmt( s->cond.get(), local, ifd, ofd ) == 0 ) {
-				return evalStmt( s->then.get(), local, ifd, ofd );
+				// return evalStmt( s->then.get(), local, ifd, ofd );
+				stmt = s->then.get();
+				goto tailRec;
 			}
 			else {
-				return evalStmt( s->elze.get(), local, ifd, ofd );
+				// return evalStmt( s->elze.get(), local, ifd, ofd );
+				stmt = s->elze.get();
+				goto tailRec;
 			}
 		}
 		VCASE( While, s ) {
@@ -547,7 +556,10 @@ inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local, int if
 			catch( BreakException const& e ) {
 				return e.retv;
 			}
-			return evalStmt( s->elze.get(), local, ifd, ofd );
+
+			// return evalStmt( s->elze.get(), local, ifd, ofd );
+			stmt = s->elze.get();
+			goto tailRec;
 		}
 		VCASE( Break, s ) {
 			deque<string> args;
