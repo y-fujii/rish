@@ -1,6 +1,11 @@
 language:
 	- documentation, documentation, and documentation
 	- assignment support with array slicing
+	- APL-like (inner|outer)product operators?
+		$lhs % $rhs
+		$lhs ^ $rhs
+		$lhs %command $rhs
+		$lhs ^command $rhs
 	- map/dict type?
 	- arithmetic expressions
 	- built-in commands for strings, such as regex operations
