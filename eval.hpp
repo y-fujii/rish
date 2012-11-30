@@ -291,6 +291,9 @@ tailRec:
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
+			if( val.size() == 0 ) {
+				throw ArgError();
+			}
 			bgn = imod( bgn, val.size() );
 			end = imod( end, val.size() );
 			if( bgn < end ) {
@@ -311,6 +314,9 @@ tailRec:
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
+			if( val.size() == 0 ) {
+				throw ArgError();
+			}
 			idx = imod( idx, val.size() );
 			*dst++ = val[idx];
 		}

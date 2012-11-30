@@ -127,12 +127,28 @@ fun runBg {
 	yield "finished join"
 }
 
+fun slice {
+	let ($arr) = (range 8)
+	echo $arr(0)
+	echo $arr(0 2)
+	echo $arr(0 -1)
+	echo $arr(-1 0)
+
+	let ($err) =
+	! echo $err(0) &&
+	! echo $err(0 2) &&
+	! echo $err(0 -1) &&
+	! echo $err(-2 -1) &&
+	echo "slice OK"
+}
+
 fun runTest {
 	let $var = S
 	echo P(yield a b c)(range 4)$var
 	factorialRec 16
 	factorialLoop 16
 	ackermann 3 2
+	slice
 	testDefer
 	at 4 (range 16)
 	redirect
