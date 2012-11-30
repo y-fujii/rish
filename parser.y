@@ -29,7 +29,7 @@
 }
 
 %type<word>  TK_WORD
-%type<var>   TK_VAR
+%type<var>   TK_VAR TK_ARRAY
 %type<expr>  expr_prim expr_concat expr_list
 %type<lexpr> lexpr_prim
 %type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
@@ -38,7 +38,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH TK_YIELD
-%token TK_DEFER TK_FOR
+%token TK_DEFER TK_FOR TK_ARRAY
 
 %start top
 
@@ -133,5 +133,5 @@ expr_prim
 	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
-	| '$' '(' TK_WORD expr_concat expr_concat ')'	{ $$ = new Slice( make_unique<Var>( string( $3->begin(), $3->end() ) ), $4, $5 ); delete $3; }
-	| '$' '(' TK_WORD expr_concat ')'				{ $$ = new Index( make_unique<Var>( string( $3->begin(), $3->end() ) ), $4 ); delete $3; }
+	| TK_ARRAY expr_concat expr_concat ')'	{ $$ = new Slice( make_unique<Var>( *$1 ), $2, $3 ); delete $1; }
+	| TK_ARRAY expr_concat ')'				{ $$ = new Index( make_unique<Var>( *$1 ), $2 ); delete $1; }

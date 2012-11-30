@@ -26,6 +26,7 @@ implementation:
 	- error values for rish internal error
 	- eliminate unnecessary threads creation
 	- static variable names resolution and lock-less variable access
+		- the current implementation of lexical scoping is broken
 	- efficient MetaString structure to handle GB data in a normal way
 
 not near future ideas:

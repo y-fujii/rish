@@ -44,7 +44,7 @@
 <N,C,I>"&"				{ BEGIN( I ); return '&'; }
 <N,C,I>"!"				{ BEGIN( I ); return '!'; }
 <N,C,I>"|"				{ BEGIN( I ); return '|'; }
-<N,C,I>"="				{ BEGIN( I ); return '='; }
+<N,C,I>"="				{ BEGIN( N ); return '='; }
 <N,C,I>"^"				{ BEGIN( I ); return '^'; }
 <N,C,I>"$"				{ BEGIN( I ); return '$'; }
 
@@ -71,6 +71,13 @@
 	yylval.var = new string( yytext + 1, yyleng - 1 );
 	BEGIN( C );
 	return TK_VAR;
+}
+
+<C>\$[a-zA-Z0-9_]+\( { INSERT_CARET(); }
+<N,I>\$[a-zA-Z0-9_]+\( {
+	yylval.var = new string( yytext + 1, yyleng - 2 );
+	BEGIN( I );
+	return TK_ARRAY;
 }
 
 <C>[^()$" \t\n]+ { INSERT_CARET(); }
