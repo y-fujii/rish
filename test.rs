@@ -148,7 +148,7 @@ fun runTest {
 	factorialRec 16
 	factorialLoop 16
 	ackermann 3 2
-	slice
+	slice # comment
 	testDefer
 	at 4 (range 16)
 	redirect
@@ -156,7 +156,15 @@ fun runTest {
 	echo (yield 0 3 2 6 -10 12312 23 2 98 8 | qsort1)
 	returnInPipe
 	nested
-	runBg
+	runBg # comment
+	#comment
+
+	if true { # comment
+		true
+	} # comment
+	else {
+		#comment #comment
+	}
 }
 
 runTest
