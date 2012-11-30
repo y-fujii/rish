@@ -141,6 +141,8 @@
 <N,C>[ \t]+		{ BEGIN( N ); }
 <I>"\n"			{ ++lexerLineNo; }
 <N,C>"\n"		{ BEGIN( N ); ++lexerLineNo; return ';'; }
+<I>#[^\n]*		{}
+<N,C>#[^\n]*	{ BEGIN( N ); }
 
 %%
 
