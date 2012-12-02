@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iomanip>
 #include <unistd.h>
+#include <string.h>
 #include <sys/select.h>
 #include "misc.hpp"
 #include "glob.hpp"

@@ -278,48 +278,6 @@ tailRec:
 			};
 			parallel( writer, reader );
 		}
-		VCASE( Slice, e ) {
-			deque<MetaString> sBgn;
-			deque<MetaString> sEnd;
-			evalExpr( e->bgn.get(), local, ifd, back_inserter( sBgn ) );
-			evalExpr( e->end.get(), local, ifd, back_inserter( sEnd ) );
-			if( sBgn.size() != 1 || sEnd.size() != 1 ) {
-				throw ArgError();
-			}
-			int bgn = readValue<int>( string( sBgn.back().begin(), sBgn.back().end() ) );
-			int end = readValue<int>( string( sEnd.back().begin(), sEnd.back().end() ) );
-
-			lock_guard<mutex> lock( mutexGlobal );
-			auto& val = local->value( e->var.get() );
-			if( val.size() == 0 ) {
-				throw ArgError();
-			}
-			bgn = imod( bgn, val.size() );
-			end = imod( end, val.size() );
-			if( bgn < end ) {
-				dst = copy( val.begin() + bgn, val.begin() + end, dst );
-			}
-			else {
-				dst = copy( val.begin() + bgn, val.end(), dst );
-				dst = copy( val.begin(), val.begin() + end, dst );
-			}
-		}
-		VCASE( Index, e ) {
-			deque<MetaString> sIdx;
-			evalExpr( e->idx.get(), local, ifd, back_inserter( sIdx ) );
-			if( sIdx.size() != 1 ) {
-				throw ArgError();
-			}
-			int idx = readValue<int>( string( sIdx.back().begin(), sIdx.back().end() ) );
-
-			lock_guard<mutex> lock( mutexGlobal );
-			auto& val = local->value( e->var.get() );
-			if( val.size() == 0 ) {
-				throw ArgError();
-			}
-			idx = imod( idx, val.size() );
-			*dst++ = val[idx];
-		}
 		VCASE( Null, _ ) {
 		}
 		VDEFAULT {
