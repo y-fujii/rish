@@ -1,6 +1,17 @@
 language:
 	- documentation, documentation, and documentation
-	- assignment support with array slicing
+	x assignment support with array slicing
+		- built-in array slicing operations have been abandoned. just one
+		  syntactic sugar is added instead:
+
+			$var(command) -> (yield $var | command)
+
+		  example usage:
+		  	$var(index 3)
+		  	$var(slice 3 10)
+			$var(hash.get key)
+			$var(sort | index 0)
+		  
 	- APL-like (inner|outer)product operators?
 		$lhs % $rhs
 		$lhs ^ $rhs
@@ -8,6 +19,9 @@ language:
 		$lhs ^command $rhs
 	- map/dict type?
 	- arithmetic expressions
+		@int( $x + 1 == 2 ) => (% "int.==" (% "int.+" $x 1) 2)
+		int:( $x + 1 == 2 )
+
 	- built-in commands for strings, such as regex operations
 	- pipe/redirection for non-stdin/stdout
 	- pipe object

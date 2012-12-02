@@ -133,5 +133,13 @@ expr_prim
 	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
 	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
-	| TK_ARRAY expr_concat expr_concat ')'	{ $$ = new Slice( make_unique<Var>( *$1 ), $2, $3 ); delete $1; }
-	| TK_ARRAY expr_concat ')'				{ $$ = new Index( make_unique<Var>( *$1 ), $2 ); delete $1; }
+	| TK_ARRAY stmt_seq ')' {
+		$$ = new Subst(
+			make_unique<Pipe>(
+				make_unique<Yield>(
+					make_unique<Var>( *$1 )
+				),
+				$2
+			)
+		);
+	}
