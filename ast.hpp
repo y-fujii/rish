@@ -14,8 +14,6 @@ struct Subst;
 struct Var;
 struct Pair;
 struct Concat;
-struct Slice;
-struct Index;
 struct Null;
 using Expr = Variant<
 	Word,
@@ -23,8 +21,6 @@ using Expr = Variant<
 	Var,
 	Pair,
 	Concat,
-	Slice,
-	Index,
 	Null
 >;
 
@@ -109,23 +105,6 @@ struct Concat: VariantImpl<Expr, Concat> {
 
 	unique_ptr<Expr> lhs;
 	unique_ptr<Expr> rhs;
-};
-
-struct Slice: VariantImpl<Expr, Slice> {
-	Slice( unique_ptr<Var>&& v, unique_ptr<Expr>&& b, unique_ptr<Expr>&& e ):
-		var( move( v ) ), bgn( move( b ) ), end( move( e ) ) {}
-
-	unique_ptr<Var> var;
-	unique_ptr<Expr> bgn;
-	unique_ptr<Expr> end;
-};
-
-struct Index: VariantImpl<Expr, Index> {
-	Index( unique_ptr<Var>&& v, unique_ptr<Expr>&& i ):
-		var( move( v ) ), idx( move( i ) ) {}
-
-	unique_ptr<Var> var;
-	unique_ptr<Expr> idx;
 };
 
 struct Null: VariantImpl<Expr, Null> {
