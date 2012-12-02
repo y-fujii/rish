@@ -1,18 +1,9 @@
-
-fun range $n {
-	let $i = 0
-	while test $i -lt $n {
-		yield $i
-		let $i = (expr $i + 1)
-	}
-}
-
-fun enumerate {
-	let $i = 0 
+fun size {
+	let $n = 0
 	while fetch $e {
-		yield $i $e
-		let $i = (expr $i + 1)
+		let $n = (expr $n + 1)
 	}
+	yield $n
 }
 
 fun index $n {
@@ -29,6 +20,22 @@ fun slice $bgn $end {
 		if test $bgn -le $i && test $i -lt $end {
 			yield $e
 		}
+	}
+}
+
+fun range $n {
+	let $i = 0
+	while test $i -lt $n {
+		yield $i
+		let $i = (expr $i + 1)
+	}
+}
+
+fun enumerate {
+	let $i = 0 
+	while fetch $e {
+		yield $i $e
+		let $i = (expr $i + 1)
 	}
 }
 
@@ -72,17 +79,17 @@ fun ackermann $m $n {
 
 fun qsort0 ($xs) {
 	if let $pv ($xs) = $xs {
-		qsort0 (yield $xs | while fetch $x {
+		qsort0 $xs( while fetch $x {
 			if test $x -le $pv {
 				yield $x
 			}
-		})
+		} )
 		yield $pv
-		qsort0 (yield $xs | while fetch $x {
+		qsort0 $xs( yield $xs | while fetch $x {
 			if test $x -gt $pv {
 				yield $x
 			}
-		})
+		} )
 	}
 }
 
@@ -135,7 +142,6 @@ fun runBg {
 	yield "finished join"
 }
 
-/*
 fun testSlice {
 	let ($arr) = (range 8)
 	echo $arr(0)
@@ -150,17 +156,8 @@ fun testSlice {
 	! echo $err(-2 -1) &&
 	echo "slice OK"
 }
-*/
 
 fun emulPrevNext {
-	fun @ ($args) {
-		let $n = 0
-		yield $args | while fetch $e {
-			let $n = (expr $n + 1)
-		}
-		yield $n
-	}
-
 	let $cwDir = "/0"
 
 	fun pwd {
@@ -183,7 +180,7 @@ fun emulPrevNext {
 	}
 
 	fun nd {
-		if expr $dirPos + 1 < (@ $dirStack) |> /dev/null {
+		if expr $dirPos + 1 < $dirStack(size) |> /dev/null {
 			let $dirPos = (expr $dirPos + 1)
 			std.cd $dirStack(index $dirPos)
 		}
@@ -219,7 +216,7 @@ fun runTest {
 	factorialLoop 16
 	ackermann 3 2
 	echo 29
-	testSlice
+	# testSlice
 	testDefer
 	range 16 | index 4
 	range 16 | slice 4 6
