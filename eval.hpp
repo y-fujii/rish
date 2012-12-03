@@ -66,8 +66,8 @@ struct Evaluator {
 	};
 
 	template<class Iter> int callCommand( Iter, Iter, int, int );
-	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, int, Iter );
-	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, int, Iter );
+	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
+	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
 	int evalStmt( ast::Stmt*, shared_ptr<Local> ); // XXX
 	void join();
@@ -223,7 +223,7 @@ bool Evaluator::Local::assign( ast::LeftExpr* lhs, Iter rhsB, Iter rhsE ) {
 }
 
 template<class DstIter>
-DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, int ifd, DstIter dst ) {
+DstIter Evaluator::evalExpr( ast::Expr* expr, shared_ptr<Local> local, DstIter dst ) {
 	using namespace ast;
 
 tailRec:
@@ -232,17 +232,17 @@ tailRec:
 			*dst++ = e->word;
 		}
 		VCASE( Pair, e ) {
-			evalExpr( e->lhs.get(), local, ifd, dst );
+			evalExpr( e->lhs.get(), local, dst );
 
-			// evalExpr( e->rhs.get(), local, ifd, dst );
+			// evalExpr( e->rhs.get(), local, dst );
 			expr = e->rhs.get();
 			goto tailRec;
 		}
 		VCASE( Concat, e ) {
 			deque<MetaString> lhs;
 			deque<MetaString> rhs;
-			evalExpr( e->lhs.get(), local, ifd, back_inserter( lhs ) );
-			evalExpr( e->rhs.get(), local, ifd, back_inserter( rhs ) );
+			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
+			evalExpr( e->rhs.get(), local, back_inserter( rhs ) );
 			for( auto const& lv: lhs ) {
 				for( auto const& rv: rhs ) {
 					*dst++ = lv + rv;
@@ -268,7 +268,10 @@ tailRec:
 			};
 			auto writer = [&]() -> void {
 				try {
-					auto closer = scopeExit( bind( close, fds[1] ) );
+					auto ocloser = scopeExit( bind( close, fds[1] ) );
+					int ifd = checkSysCall( open( "/dev/null", O_RDONLY ) );
+					auto icloser = scopeExit( bind( close, ifd ) );
+
 					evalStmt( e->body.get(), local, ifd, fds[1] );
 				}
 				catch( BreakException const& ) {
@@ -345,7 +348,7 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
 }
 
 template<class DstIter>
-DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, int ifd, DstIter dstIt ) {
+DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, DstIter dstIt ) {
 	struct Inserter: std::iterator<output_iterator_tag, Inserter> {
 		DstIter dstIt;
 
@@ -366,7 +369,7 @@ DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, int ifd, 
 		}
 	};
 	Inserter inserter( dstIt );
-	evalExpr( expr, local, ifd, inserter );
+	evalExpr( expr, local, inserter );
 	return inserter.dstIt;
 }
 
@@ -442,7 +445,7 @@ tailRec:
 		}
 		VCASE( RedirFr, s ) {
 			deque<string> args;
-			evalArgs( s->file.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->file.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
@@ -454,7 +457,7 @@ tailRec:
 		}
 		VCASE( RedirTo, s ) {
 			deque<string> args;
-			evalArgs( s->file.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->file.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
@@ -466,7 +469,7 @@ tailRec:
 		}
 		VCASE( Command, s ) {
 			deque<string> args;
-			evalArgs( s->args.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->args.get(), local, back_inserter( args ) );
 			if( args.size() == 0 ) {
 				return 0;
 			}
@@ -479,7 +482,7 @@ tailRec:
 		}
 		VCASE( Return, s ) {
 			deque<string> args;
-			evalArgs( s->retv.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
@@ -488,7 +491,7 @@ tailRec:
 		}
 		VCASE( Fun, s ) {
 			deque<string> args;
-			evalArgs( s->name.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->name.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
@@ -499,7 +502,7 @@ tailRec:
 		}
 		VCASE( FunDel, s ) {
 			deque<string> args;
-			evalArgs( s->name.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->name.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
@@ -535,7 +538,7 @@ tailRec:
 		}
 		VCASE( Break, s ) {
 			deque<string> args;
-			evalArgs( s->retv.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
@@ -544,7 +547,7 @@ tailRec:
 		}
 		VCASE( Let, s ) {
 			deque<string> vals;
-			evalArgs( s->rhs.get(), local, ifd, back_inserter( vals ) );
+			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 
 			lock_guard<mutex> lock( mutexGlobal );
 			return local->assign(
@@ -593,7 +596,7 @@ tailRec:
 		}
 		VCASE( Yield, s ) {
 			deque<string> vals;
-			evalArgs( s->rhs.get(), local, ifd, back_inserter( vals ) );
+			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 			ostringstream buf;
 			for( auto const& v: vals ) {
 				buf << v << '\n';
@@ -646,7 +649,7 @@ tailRec:
 		}
 		VCASE( Defer, s ) {
 			deque<string> args;
-			evalArgs( s->args.get(), local, ifd, back_inserter( args ) );
+			evalArgs( s->args.get(), local, back_inserter( args ) );
 
 			lock_guard<mutex> lock( mutexGlobal );
 			local->defs.push_back( move( args ) );
