@@ -42,10 +42,27 @@ T readValue( string const& str ) {
 }
 
 template<class Func0, class Func1>
-void parallel( Func0 const& f0, Func1 const& f1 ) {
-	auto slave = async( launch::async, f0 );
-	f1();
-	slave.get();
+tuple<exception_ptr, exception_ptr> parallel( Func0 const& f0, Func1 const& f1 ) {
+	exception_ptr e0, e1;
+
+	thread thr( [&]() -> void {
+		try {
+			f0();
+		}
+		catch( ... ) {
+			e0 = current_exception();
+		}
+	} );
+
+	try {
+		f1();
+	}
+	catch( ... ) {
+		e1 = current_exception();
+	}
+
+	thr.join();
+	return make_tuple( move( e0 ), move( e1 ) );
 }
 
 template<class Func>
