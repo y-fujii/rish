@@ -29,11 +29,8 @@ using namespace std;
 struct Evaluator {
 	Evaluator(): stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
 
-	using Builtin = function<int (
-		move_iterator<deque<string>::iterator>,
-		move_iterator<deque<string>::iterator>,
-		Evaluator&, int, int
-	)>;
+	using ArgIter = move_iterator<deque<string>::iterator>;
+	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, int, int )>;
 
 	struct Local {
 		deque<string>& value( ast::Var* );
@@ -109,25 +106,16 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Iter rhsB, Iter rhsE ) {
 
 	// test
 	for( size_t i = 0; i < lhs->var.size(); ++i ) {
-		VSWITCH( lhs->var[i].get() ) {
-			VCASE( Word, word ) {
-				if( word->word != MetaString( rhsB[i] ) ) {
-					return false;
-				}
-			}
-			VDEFAULT {
-			}
+		auto word = match<Word>( lhs->var[i].get() );
+		if( word && word->word != MetaString( rhsB[i] ) ) {
+			return false;
 		}
 	}
 
 	// assign
 	for( size_t i = 0; i < lhs->var.size(); ++i ) {
-		VSWITCH( lhs->var[i].get() ) {
-			VCASE( Var, var ) {
-				value( var ) = { rhsB[i] };
-			}
-			VDEFAULT {
-			}
+		if( auto var = match<Var>( lhs->var[i].get() ) ) {
+			value( var ) = { rhsB[i] };
 		}
 	}
 
@@ -148,38 +136,24 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Iter rhsB, Iter rhsE ) {
 
 	// test varL
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		VSWITCH( lhs->varL[i].get() ) {
-			VCASE( Word, word ) {
-				if( word->word != MetaString( rhsL[i] ) ) {
-					return false;
-				}
-			}
-			VDEFAULT {
-			}
+		auto word = match<Word>( lhs->varL[i].get() );
+		if( word && word->word != MetaString( rhsL[i] ) ) {
+			return false;
 		}
 	}
 
 	// test varR
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		VSWITCH( lhs->varR[i].get() ) {
-			VCASE( Word, word ) {
-				if( word->word != MetaString( rhsR[i] ) ) {
-					return false;
-				}
-			}
-			VDEFAULT {
-			}
+		auto word = match<Word>( lhs->varR[i].get() );
+		if( word && word->word != MetaString( rhsR[i] ) ) {
+			return false;
 		}
 	}
 
 	// assign varL
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
-		VSWITCH( lhs->varL[i].get() ) {
-			VCASE( Var, var ) {
-				value( var ) = { rhsL[i] };
-			}
-			VDEFAULT {
-			}
+		if( auto var = match<Var>( lhs->varL[i].get() ) ) {
+			value( var ) = { rhsL[i] };
 		}
 	}
 
@@ -190,12 +164,8 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Iter rhsB, Iter rhsE ) {
 
 	// assign varR
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
-		VSWITCH( lhs->varR[i].get() ) {
-			VCASE( Var, var ) {
-				value( var ) = { rhsR[i] };
-			}
-			VDEFAULT {
-			}
+		if( auto var = match<Var>( lhs->varR[i].get() ) ) {
+			value( var ) = { rhsR[i] };
 		}
 	}
 

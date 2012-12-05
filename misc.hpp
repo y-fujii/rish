@@ -140,6 +140,16 @@ struct VariantImpl<Variant<Tn...>, T>: Variant<Tn...> {
 	VariantImpl(): Variant<Tn...>( sTag ) {}
 };
 
+template<class T, class... Tn>
+T* match( Variant<Tn...>* v ) {
+	if( v->dTag == T::sTag ) {
+		return static_cast<T*>( v );
+	}
+	else {
+		return nullptr;
+	}
+}
+
 template<class T>
 struct FalseWrapper {
 	operator bool() const {
