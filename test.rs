@@ -39,6 +39,16 @@ fun enumerate {
 	}
 }
 
+fun testLet {
+	yield "test let"
+	let name = name || yield NG
+	let name = Name && yield NG
+	let $var = name || yield NG
+	let $var $var = name && yield NG
+	let ($var) = name name || yield NG
+	let $var name = $var || yield NG
+}
+
 fun testDefer {
 	defer echo
 	range 8 | while fetch $i {
@@ -210,13 +220,15 @@ fun emulPrevNext {
 }
 
 fun runTest {
+	echo "args: " $args
 	let $var = S
 	echo P(yield a b c)(range 4)$var
+	testLet
 	factorialRec 16
 	factorialLoop 16
 	ackermann 3 2
 	echo 29
-	# testSlice
+	// testSlice
 	testDefer
 	range 16 | index 4
 	range 16 | slice 4 6
@@ -225,15 +237,15 @@ fun runTest {
 	echo (yield 0 3 2 6 -10 12312 23 2 98 8 | qsort1)
 	returnInPipe
 	nested
-	runBg # comment
+	runBg // comment
 	emulPrevNext
-	#comment
+	//comment
 
-	if true { # comment
+	if true { // comment
 		true
-	} # comment
+	} // comment
 	else {
-		#comment #comment
+		//comment //comment
 	}
 }
 
