@@ -1,13 +1,15 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <deque>
 #include <cassert>
-#include <sstream>
 #include <iomanip>
-#include <unistd.h>
+#include <map>
+#include <sstream>
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
 #include <string.h>
-#include <sys/select.h>
+#include <unistd.h>
 #include "misc.hpp"
 #include "glob.hpp"
 
@@ -38,8 +40,7 @@ struct ThreadSupport {
 	}
 
 	static void interrupt( thread& t ) {
-		int ec = pthread_kill( t.native_handle(), SIGUSR1 );
-		if( ec != 0 ) {
+		if( int ec = pthread_kill( t.native_handle(), SIGUSR1 ) ) {
 			throw system_error( ec, system_category() );
 		}
 	}
@@ -61,18 +62,18 @@ struct ThreadSupport {
 
 inline int checkSysCall( int retv ) {
 	if( retv < 0 ) {
-		if( errno == EINTR && ThreadSupport::_interrupted() ) {
+		if( errno != EINTR ) {
+			throw system_error( errno, system_category() );
+		}
+		if( ThreadSupport::_interrupted() ) {
 			ThreadSupport::_interrupted() = false;
 			throw ThreadSupport::Interrupt();
-		}
-		else {
-			throw system_error( errno, system_category() );
 		}
 	}
 	return retv;
 }
 
-struct UnixStreamBuf: std::streambuf {
+struct UnixStreamBuf: streambuf {
 	UnixStreamBuf( int fd, size_t bs ):
 		_fd( fd ), _buf( bs ) {
 	}
@@ -92,12 +93,12 @@ struct UnixStreamBuf: std::streambuf {
 
 	private:
 		int const _fd;
-		std::vector<char> _buf;
+		vector<char> _buf;
 };
 
-struct UnixIStream: std::istream {
-	explicit UnixIStream( int fd, size_t bs = 4096 ):
-		std::istream( new UnixStreamBuf( fd, bs ) ) {
+struct UnixIStream: istream {
+	explicit UnixIStream( int fd, size_t bs = PIPE_BUF ):
+		istream( new UnixStreamBuf( fd, bs ) ) {
 	}
 
 	~UnixIStream() {
@@ -171,76 +172,6 @@ pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd ) {
 	return pid;
 }
 
-struct Selector {
-	Selector( initializer_list<int> ifds, initializer_list<int> ofds ) {
-		FD_ZERO( &_result_ifds );
-		FD_ZERO( &_result_ofds );
-
-		FD_ZERO( &_ifds );
-		for( int fd: ifds ) {
-			FD_SET( fd, &_ifds );
-		}
-
-		FD_ZERO( &_ofds );
-		for( int fd: ofds ) {
-			FD_SET( fd, &_ofds );
-		}
-
-		int imax = *max_element( ifds.begin(), ifds.end() );
-		int omax = *max_element( ofds.begin(), ofds.end() );
-		_maxFd = max( imax, omax );
-	}
-
-	void wait() {
-		memcpy( &_result_ifds, &_ifds, sizeof( fd_set ) );
-		memcpy( &_result_ofds, &_ofds, sizeof( fd_set ) );
-		checkSysCall( select( _maxFd, &_result_ifds, &_result_ofds, nullptr, nullptr ) );
-	}
-
-	bool readable( int fd ) const {
-		return FD_ISSET( fd, &_result_ifds );
-	}
-
-	bool writable( int fd ) const {
-		return FD_ISSET( fd, &_result_ofds );
-	}
-
-	private:
-		fd_set _ifds;
-		fd_set _ofds;
-		fd_set _result_ifds;
-		fd_set _result_ofds;
-		int _maxFd;
-};
-
-inline bool readable( int fd ) {
-	fd_set fds;
-	FD_ZERO( &fds );
-	FD_SET( fd, &fds );
-
-	struct timeval timeout;
-	timeout.tv_sec  = 0;
-	timeout.tv_usec = 0;
-
-	checkSysCall( select( fd, &fds, nullptr, nullptr, &timeout ) );
-
-	return FD_ISSET( fd, &fds );
-}
-
-inline bool writable( int fd ) {
-	fd_set fds;
-	FD_ZERO( &fds );
-	FD_SET( fd, &fds );
-
-	struct timeval timeout;
-	timeout.tv_sec  = 0;
-	timeout.tv_usec = 0;
-
-	checkSysCall( select( fd, nullptr, &fds, nullptr, &timeout ) );
-
-	return FD_ISSET( fd, &fds );
-}
-
 template<class T>
 struct MsgQueue {
 	// guarantee atomicity
@@ -263,19 +194,21 @@ struct MsgQueue {
 		_ofd = fds[1];
 	}
 
-	void put( std::unique_ptr<T>&& m ) {
+	void put( unique_ptr<T>&& m ) {
 		T* p = m.release();
 		checkSysCall( write( _ofd, &p, sizeof( &p ) ) );
 	}
 
-	std::unique_ptr<T> get() {
+	unique_ptr<T> get() {
 		T* p;
 		checkSysCall( read( _ifd, &p, sizeof( &p ) ) );
-		return std::unique_ptr<T>( p );
+		return unique_ptr<T>( p );
 	}
 
 	bool empty() {
-		return readable( _ifd );
+		pollfd pfd{ _ifd, POLLIN, 0 };
+		checkSysCall( poll( &pfd, 1, 0 ) );
+		return (pfd.revents & POLLIN) != 0;
 	}
 
 	int fd() const {
@@ -284,4 +217,141 @@ struct MsgQueue {
 
 	private:
 		int _ifd, _ofd;
+};
+
+struct EventLooper {
+	EventLooper() {
+		if( !_signalFd().init ) {
+			int fds[2];
+			checkSysCall( pipe( fds ) );
+			checkSysCall( fcntl( fds[0], F_SETFL, O_NONBLOCK ) );
+			checkSysCall( fcntl( fds[1], F_SETFL, O_NONBLOCK ) );
+			_signalFd() = { true, fds[0], fds[1] };
+		}
+	}
+
+	void addReader( int fd, function<void ()> cb ) {
+		_handlers[fd].reader = move( cb );
+	}
+
+	void addWriter( int fd, function<void ()> cb ) {
+		_handlers[fd].writer = move( cb );
+	}
+
+	void addSignal( int sig, function<void ()> cb ) {
+		struct sigaction sa;
+		memset( &sa, 0, sizeof( sa ) );
+		sa.sa_flags = SA_RESTART;
+		sa.sa_handler = _handleSignal;
+		checkSysCall( sigaction( sig, &sa, nullptr ) );
+
+		sigset_t mask;
+		checkSysCall( sigemptyset( &mask ) );
+		checkSysCall( sigaddset( &mask, sig ) );
+		if( int ec = pthread_sigmask( SIG_UNBLOCK, &mask, nullptr ) ) {
+			throw system_error( ec, system_category() );
+		}
+
+		_signals[sig] = move( cb );
+	}
+
+	void removeReader( int fd ) {
+		if( _handlers.at( fd ).writer ) {
+			_handlers[fd].reader = function<void ()>();
+		}
+		else {
+			_handlers.erase( fd );
+		}
+	}
+
+	void removeWriter( int fd ) {
+		if( _handlers.at( fd ).reader ) {
+			_handlers[fd].writer = function<void ()>();
+		}
+		else {
+			_handlers.erase( fd );
+		}
+	}
+
+	void removeSignal( int sig ) {
+		struct sigaction sa;
+		memset( &sa, 0, sizeof( sa ) );
+		sa.sa_handler = SIG_DFL;
+		checkSysCall( sigaction( sig, &sa, nullptr ) );
+
+		_signals.erase( sig );
+	}
+
+	// must be safe to call add*(), remove*() from handlers
+	void wait() {
+		vector<pollfd> pfds;
+		pfds.emplace_back( pollfd{ _signalFd().ifd, POLLIN, 0 } );
+		for( auto const& h: _handlers ) {
+			short ev = 0;
+			if( h.second.reader ) {
+				ev |= POLLIN;
+			}
+			if( h.second.writer ) {
+				ev |= POLLOUT;
+			}
+			pfds.emplace_back( pollfd{ h.first, ev, 0 } );
+		}
+
+		checkSysCall( poll( pfds.data(), pfds.size(), -1 ) );
+
+		if( pfds[0].revents & POLLIN ) {
+			uint8_t buf[PIPE_BUF];
+			size_t n = checkSysCall( read( _signalFd().ifd, buf, PIPE_BUF ) );
+			for( size_t i = 0; i < n; ++i ) {
+				auto it = _signals.find( buf[i] );
+				if( it != _signals.end() ) {
+					it->second();
+				}
+			}
+		}
+
+		for( auto pit = pfds.begin() + 1; pit < pfds.end(); ++pit ) {
+			if( pit->revents & POLLIN ) {
+				auto hit = _handlers.find( pit->fd );
+				if( hit != _handlers.end() && hit->second.reader ) {
+					hit->second.reader();
+					// _handlers may be changed here
+				}
+			}
+			if( pit->revents & POLLOUT ) {
+				auto hit = _handlers.find( pit->fd );
+				if( hit != _handlers.end() && hit->second.writer ) {
+					hit->second.writer();
+					// _handlers may be changed here
+				}
+			}
+		}
+	}
+
+	private:
+		struct FdHandler {
+			function<void ()> reader;
+			function<void ()> writer;
+		};
+
+		struct SignalFd {
+			volatile bool init;
+			volatile int ifd;
+			volatile int ofd;
+		};
+
+		static SignalFd& _signalFd() {
+			static SignalFd sigFd{ false, -1, -1 };
+			return sigFd;
+		}
+
+		static void _handleSignal( int sigI ) {
+			uint8_t sigB = sigI;
+			if( write( _signalFd().ofd, &sigB, 1 ) < 0 ) {
+				terminate();
+			}
+		}
+
+		map<int, FdHandler> _handlers;
+		map<int, function<void ()>> _signals;
 };
