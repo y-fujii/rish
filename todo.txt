@@ -12,11 +12,12 @@ language:
 			$var(hash.get key)
 			$var(sort | index 0)
 		  
-	- APL-like (inner|outer)product operators?
+	- APL-like (inner|outer)product operators or zip operator?
 		$lhs % $rhs
 		$lhs ^ $rhs
 		$lhs %command $rhs
 		$lhs ^command $rhs
+	- RDB-like join operator?
 	- map/dict type?
 	- arithmetic expressions
 		@int( $x + 1 == 2 ) => (% "int.==" (% "int.+" $x 1) 2)
