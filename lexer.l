@@ -27,6 +27,9 @@
 		yyless( 0 );			\
 		return '^';				\
 	}
+
+	#pragma GCC diagnostic ignored "-Wsign-compare"
+	#pragma GCC diagnostic ignored "-Wunused-function"
 %}
 
 /* [N]ormal, auto [C]aret, [I]gnore newline */
@@ -141,8 +144,8 @@
 <N,C>[ \t]+		{ BEGIN( N ); }
 <I>"\n"			{ ++lexerLineNo; }
 <N,C>"\n"		{ BEGIN( N ); ++lexerLineNo; return ';'; }
-<I>#[^\n]*		{}
-<N,C>#[^\n]*	{ BEGIN( N ); }
+<I>\/\/[^\n]*	{}
+<N,C>\/\/[^\n]*	{ BEGIN( N ); }
 
 %%
 
