@@ -41,7 +41,7 @@ int main( int argc, char** argv ) {
 				&argv[optind + 1], &argv[argc],
 				back_inserter( local->value( &var ) )
 			);
-			eval.evalStmt( ast.get(), local );
+			eval.evalStmt( ast.get(), local, 0, 1 );
 			eval.join();
 		}
 		catch( SyntaxError const& err ) {
@@ -55,7 +55,7 @@ int main( int argc, char** argv ) {
 
 			Evaluator eval;
 			auto local = make_shared<Evaluator::Local>();
-			eval.evalStmt( ast.get(), local );
+			eval.evalStmt( ast.get(), local, 0, 1 );
 			eval.join();
 		}
 		catch( SyntaxError const& err ) {

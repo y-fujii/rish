@@ -43,7 +43,7 @@ struct Repl {
 	}
 
 	void onSignalInt() {
-		cout << "\r\x1b[K" << endl;
+		cout << "\r\x1b[K" << flush;
 		rl_initialize();
 		rl_redisplay();
 	}
@@ -55,7 +55,7 @@ struct Repl {
 	static void onLineEntered( char* line ) {
 		// Ctrl-D
 		if( line == nullptr ) {
-			cout << "\nwaiting background jobs..." << endl;
+			cout << "\nwaiting background jobs..." << flush;
 			self()->eval.join();
 			self()->finished = true;
 			return;
@@ -71,7 +71,7 @@ struct Repl {
 			istringstream istr( line );
 			unique_ptr<ast::Stmt> ast = parse( istr );
 
-			int retv = self()->eval.evalStmt( ast.get(), self()->local );
+			int retv = self()->eval.evalStmt( ast.get(), self()->local, 0, 1 );
 			if( retv != 0 ) {
 				cerr << "The command returned " << retv << "." << endl;
 			}

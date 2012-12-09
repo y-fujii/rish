@@ -257,7 +257,7 @@ struct EventLooper {
 
 	void removeReader( int fd ) {
 		if( _handlers.at( fd ).writer ) {
-			_handlers[fd].reader = function<void ()>();
+			_handlers[fd].reader = {};
 		}
 		else {
 			_handlers.erase( fd );
@@ -266,7 +266,7 @@ struct EventLooper {
 
 	void removeWriter( int fd ) {
 		if( _handlers.at( fd ).reader ) {
-			_handlers[fd].writer = function<void ()>();
+			_handlers[fd].writer = {};
 		}
 		else {
 			_handlers.erase( fd );
