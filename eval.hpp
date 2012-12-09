@@ -66,7 +66,7 @@ struct Evaluator {
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
-	int evalStmt( ast::Stmt*, shared_ptr<Local> ); // XXX
+	future<int> evaluate( ast::Stmt*, shared_ptr<Local> );
 	void join();
 	void interrupt();
 
@@ -293,7 +293,7 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
 		}
 		// loca.defs is not required anymore but local itself may be referenced
 		// by other closures.
-		local->defs = deque<deque<string>>();
+		local->defs = {};
 
 		return retv;
 	}
@@ -646,8 +646,10 @@ tailRec:
 	return -1;
 }
 
-inline int Evaluator::evalStmt( ast::Stmt* stmt, shared_ptr<Local> local ) {
-	return evalStmt( stmt, local, stdin, stdout );
+inline future<int> Evaluator::evaluate( ast::Stmt* stmt, shared_ptr<Local> local ) {
+	return async( [&]() -> int {
+		return evalStmt( stmt, local, stdin, stdout );
+	} );
 }
 
 inline void Evaluator::join() {
