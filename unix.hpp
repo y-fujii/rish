@@ -1,6 +1,7 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <iomanip>
 #include <map>
@@ -73,9 +74,10 @@ inline int checkSysCall( int retv ) {
 	return retv;
 }
 
+template<size_t N>
 struct UnixStreamBuf: streambuf {
-	UnixStreamBuf( int fd, size_t bs ):
-		_fd( fd ), _buf( bs ) {
+	UnixStreamBuf( int fd ):
+		_fd( fd ) {
 	}
 
 	virtual int underflow() {
@@ -93,12 +95,13 @@ struct UnixStreamBuf: streambuf {
 
 	private:
 		int const _fd;
-		vector<char> _buf;
+		array<char, N> _buf;
 };
 
+template<size_t N = PIPE_BUF>
 struct UnixIStream: istream {
-	explicit UnixIStream( int fd, size_t bs = PIPE_BUF ):
-		istream( new UnixStreamBuf( fd, bs ) ) {
+	explicit UnixIStream( int fd ):
+		istream( new UnixStreamBuf<N>( fd ) ) {
 	}
 
 	~UnixIStream() {
