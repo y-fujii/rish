@@ -230,7 +230,7 @@ tailRec:
 
 			auto reader = [&]() -> void {
 				auto closer = scopeExit( bind( close, fds[0] ) );
-				UnixIStream ifs( fds[0] );
+				UnixIStream<> ifs( fds[0] );
 				string buf;
 				while( getline( ifs, buf ) ) {
 					*dst++ = buf;
@@ -529,7 +529,7 @@ tailRec:
 		VCASE( Fetch, s ) {
 			VSWITCH( s->lhs.get() ) {
 				VCASE( VarFix, lhs ) {
-					UnixIStream ifs( ifd, 1 );
+					UnixIStream<1> ifs( ifd );
 					deque<string> rhs( lhs->var.size() );
 					for( auto& v: rhs ) {
 						if( !getline( ifs, v ) ) {
@@ -546,7 +546,7 @@ tailRec:
 				}
 				VCASE( VarVar, lhs ) {
 					deque<string> rhs;
-					UnixIStream ifs( ifd );
+					UnixIStream<> ifs( ifd );
 					string buf;
 					while( getline( ifs, buf ) ) {
 						rhs.push_back( buf );
