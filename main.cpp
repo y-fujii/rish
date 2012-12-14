@@ -64,7 +64,7 @@ int main( int argc, char** argv ) {
 		}
 	}
 	else {
-		Repl repl;
+		Repl();
 	}
 
 	return 0;

@@ -67,6 +67,7 @@
 <N,C,I>"fun"			{ BEGIN( N ); return TK_FUN; }
 <N,C,I>"fetch"			{ BEGIN( N ); return TK_FETCH; }
 <N,C,I>"yield"			{ BEGIN( N ); return TK_YIELD; }
+<N,C,I>"zip"			{ BEGIN( N ); return TK_ZIP; }
 <N,C,I>"defer"			{ BEGIN( N ); return TK_DEFER; }
 
 <C>\$[a-zA-Z0-9_]+ { INSERT_CARET(); }

@@ -39,6 +39,24 @@ fun enumerate {
 	}
 }
 
+fun all {
+	while fetch $e {
+		if test $e -eq 0 {
+			return 0
+		}
+	}
+	return 1
+}
+
+fun any {
+	while fetch $e {
+		if test $e -ne 0 {
+			return 1
+		}
+	}
+	return 0
+}
+
 fun testLet {
 	yield "test let"
 	let name = name || yield NG
@@ -61,7 +79,7 @@ fun testDefer {
 fun factorialLoop $n {
 	let $result = 1
 	range $n | while fetch $i {
-		let $result = (expr $result "*" "(" $i + 1 ")" )
+		let $result = (expr $result "*" "(" $i + 1 ")")
 	}
 	yield $result
 }
@@ -219,6 +237,12 @@ fun emulPrevNext {
 	echo /1 /2 /3 /2 /4 /2 /1 /2 /1 /0
 }
 
+fun testZip {
+	zip || yield "NG"
+	zip (yield)
+	zip (yield 0 1 2) (yield a b c)
+}
+
 fun runTest {
 	echo "args: " $args
 	let $var = S
@@ -239,6 +263,7 @@ fun runTest {
 	nested
 	runBg // comment
 	emulPrevNext
+	echo (testZip)
 	//comment
 
 	if true { // comment

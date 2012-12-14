@@ -617,6 +617,32 @@ tailRec:
 			}
 			return lval || rval;
 		}
+		VCASE( Zip, s ) {
+			if( s->exprs.size() == 0 ) {
+				return 0;
+			}
+
+			deque<deque<string>> vals( s->exprs.size() );
+			// evaluate all elements even if they have different sizes
+			bool error = false;
+			for( size_t i = 0; i < s->exprs.size(); ++i ) {
+				evalArgs( s->exprs[i].get(), local, back_inserter( vals[i] ) );
+				error |= vals[0].size() != vals[i].size();
+			}
+			if( error ) {
+				return 1;
+			}
+
+			ostringstream buf;
+			for( size_t j = 0; j < vals[0].size(); ++j ) {
+				for( size_t i = 0; i < vals.size(); ++i ) {
+					buf << vals[i][j] << '\n';
+				}
+			}
+			writeAll( ofd, buf.str() );
+
+			return 0;
+		}
 		VCASE( Defer, s ) {
 			deque<string> args;
 			evalArgs( s->args.get(), local, back_inserter( args ) );

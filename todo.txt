@@ -20,8 +20,11 @@ language:
 	- RDB-like join operator?
 	- map/dict type?
 	- arithmetic expressions
-		@int( $x + 1 == 2 ) => (% "int.==" (% "int.+" $x 1) 2)
-		int:( $x + 1 == 2 )
+		$x * $y + $z * $w =>
+		zip (zip $x $y | "*") (zip $z $w | "*") | "+"
+
+		(int $x * $y + $z * $w) =>
+		zip (zip $x $y | "int.*") (zip $z $w | "int.*") | "int.+"
 
 	- built-in commands for strings, such as regex operations
 	- pipe/redirection for non-stdin/stdout
@@ -32,6 +35,11 @@ language:
 	- zsh like ** expansion
 	- restrict wildcard expansion iff strings are started with "./", "../" or "/" ?
 		- How about started with $VAR ?
+	- more aggressive use of return values to control flow
+		- return, break return special values
+	
+	- std.fdutil
+		fdutil --dup stdout stderr --redir-from ./file stdin
 
 UI:
 	- job control

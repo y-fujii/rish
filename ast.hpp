@@ -47,6 +47,7 @@ struct Parallel;
 struct RedirFr;
 struct RedirTo;
 struct Pipe;
+struct Zip;
 struct Defer;
 struct None;
 using Stmt = Variant<
@@ -66,6 +67,7 @@ using Stmt = Variant<
 	RedirFr,
 	RedirTo,
 	Pipe,
+	Zip,
 	Defer,
 	None
 >;
@@ -249,6 +251,13 @@ struct Pipe: VariantImpl<Stmt, Pipe> {
 
 	unique_ptr<Stmt> lhs;
 	unique_ptr<Stmt> rhs;
+};
+
+struct Zip: VariantImpl<Stmt, Zip> {
+	Zip( deque<unique_ptr<Expr>>&& e ):
+		exprs( move( e ) ) {}
+
+	deque<unique_ptr<Expr>> exprs;
 };
 
 struct Defer: VariantImpl<Stmt, Defer> {
