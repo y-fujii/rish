@@ -27,7 +27,7 @@ using namespace std;
 
 
 struct Evaluator {
-	Evaluator(): stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
+	Evaluator(): separator( '\n' ), stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
 
 	using ArgIter = move_iterator<deque<string>::iterator>;
 	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, int, int )>;
@@ -76,6 +76,7 @@ struct Evaluator {
 	map<thread::id, thread> backgrounds;
 	mutex mutexGlobal;
 
+	char separator; // XXX: better to be function local?
 	int stdin;
 	int stdout;
 	int stderr;
@@ -232,7 +233,7 @@ tailRec:
 				auto closer = scopeExit( bind( close, fds[0] ) );
 				UnixIStream<> ifs( fds[0] );
 				string buf;
-				while( getline( ifs, buf ) ) {
+				while( getline( ifs, buf, separator ) ) {
 					*dst++ = buf;
 				}
 			};
@@ -409,7 +410,7 @@ tailRec:
 
 			ostringstream ofs;
 			ofs.exceptions( ios_base::failbit | ios_base::badbit );
-			ofs << id << '\n';
+			ofs << id << separator;
 			writeAll( ofd, ofs.str() );
 			return 0;
 		}
@@ -532,7 +533,7 @@ tailRec:
 					UnixIStream<1> ifs( ifd );
 					deque<string> rhs( lhs->var.size() );
 					for( auto& v: rhs ) {
-						if( !getline( ifs, v ) ) {
+						if( !getline( ifs, v, separator ) ) {
 							return 1;
 						}
 					}
@@ -548,7 +549,7 @@ tailRec:
 					deque<string> rhs;
 					UnixIStream<> ifs( ifd );
 					string buf;
-					while( getline( ifs, buf ) ) {
+					while( getline( ifs, buf, separator ) ) {
 						rhs.push_back( buf );
 					}
 
@@ -569,7 +570,7 @@ tailRec:
 			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 			ostringstream buf;
 			for( auto const& v: vals ) {
-				buf << v << '\n';
+				buf << v << separator;
 			}
 			writeAll( ofd, buf.str() );
 			return 0;
@@ -636,7 +637,7 @@ tailRec:
 			ostringstream buf;
 			for( size_t j = 0; j < vals[0].size(); ++j ) {
 				for( size_t i = 0; i < vals.size(); ++i ) {
-					buf << vals[i][j] << '\n';
+					buf << vals[i][j] << separator;
 				}
 			}
 			writeAll( ofd, buf.str() );
