@@ -94,7 +94,7 @@ struct ScopeExiter {
 	}
 
 	private:
-		Func const _callback;
+		Func _callback;
 		bool _run;
 };
 
