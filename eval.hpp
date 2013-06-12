@@ -457,7 +457,7 @@ tailRec:
 				throw ArgError();
 			}
 
-			throw ReturnException( readValue<int>( args[0] ) ) ;
+			throw ReturnException( stoi( args[0] ) ) ;
 		}
 		VCASE( Fun, s ) {
 			deque<string> args;
@@ -512,7 +512,7 @@ tailRec:
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
-			int retv = readValue<int>( args[0] );
+			int retv = stoi( args[0] );
 			throw BreakException( retv );
 		}
 		VCASE( Let, s ) {
