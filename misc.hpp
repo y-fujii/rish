@@ -31,16 +31,6 @@ inline unique_ptr<T> make_unique( Args&&... args ) {
 	return unique_ptr<T>( new T( forward<Args>( args )... ) );
 }
 
-template<class T>
-T readValue( string const& str ) {
-	istringstream ifs( str );
-	ifs.exceptions( ios_base::failbit | ios_base::badbit );
-
-	T val;
-	ifs >> val;
-	return val;
-}
-
 template<class Func0, class Func1>
 tuple<exception_ptr, exception_ptr> parallel( Func0 const& f0, Func1 const& f1 ) {
 	exception_ptr e0, e1;
