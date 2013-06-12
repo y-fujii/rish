@@ -1,4 +1,22 @@
 language:
+	- fix broken variable scope
+		- per-function scope (Python-like) or per-block scope (ES6 "let"-like)
+			range 8 | while fetch $i {
+				fun closure-$i {
+					yield $i
+				}
+			}
+
+		- per-function scope with lifetime analysis
+			if ... {
+				$x = ...
+				$y = ...
+			}
+			else {
+				$x = ...
+			}
+			// $x is defined, $y is not defined here.
+
 	- documentation, documentation, and documentation
 	x assignment support with array slicing
 		- built-in array slicing operations have been abandoned. just one
@@ -53,8 +71,7 @@ implementation:
 	- decent thread stopping mechanism
 	- error values for rish internal error
 	- eliminate unnecessary threads creation
-	- static variable names resolution and lock-less variable access
-		- the current implementation of lexical scoping is broken
+	- lock-less variable access
 	- efficient MetaString structure to handle GB data in a normal way
 
 not near future ideas:

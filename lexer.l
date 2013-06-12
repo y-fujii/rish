@@ -72,40 +72,40 @@
 
 <C>\$[a-zA-Z0-9_]+ { INSERT_CARET(); }
 <N,I>\$[a-zA-Z0-9_]+ {
-	yylval.var = new string( yytext + 1, yyleng - 1 );
+	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), lexerLineNo );
 	BEGIN( C );
 	return TK_VAR;
 }
 
 <C>\$[a-zA-Z0-9_]+\( { INSERT_CARET(); }
 <N,I>\$[a-zA-Z0-9_]+\( {
-	yylval.var = new string( yytext + 1, yyleng - 2 );
+	yylval.var = new ast::Var( string( yytext + 1, yyleng - 2 ), lexerLineNo );
 	BEGIN( I );
 	return TK_ARRAY;
 }
 
 <C>[^()$" \t\n]+ { INSERT_CARET(); }
 <N,I>[^()$" \t\n]+ {
-	auto dst = make_unique<MetaString>( yytext, yytext + yyleng );
-	auto it = dst->begin();
-	assert( it != dst->end() );
+	MetaString w( yytext, yytext + yyleng );
+	auto it = w.begin();
+	assert( it != w.end() );
 	if( *it == '~' ) {
 		*it |= metaMask;
 	}
-	while( it != dst->end() ) {
+	while( it != w.end() ) {
 		if( *it == '*' || *it == '?' ) {
 			*it |= metaMask;
 		}
 		++it;
 	}
 
-	yylval.word = dst.release();
+	yylval.word = new ast::Word( move( w ) );
 	BEGIN( C );
 	return TK_WORD;
 }
 
 <N,C,I>\"(\\.|[^\\"])*\" {
-	auto dst = make_unique<MetaString>();
+	MetaString w;
 	for( int i = 1; i < yyleng - 1; ++i ) {
 		char c;
 		if( yytext[i] == '\\' ) {
@@ -133,10 +133,10 @@
 		else {
 			c = yytext[i];
 		}
-		dst->push_back( c );
+		w.push_back( c );
 	}
 
-	yylval.word = dst.release();
+	yylval.word = new ast::Word( move( w ) );
 	BEGIN( N );
 	return TK_WORD;
 }

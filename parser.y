@@ -20,8 +20,8 @@
 %}
 
 %union {
-	MetaString* word;
-	std::string* var;
+	StupidPtr<ast::Word> word;
+	StupidPtr<ast::Var> var;
 	StupidPtr<ast::Expr> expr;
 	StupidPtr<ast::LeftExpr> lexpr;
 	StupidPtr<ast::Stmt> stmt;
@@ -114,11 +114,11 @@ else_
 
 lexpr_prim
 	: lexpr_list						{ $$ = new VarFix( move( *$1 ) ); delete $1; }
-	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( move( *$1 ), make_unique<Var>( *$3 ), move( *$5 ) ); delete $1; delete $3; delete $5; }
+	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( move( *$1 ), $3, move( *$5 ) ); delete $1; delete $5; }
 
 lexpr_list
-	: lexpr_list TK_VAR					{ $1->push_back( make_unique<Var>( *$2 ) ); delete $2; $$ = $1; }
-	| lexpr_list TK_WORD				{ $1->push_back( make_unique<Word>( *$2 ) ); delete $2; $$ = $1; }
+	: lexpr_list TK_VAR					{ $1->push_back( $2 ); $$ = $1; }
+	| lexpr_list TK_WORD				{ $1->push_back( $2 ); $$ = $1; }
 	|									{ $$ = new deque<unique_ptr<Expr>>(); }
 
 expr_list
@@ -135,15 +135,13 @@ expr_concat
 	| expr_prim
 
 expr_prim
-	: TK_WORD							{ $$ = new Word( *$1 ); delete $1; }
-	| TK_VAR							{ $$ = new Var( *$1 ); delete $1; }
+	: TK_WORD							{ $$ = $1; }
+	| TK_VAR							{ $$ = $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
 	| TK_ARRAY stmt_seq ')' {
 		$$ = new Subst(
 			make_unique<Pipe>(
-				make_unique<Yield>(
-					make_unique<Var>( *$1 )
-				),
+				make_unique<Yield>( $1 ),
 				$2
 			)
 		);

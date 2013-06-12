@@ -87,10 +87,13 @@ struct Subst: VariantImpl<Expr, Subst> {
 };
 
 struct Var: VariantImpl<Expr, Var> {
-	Var( string const& n ):
-		name( n ) {}
+	Var( string const& n, size_t l ):
+		index( -1 ), depth( -1 ), name( n ), line( l ) {}
 
+	int index;
+	int depth;
 	string name;
+	size_t line;
 };
 
 struct Pair: VariantImpl<Expr, Pair> {
@@ -152,6 +155,7 @@ struct Fun: VariantImpl<Stmt, Fun> {
 	unique_ptr<Expr> name;
 	shared_ptr<LeftExpr> args;
 	shared_ptr<Stmt> body;
+	int nVar;
 };
 
 struct FunDel: VariantImpl<Stmt, FunDel> {

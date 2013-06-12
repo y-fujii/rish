@@ -48,10 +48,20 @@ struct StupidPtr {
 		return *this;
 	}
 
-	operator unique_ptr<T>() {
-		return unique_ptr<T>( _ptr );
+	template<class U>
+	operator StupidPtr<U>() const {
+		StupidPtr<U> dst;
+		dst._ptr = _ptr;
+		return dst;
+	}
+
+	template<class U>
+	operator unique_ptr<U>() const {
+		return unique_ptr<U>( _ptr );
 	}
 
 	private:
 		T* _ptr;
+	
+	template<class U> friend struct StupidPtr;
 };

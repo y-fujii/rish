@@ -11,6 +11,7 @@
 #include "misc.hpp"
 #include "ast.hpp"
 #include "parser.hpp"
+#include "annotate.hpp"
 #include "eval.hpp"
 #include "repl.hpp"
 //#include "builtins.hpp"
@@ -31,17 +32,21 @@ int main( int argc, char** argv ) {
 
 	if( optind < argc ) {
 		try {
-			ifstream ifs( argv[optind] );
-			unique_ptr<ast::Stmt> ast = parse( ifs );
-
-			Evaluator eval;
-			auto local = make_shared<Evaluator::Local>();
-			ast::Var var( "args" );
+			ast::Var var( "args", -1 );
+			Annotator::Local alocal;
+			alocal.assign( &var );
+			auto elocal = make_shared<Evaluator::Local>();
+			elocal->vars.resize( alocal.vars.size() );
 			copy( 
 				&argv[optind + 1], &argv[argc],
-				back_inserter( local->value( &var ) )
+				back_inserter( elocal->value( &var ) )
 			);
-			eval.evalStmt( ast.get(), local, 0, 1 );
+
+			ifstream ifs( argv[optind] );
+			unique_ptr<ast::Stmt> ast = parse( ifs );
+			Annotator().annotate( ast.get(), alocal );
+			Evaluator eval;
+			eval.evalStmt( ast.get(), elocal, 0, 1 );
 			eval.join();
 		}
 		catch( SyntaxError const& err ) {
@@ -49,6 +54,7 @@ int main( int argc, char** argv ) {
 			return 1;
 		}
 	}
+	/*
 	else if( !isatty( 0 ) ) {
 		try {
 			unique_ptr<ast::Stmt> ast = parse( cin );
@@ -66,6 +72,7 @@ int main( int argc, char** argv ) {
 	else {
 		Repl();
 	}
+	*/
 
 	return 0;
 }

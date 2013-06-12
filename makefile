@@ -1,11 +1,11 @@
-CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -pthread -stdlib=libc++ -lc++abi -g -O3
+CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -pthread -g -O4
 #CXX = g++ -std=c++11 -pedantic -Wall -Wextra -pthread -g -O0
 LEX = flex
 
 SRCS = \
 	lexer.l parser.y \
 	misc.hpp unix.hpp \
-	parser.hpp ast.hpp eval.hpp glob.hpp \
+	parser.hpp ast.hpp annotate.hpp eval.hpp glob.hpp \
 	builtins.hpp repl.hpp main.cpp
 
 rish: $(SRCS) makefile
