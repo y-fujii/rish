@@ -147,6 +147,29 @@ inline void writeAll( int ofd, string const& src ) {
 	}
 }
 
+template<class = void>
+struct Environ {
+	static bool get( string const& key, string& dst ) {
+		lock_guard<mutex> lock( _mutex );
+		char* val = getenv( key.c_str() );
+		if( val == nullptr ) {
+			return false;
+		}
+		else {
+			dst = string( val );
+			return true;
+		}
+	}
+
+	static void set( string const& key, string const& val ) {
+		lock_guard<mutex> lock( _mutex );
+		checkSysCall( setenv( key.c_str(), val.c_str(), 1 ) );
+	}
+
+	private:
+		static mutex _mutex;
+};
+
 template<class Iter>
 pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd ) {
 	size_t size = distance( argsB, argsE );
