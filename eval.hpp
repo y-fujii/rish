@@ -39,11 +39,12 @@ struct Evaluator {
 		template<class Iter> bool assign( ast::LeftExpr*, Iter, Iter );
 
 		shared_ptr<Local> outer;
-		map<string, deque<string>> vars;
+		deque<deque<string>> vars;
 		deque<deque<string>> defs;
 	};
 
 	struct Closure {
+		int nVar;
 		shared_ptr<ast::LeftExpr> args;
 		shared_ptr<ast::Stmt> body;
 		shared_ptr<Local> env;
@@ -84,17 +85,14 @@ struct Evaluator {
 
 
 inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
+	assert( var->depth >= 0 );
+	assert( var->index >= 0 );
+
 	Local* it = this;
-	while( it != nullptr ) {
-		auto v = it->vars.find( var->name );
-		if( v != it->vars.end() ) {
-			return v->second;
-		}
+	for( int i = 0; i < var->depth; ++i ) {
 		it = it->outer.get();
 	}
-
-	// new variable
-	return vars[var->name];
+	return it->vars[var->index];
 }
 
 template<class Iter>
@@ -272,6 +270,7 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
 		mutexGlobal.unlock();
 
 		auto local = make_shared<Local>();
+		local->vars.resize( cl.nVar );
 		if( !local->assign( cl.args.get(), argsB + 1, argsE ) ) {
 			throw ArgError(); // or allow overloaded functions?
 		}
@@ -468,7 +467,7 @@ tailRec:
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
-			closures[args[0]] = { s->args, s->body, local };
+			closures[args[0]] = { s->nVar, s->args, s->body, local };
 			return 0;
 		}
 		VCASE( FunDel, s ) {
