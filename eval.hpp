@@ -29,9 +29,6 @@ using namespace std;
 struct Evaluator {
 	Evaluator(): separator( '\n' ), stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
 
-	using ArgIter = move_iterator<deque<string>::iterator>;
-	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, int, int )>;
-
 	struct Local {
 		deque<string>& value( ast::Var* );
 		template<class Iter> bool assign( ast::VarFix*, Iter, Iter );
@@ -41,6 +38,7 @@ struct Evaluator {
 		shared_ptr<Local> outer;
 		deque<deque<string>> vars;
 		deque<deque<string>> defs;
+		string cwd;
 	};
 
 	struct Closure {
@@ -63,7 +61,10 @@ struct Evaluator {
 	struct ArgError {
 	};
 
-	template<class Iter> int callCommand( Iter, Iter, int, int );
+	using ArgIter = move_iterator<deque<string>::iterator>;
+	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, Local const&, int, int )>;
+
+	template<class Iter> int callCommand( Iter, Iter, Local const&, int, int );
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
@@ -260,7 +261,7 @@ tailRec:
 }
 
 template<class Iter>
-int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
+int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd, int ofd ) {
 	assert( argsE - argsB >= 1 );
 
 	mutexGlobal.lock();
@@ -269,31 +270,32 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
 		Closure cl = fit->second;
 		mutexGlobal.unlock();
 
-		auto local = make_shared<Local>();
-		local->vars.resize( cl.nVar );
-		if( !local->assign( cl.args.get(), argsB + 1, argsE ) ) {
+		auto child = make_shared<Local>();
+		child->vars.resize( cl.nVar );
+		if( !child->assign( cl.args.get(), argsB + 1, argsE ) ) {
 			throw ArgError(); // or allow overloaded functions?
 		}
-		local->outer = move( cl.env );
+		child->outer = move( cl.env );
+		child->cwd = local.cwd;
 
 		int retv;
 		try {
-			retv = evalStmt( cl.body.get(), local, ifd, ofd );
+			retv = evalStmt( cl.body.get(), child, ifd, ofd );
 		}
 		catch( ReturnException const& e ) {
 			retv = e.retv;
 		}
 
-		for( auto it = local->defs.rbegin(); it != local->defs.rend(); ++it ) {
+		for( auto it = child->defs.rbegin(); it != child->defs.rend(); ++it ) {
 			callCommand(
 				make_move_iterator( it->begin() ),
 				make_move_iterator( it->end() ),
-				ifd, ofd
+				*child, ifd, ofd
 			);
 		}
-		// loca.defs is not required anymore but local itself may be referenced
-		// by other closures.
-		local->defs = {};
+		// child.defs is not required anymore but local itself may be
+		// referenced by other closures.
+		child->defs = {};
 
 		return retv;
 	}
@@ -304,14 +306,14 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, int ifd, int ofd ) {
 	auto bit = builtins.find( argsB[0] );
 	if( bit != builtins.end() ) {
 		try {
-			return bit->second( argsB + 1, argsE, *this, ifd, ofd );
+			return bit->second( argsB + 1, argsE, *this, local, ifd, ofd );
 		}
 		catch( std::exception const& ) {
 			return 1;
 		}
 	}
 
-	pid_t pid = forkExec( argsB, argsE, ifd, ofd );
+	pid_t pid = forkExec( argsB, argsE, ifd, ofd, local.cwd );
 	int status;
 	checkSysCall( waitpid( pid, &status, 0 ) );
 	return WEXITSTATUS( status );
@@ -447,7 +449,7 @@ tailRec:
 			return callCommand(
 				make_move_iterator( args.begin() ),
 				make_move_iterator( args.end() ),
-				ifd, ofd
+				*local, ifd, ofd
 			);
 		}
 		VCASE( Return, s ) {
