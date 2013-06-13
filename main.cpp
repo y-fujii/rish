@@ -30,6 +30,10 @@ int main( int argc, char** argv ) {
 	sa.sa_flags = SA_RESTART;
 	sigaction( SIGPIPE, &sa, nullptr );
 
+	array<char, MAXPATHLEN> buf;
+	getcwd( buf.data(), buf.size() );
+	string cwd( buf.data() );
+
 	if( optind < argc ) {
 		try {
 			ast::Var var( "args", -1 );
@@ -41,6 +45,7 @@ int main( int argc, char** argv ) {
 				&argv[optind + 1], &argv[argc],
 				back_inserter( elocal->value( &var ) )
 			);
+			elocal->cwd = cwd;
 
 			ifstream ifs( argv[optind] );
 			unique_ptr<ast::Stmt> ast = parse( ifs );

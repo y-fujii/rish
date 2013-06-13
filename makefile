@@ -1,4 +1,4 @@
-CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -pthread -g -O4
+CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -stdlib=libc++ -pthread -g -O3
 #CXX = g++ -std=c++11 -pedantic -Wall -Wextra -pthread -g -O0
 LEX = flex
 
@@ -13,8 +13,8 @@ rish: $(SRCS) makefile
 	mv y.tab.h tokens.hpp; \
 	mv y.tab.c parser.cpp; \
 	mv y.output parser.out
-	$(LEX) -o lexer.cpp lexer.l; \
-	$(CXX) -o rish main.cpp lexer.cpp parser.cpp -lreadline
+	$(LEX) -olexer.cpp lexer.l; \
+	$(CXX) -orish main.cpp lexer.cpp parser.cpp -lreadline
 
 test: rish
 	wc $(SRCS)

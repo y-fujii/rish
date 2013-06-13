@@ -171,7 +171,7 @@ struct Environ {
 };
 
 template<class Iter>
-pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd ) {
+pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd, string const& cwd ) {
 	size_t size = distance( argsB, argsE );
 	assert( size >= 1 );
 
@@ -191,6 +191,9 @@ pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd ) {
 			_exit( 1 );
 		}
 		closefrom( 3 );
+		if( chdir( cwd.c_str() ) < 0 ) {
+			_exit( 1 );
+		}
 		execvp( argsRaw[0], const_cast<char* const*>( &argsRaw[0] ) );
 		_exit( 1 );
 	}
