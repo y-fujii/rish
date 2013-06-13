@@ -27,7 +27,7 @@ using namespace std;
 
 
 struct Evaluator {
-	Evaluator(): separator( '\n' ), stdin( 0 ), stdout( 1 ), stderr( 2 ) {} // XXX
+	Evaluator(): separator( '\n' ) {} // XXX
 
 	struct Local {
 		deque<string>& value( ast::Var* );
@@ -68,7 +68,7 @@ struct Evaluator {
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
-	future<int> evaluate( ast::Stmt*, shared_ptr<Local> );
+	future<int> evaluate( ast::Stmt*, shared_ptr<Local>, int, int );
 	void join();
 	void interrupt();
 
@@ -79,9 +79,6 @@ struct Evaluator {
 	mutex mutexGlobal;
 
 	char separator; // XXX: better to be function local?
-	int stdin;
-	int stdout;
-	int stderr;
 };
 
 
@@ -398,10 +395,15 @@ tailRec:
 			return lval || rval;
 		}
 		VCASE( Bg, s ) {
+			// keep the reference to AST
 			shared_ptr<Stmt> body = s->body;
 			thread thr( [=]() -> void {
-				// keep the reference to AST
-				this->evalStmt( body.get(), local, this->stdin, this->stdout );
+				int ifd = checkSysCall( open( "/dev/null", O_RDONLY ) );
+				auto icloser = scopeExit( bind( close, ifd ) );
+				int ofd = checkSysCall( open( "/dev/null", O_WRONLY ) );
+				auto ocloser = scopeExit( bind( close, ofd ) );
+
+				this->evalStmt( body.get(), local, ifd, ofd );
 			} );
 			thread::id id = thr.get_id();
 			{
@@ -673,9 +675,9 @@ tailRec:
 	return -1;
 }
 
-inline future<int> Evaluator::evaluate( ast::Stmt* stmt, shared_ptr<Local> local ) {
+inline future<int> Evaluator::evaluate( ast::Stmt* stmt, shared_ptr<Local> local, int ifd, int ofd ) {
 	return async( [&]() -> int {
-		return evalStmt( stmt, local, stdin, stdout );
+		return evalStmt( stmt, local, ifd, ofd );
 	} );
 }
 
