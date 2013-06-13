@@ -512,8 +512,7 @@ tailRec:
 			if( args.size() != 1 ) {
 				throw ArgError();
 			}
-			int retv = stoi( args[0] );
-			throw BreakException( retv );
+			throw BreakException( stoi( args[0] ) );
 		}
 		VCASE( Let, s ) {
 			deque<string> vals;
