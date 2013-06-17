@@ -319,9 +319,11 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd,
 template<class DstIter>
 DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, DstIter dstIt ) {
 	struct Inserter: std::iterator<output_iterator_tag, Inserter> {
+		string const* cwd;
 		DstIter dstIt;
 
-		explicit Inserter( DstIter it ): dstIt( it ) {
+		explicit Inserter( string const* c, DstIter it ):
+			cwd( c ), dstIt( it ) {
 		}
 		Inserter& operator*() {
 			return *this;
@@ -333,11 +335,11 @@ DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, DstIter d
 			return *this;
 		}
 		Inserter operator=( MetaString const& str ) {
-			this->dstIt = expandGlob( str, this->dstIt );
+			this->dstIt = expandGlob( str, *this->cwd, this->dstIt );
 			return *this;
 		}
 	};
-	Inserter inserter( dstIt );
+	Inserter inserter( &local->cwd, dstIt );
 	evalExpr( expr, local, inserter );
 	return inserter.dstIt;
 }
