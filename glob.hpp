@@ -65,8 +65,8 @@ inline bool matchGlob( MetaString const& ptrn, string const& src ) {
 
 template<class DstIter>
 DstIter listDir( string const& root, DstIter dstIt ) {
-	char const* r = root.size() == 0 ? "." : root.c_str();
-	DIR* dir = opendir( r );
+	assert( root.size() != 0 );
+	DIR* dir = opendir( root.c_str() );
 	if( dir == NULL ) {
 		throw system_error( errno, system_category() );
 	}
@@ -131,7 +131,7 @@ DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt
 }
 
 template<class DstIter>
-DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
+DstIter expandGlob( MetaString const& src, string const& cwd, DstIter dstIt ) {
 	MetaString ptrn;
 	if( src.size() >= 1 && src[0] == home ) {
 		ptrn = MetaString( getenv( "HOME" ) ) + src.substr( 1 );
@@ -149,6 +149,6 @@ DstIter expandGlob( MetaString const& src, DstIter dstIt ) {
 		return expandGlobRec( "/", ptrn.substr( 1 ), dstIt );
 	}
 	else {
-		return expandGlobRec( "", ptrn, dstIt );
+		return expandGlobRec( cwd + "/", ptrn, dstIt );
 	}
 }
