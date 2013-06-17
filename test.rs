@@ -188,7 +188,7 @@ fun testSlice {
 fun emulPrevNext {
 	let $cwDir = "/0"
 
-	fun pwd {
+	fun std.pwd {
 		yield $cwDir
 	}
 
@@ -197,12 +197,12 @@ fun emulPrevNext {
 		echo $dir
 	}
 
-	let ($dirStack) = (pwd)
+	let ($dirStack) = (std.pwd)
 	let $dirPos = 0
 
 	fun cd $dir {
 		if std.cd $dir {
-			let ($dirStack) = $dirStack(slice 0 (expr $dirPos + 1)) (pwd)
+			let ($dirStack) = $dirStack(slice 0 (expr $dirPos + 1)) (std.pwd)
 			let $dirPos = (expr $dirPos + 1)
 		}
 	}
@@ -243,6 +243,13 @@ fun testZip {
 	zip (yield 0 1 2) (yield a b c)
 }
 
+fun localCwd {
+	chdir ~
+	pwd
+	chdir /
+	pwd
+}
+
 fun runTest {
 	echo "args: " $args
 	let $var = S
@@ -272,6 +279,7 @@ fun runTest {
 	else {
 		//comment //comment
 	}
+	localCwd
 }
 
 runTest
