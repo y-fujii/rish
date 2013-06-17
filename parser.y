@@ -99,6 +99,7 @@ stmt_prim
 	| TK_YIELD expr_pair								{ $$ = new Yield( $2 ); }
 	| TK_ZIP expr_list									{ $$ = new Zip( move( *$2 ) ); delete $2; }
 	| TK_DEFER expr_pair								{ $$ = new Defer( $2 ); }
+	| TK_CHDIR expr_concat								{ $$ = new ChDir( $2 ); }
 	| TK_FUN expr_concat lexpr_prim '{' stmt_seq '}'	{ $$ = new Fun( $2, $3, $5 ); }
 	| TK_FUN expr_concat '!'							{ $$ = new FunDel( $2 ); }
 	| '{' stmt_seq '}'									{ $$ = $2; };

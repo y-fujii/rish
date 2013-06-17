@@ -188,6 +188,9 @@ tailRec:
 		VCASE( Defer, s ) {
 			annotate( s->args.get(), local );
 		}
+		VCASE( ChDir, s ) {
+			annotate( s->args.get(), local );
+		}
 		VCASE( None, s ) {
 		}
 		VDEFAULT {

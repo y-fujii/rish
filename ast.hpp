@@ -49,6 +49,7 @@ struct RedirTo;
 struct Pipe;
 struct Zip;
 struct Defer;
+struct ChDir;
 struct None;
 using Stmt = Variant<
 	If,
@@ -69,6 +70,7 @@ using Stmt = Variant<
 	Pipe,
 	Zip,
 	Defer,
+	ChDir,
 	None
 >;
 
@@ -266,6 +268,13 @@ struct Zip: VariantImpl<Stmt, Zip> {
 
 struct Defer: VariantImpl<Stmt, Defer> {
 	Defer( unique_ptr<Expr>&& a ):
+		args( move( a ) ) {}
+
+	unique_ptr<Expr> args;
+};
+
+struct ChDir: VariantImpl<Stmt, ChDir> {
+	ChDir( unique_ptr<Expr>&& a ):
 		args( move( a ) ) {}
 
 	unique_ptr<Expr> args;

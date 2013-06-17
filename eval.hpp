@@ -656,6 +656,17 @@ tailRec:
 			local->defs.push_back( move( args ) );
 			return 0;
 		}
+		VCASE( ChDir, s ) {
+			deque<string> args;
+			evalArgs( s->args.get(), local, back_inserter( args ) );
+			if( args.size() != 1 ) {
+				throw ArgError();
+			}
+
+			lock_guard<mutex> lock( mutexGlobal );
+			local->cwd = args[0];
+			return 0;
+		}
 		VCASE( None, s ) {
 			return s->retv;
 		}

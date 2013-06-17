@@ -69,6 +69,7 @@
 <N,C,I>"yield"			{ BEGIN( N ); return TK_YIELD; }
 <N,C,I>"zip"			{ BEGIN( N ); return TK_ZIP; }
 <N,C,I>"defer"			{ BEGIN( N ); return TK_DEFER; }
+<N,C,I>"chdir"			{ BEGIN( N ); return TK_CHDIR; }
 
 <C>\$[a-zA-Z0-9_]+ { INSERT_CARET(); }
 <N,I>\$[a-zA-Z0-9_]+ {
