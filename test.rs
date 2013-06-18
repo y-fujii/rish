@@ -197,27 +197,28 @@ fun emulPrevNext {
 		echo $dir
 	}
 
-	let ($dirStack) = (std.pwd)
-	let $dirPos = 0
+	let ($dir_prev) =
+	let ($dir_next) =
 
 	fun cd $dir {
+		let $cwd = (std.pwd)
 		if std.cd $dir {
-			let ($dirStack) = $dirStack(slice 0 (expr $dirPos + 1)) (std.pwd)
-			let $dirPos = (expr $dirPos + 1)
+			let ($dir_prev) = $dir_prev $cwd
+			let ($dir_next) =
 		}
 	}
 
 	fun nd {
-		if expr $dirPos + 1 < $dirStack(size) |> /dev/null {
-			let $dirPos = (expr $dirPos + 1)
-			std.cd $dirStack(index $dirPos)
+		if let ($dir_next) $dir = $dir_next {
+			let ($dir_prev) = $dir_prev (std.pwd)
+			std.cd $dir
 		}
 	}
 
 	fun pd {
-		if expr $dirPos - 1 >= 0 |> /dev/null {
-			let $dirPos = (expr $dirPos - 1)
-			std.cd $dirStack(index $dirPos)
+		if let ($dir_prev) $dir = $dir_prev {
+			let ($dir_next) = $dir_next (std.pwd)
+			std.cd $dir
 		}
 	}
 
