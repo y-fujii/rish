@@ -86,3 +86,8 @@ not near future ideas:
 	- tmux, screen like features?
 	- HTML5 terminal?
 		- ref: TermKit, etc.
+
+features which may be removed:
+	- ast::{Parallel, Bg}
+	- closure
+	- defer
