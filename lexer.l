@@ -53,6 +53,7 @@
 
 <N,C,I>"&&"				{ BEGIN( I ); return TK_AND2; }
 <N,C,I>"||"				{ BEGIN( I ); return TK_OR2; }
+<N,C,I>"->"				{ BEGIN( I ); return TK_ARROW; }
 <N,C,I>">|"				{ BEGIN( I ); return TK_RDFR; }
 <N,C,I>"|>"				{ BEGIN( I ); return TK_RDT1; }
 <N,C,I>"|>>"			{ BEGIN( I ); return TK_RDT2; }

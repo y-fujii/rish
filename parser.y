@@ -38,7 +38,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH TK_YIELD
-%token TK_DEFER TK_FOR TK_ARRAY TK_ZIP TK_CHDIR
+%token TK_DEFER TK_FOR TK_ARRAY TK_ZIP TK_CHDIR TK_ARROW
 
 %start top
 
@@ -81,7 +81,8 @@ stmt_redir
 
 stmt_pipe
 	: stmt_pipe '|' stmt_prim		{ $$ = new Pipe( $1, $3 ); }
-	| expr_concat TK_RDFR stmt_prim	{ $$ = new RedirFr( $3, $1 ); }
+	| expr_pair TK_RDFR  stmt_prim	{ $$ = new RedirFr( $3, $1 ); }
+	| expr_pair TK_ARROW stmt_prim	{ $$ = new Pipe( make_unique<Yield>( $1 ), $3 ); }
 	| stmt_prim
 
 stmt_prim

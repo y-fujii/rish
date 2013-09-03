@@ -123,13 +123,13 @@ fun qsort0 ($xs) {
 
 fun qsort1 {
 	if fetch $pv ($xs) {
-		yield $xs | while fetch $x {
+		$xs -> while fetch $x {
 			if test $x -le $pv {
 				yield $x
 			}
 		} | qsort1
 		yield $pv
-		yield $xs | while fetch $x {
+		$xs -> while fetch $x {
 			if test $x -gt $pv {
 				yield $x
 			}
