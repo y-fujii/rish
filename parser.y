@@ -29,7 +29,7 @@
 }
 
 %type<word>  TK_WORD
-%type<var>   TK_VAR TK_ARRAY
+%type<var>   TK_VAR
 %type<expr>  expr_prim expr_concat expr_pair
 %type<lexpr> lexpr_prim
 %type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
@@ -38,7 +38,7 @@
 
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH TK_YIELD
-%token TK_DEFER TK_FOR TK_ARRAY TK_ZIP TK_CHDIR TK_ARROW
+%token TK_DEFER TK_FOR TK_ZIP TK_CHDIR TK_ARROW
 
 %start top
 
@@ -140,11 +140,3 @@ expr_prim
 	: TK_WORD							{ $$ = $1; }
 	| TK_VAR							{ $$ = $1; }
 	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
-	| TK_ARRAY stmt_seq ')' {
-		$$ = new Subst(
-			make_unique<Pipe>(
-				make_unique<Yield>( $1 ),
-				$2
-			)
-		);
-	}
