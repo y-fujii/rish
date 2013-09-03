@@ -107,13 +107,13 @@ fun ackermann $m $n {
 
 fun qsort0 ($xs) {
 	if let $pv ($xs) = $xs {
-		qsort0 $xs( while fetch $x {
+		qsort0 ($xs -> while fetch $x {
 			if test $x -le $pv {
 				yield $x
 			}
 		} )
 		yield $pv
-		qsort0 $xs( yield $xs | while fetch $x {
+		qsort0 ($xs -> while fetch $x {
 			if test $x -gt $pv {
 				yield $x
 			}
