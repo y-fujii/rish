@@ -38,8 +38,11 @@
 %%
 
 <C>"("					{ INSERT_CARET(); }
+<C>"["					{ INSERT_CARET(); }
 <N,I>"("				{ BEGIN( I ); return '('; }
+<N,I>"["				{ BEGIN( I ); return '['; }
 <N,C,I>")"				{ BEGIN( C ); return ')'; }
+<N,C,I>"]"				{ BEGIN( C ); return ']'; }
 <N,C,I>"{"				{ BEGIN( I ); return '{'; }
 <N,C,I>"}"				{ BEGIN( N ); return '}'; }
 
@@ -79,8 +82,8 @@
 	return TK_VAR;
 }
 
-<C>[^()$" \t\n]+ { INSERT_CARET(); }
-<N,I>[^()$" \t\n]+ {
+<C>[^()\[\]$" \t\n]+ { INSERT_CARET(); }
+<N,I>[^()\[\]$" \t\n]+ {
 	MetaString w( yytext, yytext + yyleng );
 	auto it = w.begin();
 	assert( it != w.end() );
