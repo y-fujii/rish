@@ -138,5 +138,8 @@ expr_concat
 
 expr_prim
 	: TK_WORD							{ $$ = $1; }
+	| '('								{ $$ = new Word( MetaString( "(" ) ); }
+	| ')'								{ $$ = new Word( MetaString( ")" ) ); }
+	| '='								{ $$ = new Word( MetaString( "=" ) ); }
 	| TK_VAR							{ $$ = $1; }
-	| '(' stmt_seq ')'					{ $$ = new Subst( $2 ); }
+	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
