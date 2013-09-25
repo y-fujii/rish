@@ -220,7 +220,7 @@ tailRec:
 		VCASE( Var, e ) {
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e );
-			dst = copy( val.begin(), val.end(), dst );
+			dst = copy( val.cbegin(), val.cend(), dst );
 		}
 		VCASE( Subst, e ) {
 			int fds[2];
@@ -256,8 +256,8 @@ tailRec:
 			auto lit = lhs.cbegin();
 			auto rit = rhs.cbegin();
 			while( lit != lhs.cend() && rit != rhs.cend() ) {
-				int64_t lval = stoll( string( lit->begin(), lit->end() ) );
-				int64_t rval = stoll( string( rit->begin(), rit->end() ) );
+				int64_t lval = stoll( string( lit->cbegin(), lit->cend() ) );
+				int64_t rval = stoll( string( rit->cbegin(), rit->cend() ) );
 				int64_t r;
 				switch( e->op ) {
 					case BinOp::add: r = lval + rval; break;
@@ -281,7 +281,7 @@ tailRec:
 			deque<MetaString> lhs;
 			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
 			for( auto v: lhs ) {
-				int64_t val = stoll( string( v.begin(), v.end() ) );
+				int64_t val = stoll( string( v.cbegin(), v.cend() ) );
 				int64_t r;
 				switch( e->op ) {
 					case UniOp::pos: r = +val; break;
