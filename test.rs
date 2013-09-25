@@ -252,7 +252,7 @@ fun localCwd {
 }
 
 fun runTest {
-	yield (1 + 2 * 3) 7
+	yield (1 6 + 2 1 * 3 1)
 	echo "args: " $args
 	let $var = S
 	echo P[yield a b c][range 4]$var
