@@ -67,24 +67,20 @@ template<class DstIter>
 DstIter listDir( string const& root, DstIter dstIt ) {
 	assert( root.size() != 0 );
 	DIR* dir = opendir( root.c_str() );
-	if( dir == NULL ) {
+	if( dir == nullptr ) {
 		throw system_error( errno, system_category() );
 	}
 	auto closer = scopeExit( bind( closedir, dir ) );
 
 	while( true ) {
-		dirent entry;
-		dirent* result;
-		int ec = readdir_r( dir, &entry, &result );
-		if( ec != 0 ) {
-			throw system_error( ec, system_category() );
-		}
-		if( result == NULL ) {
+		// readdir() IS reentrant.
+		dirent* entry = readdir( dir );
+		if( entry == nullptr ) {
 			break;
 		}
-		string name( entry.d_name );
+		string name( entry->d_name );
 		if( name != "." && name != ".." ) {
-			*dstIt++ = make_pair( name, int( entry.d_type ) );
+			*dstIt++ = make_pair( name, int( entry->d_type ) );
 		}
 	}
 
