@@ -20,17 +20,18 @@
 %}
 
 %union {
-	StupidPtr<ast::Word> word;
-	StupidPtr<ast::Var> var;
-	StupidPtr<ast::Expr> expr;
+	StupidPtr<ast::Word>     word;
+	StupidPtr<ast::Var>      var;
+	StupidPtr<ast::Expr>     expr;
 	StupidPtr<ast::LeftExpr> lexpr;
-	StupidPtr<ast::Stmt> stmt;
+	StupidPtr<ast::Stmt>     stmt;
 	std::deque<unique_ptr<ast::Expr>>* exprs;
 }
 
-%type<word>  TK_WORD
+%type<word>  TK_WORD symbols
 %type<var>   TK_VAR
 %type<expr>  expr_prim expr_concat expr_pair
+%type<expr>  arith_prim arith_pos arith_mul arith_add
 %type<lexpr> lexpr_prim
 %type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
 %type<stmt>  stmt_redir stmt_pipe stmt_prim if_ else_
@@ -138,8 +139,49 @@ expr_concat
 
 expr_prim
 	: TK_WORD							{ $$ = $1; }
-	| '('								{ $$ = new Word( MetaString( "(" ) ); }
-	| ')'								{ $$ = new Word( MetaString( ")" ) ); }
-	| '='								{ $$ = new Word( MetaString( "=" ) ); }
+	| symbols							{ $$ = $1; }
 	| TK_VAR							{ $$ = $1; }
 	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
+	/*
+	| '(' arith_bool ')'				{ $$ = $2; }
+	*/
+	| '(' arith_add  ')'				{ $$ = $2; }
+
+/*
+arith_bool
+	: arith_add TK_EQ arith_add			{ $$ = new CmpOp( CmpOp::eq, $1, $3 ); }
+	| arith_add TK_NE arith_add			{ $$ = new CmpOp( CmpOp::ne, $1, $3 ); }
+	| arith_add TK_LE arith_add			{ $$ = new CmpOp( CmpOp::le, $1, $3 ); }
+	| arith_add TK_GE arith_add			{ $$ = new CmpOp( CmpOp::ge, $1, $3 ); }
+	| arith_add '<'   arith_add			{ $$ = new CmpOp( CmpOp::lt, $1, $3 ); }
+	| arith_add '>'   arith_add			{ $$ = new CmpOp( CmpOp::gt, $1, $3 ); }
+*/
+
+arith_add
+	: arith_add '+' arith_mul			{ $$ = new BinOp( BinOp::add, $1, $3 ); }
+	| arith_add '-' arith_mul			{ $$ = new BinOp( BinOp::sub, $1, $3 ); }
+	| arith_mul
+
+arith_mul
+	: arith_mul '*' arith_pos			{ $$ = new BinOp( BinOp::mul, $1, $3 ); }
+	| arith_mul '/' arith_pos			{ $$ = new BinOp( BinOp::div, $1, $3 ); }
+	| arith_mul '%' arith_pos			{ $$ = new BinOp( BinOp::mod, $1, $3 ); }
+	| arith_pos
+
+arith_pos
+	: '+' arith_prim					{ $$ = new UniOp( UniOp::pos, $2 ); }
+	| '-' arith_prim					{ $$ = new UniOp( UniOp::neg, $2 ); }
+	| arith_prim
+
+arith_prim
+	: TK_WORD							{ $$ = $1; }
+	| TK_VAR							{ $$ = $1; }
+	| '(' arith_add ')'					{ $$ = $2; }
+	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
+
+symbols
+	: '+'								{ $$ = new Word( basic_string<uint16_t>( 1, '+' ) ); }
+	| '-'								{ $$ = new Word( basic_string<uint16_t>( 1, '-' ) ); }
+	| '*'								{ $$ = new Word( basic_string<uint16_t>( 1, star ) ); }
+	| '/'								{ $$ = new Word( basic_string<uint16_t>( 1, '/' ) ); }
+	| '%'								{ $$ = new Word( basic_string<uint16_t>( 1, '%' ) ); }

@@ -1,7 +1,7 @@
 fun size {
 	let $n = 0
 	while fetch $e {
-		let $n = [expr $n + 1]
+		let $n = ($n + 1)
 	}
 	yield $n
 }
@@ -27,7 +27,7 @@ fun range $n {
 	let $i = 0
 	while test $i -lt $n {
 		yield $i
-		let $i = [expr $i + 1]
+		let $i = ($i + 1)
 	}
 }
 
@@ -35,7 +35,7 @@ fun enumerate {
 	let $i = 0 
 	while fetch $e {
 		yield $i $e
-		let $i = [expr $i + 1]
+		let $i = ($i + 1)
 	}
 }
 
@@ -79,7 +79,7 @@ fun testDefer {
 fun factorialLoop $n {
 	let $result = 1
 	range $n | while fetch $i {
-		let $result = [expr $result "*" ($i + 1)]
+		let $result = ($result * ($i + 1))
 	}
 	yield $result
 }
@@ -89,19 +89,19 @@ fun factorialRec $n {
 		yield 1
 	}
 	else {
-		expr $n "*" [factorialRec [expr $n - 1]]
+		yield ($n * [factorialRec ($n - 1)])
 	}
 }
 
 fun ackermann $m $n {
 	if test $m -eq 0 {
-		expr $n + 1
+		yield ($n + 1)
 	}
 	else if test $n -eq 0 {
-		ackermann [expr $m - 1] 1
+		ackermann ($m - 1) 1
 	}
 	else {
-		ackermann [expr $m - 1] [ackermann $m [expr $n - 1]]
+		ackermann ($m - 1) [ackermann $m ($n - 1)]
 	}
 }
 
@@ -252,6 +252,8 @@ fun localCwd {
 }
 
 fun runTest {
+	yield (1 + 2 * 3) 7
+	echo *
 	echo "args: " $args
 	let $var = S
 	echo P[yield a b c][range 4]$var

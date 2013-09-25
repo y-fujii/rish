@@ -65,6 +65,7 @@ struct Evaluator {
 	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, Local const&, int, int )>;
 
 	template<class Iter> int callCommand( Iter, Iter, Local const&, int, int );
+	template<class Iter> Iter evalArith( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
@@ -247,6 +248,41 @@ tailRec:
 				}
 			};
 			parallel( writer, reader );
+		}
+		VCASE( BinOp, e ) {
+			deque<MetaString> lhs, rhs;
+			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
+			evalExpr( e->rhs.get(), local, back_inserter( rhs ) );
+			auto lit = lhs.cbegin();
+			auto rit = rhs.cbegin();
+			while( lit != lhs.cend() && rit != rhs.cend() ) {
+				int64_t lval = stoll( string( lit->begin(), lit->end() ) );
+				int64_t rval = stoll( string( rit->begin(), rit->end() ) );
+				int64_t r;
+				switch( e->op ) {
+					case BinOp::add: r = lval + rval; break;
+					case BinOp::sub: r = lval - rval; break;
+					case BinOp::mul: r = lval * rval; break;
+					case BinOp::div: r = lval / rval; break;
+					case BinOp::mod: r = lval % rval; break;
+				}
+				*dst++ = to_string( r );
+				++lit;
+				++rit;
+			}
+		}
+		VCASE( UniOp, e ) {
+			deque<MetaString> lhs;
+			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
+			for( auto v: lhs ) {
+				int64_t val = stoll( string( v.begin(), v.end() ) );
+				int64_t r;
+				switch( e->op ) {
+					case UniOp::pos: r = +val; break;
+					case UniOp::neg: r = -val; break;
+				}
+				*dst++ = to_string( r );
+			}
 		}
 		VCASE( Null, _ ) {
 		}
