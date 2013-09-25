@@ -8,7 +8,7 @@ fun size {
 
 fun index $n {
 	enumerate | while fetch $i $e {
-		if test $i -eq $n {
+		if ($i == $n) {
 			yield $e
 			break 0
 		}
@@ -17,7 +17,7 @@ fun index $n {
 
 fun slice $bgn $end {
 	enumerate | while fetch $i $e {
-		if test $bgn -le $i && test $i -lt $end {
+		if ($bgn <= $i) && ($i < $end) {
 			yield $e
 		}
 	}
@@ -25,7 +25,7 @@ fun slice $bgn $end {
 
 fun range $n {
 	let $i = 0
-	while test $i -lt $n {
+	while ($i < $n) {
 		yield $i
 		let $i = ($i + 1)
 	}
@@ -41,7 +41,7 @@ fun enumerate {
 
 fun all {
 	while fetch $e {
-		if test $e -eq 0 {
+		if ($e == 0) {
 			return 0
 		}
 	}
@@ -50,7 +50,7 @@ fun all {
 
 fun any {
 	while fetch $e {
-		if test $e -ne 0 {
+		if ($e != 0) {
 			return 1
 		}
 	}
@@ -85,7 +85,7 @@ fun factorialLoop $n {
 }
 
 fun factorialRec $n {
-	if test $n -le 1 {
+	if ($n <= 1) {
 		yield 1
 	}
 	else {
@@ -94,10 +94,10 @@ fun factorialRec $n {
 }
 
 fun ackermann $m $n {
-	if test $m -eq 0 {
+	if ($m == 0) {
 		yield ($n + 1)
 	}
-	else if test $n -eq 0 {
+	else if ($n == 0) {
 		ackermann ($m - 1) 1
 	}
 	else {
@@ -108,13 +108,13 @@ fun ackermann $m $n {
 fun qsort0 ($xs) {
 	if let $pv ($xs) = $xs {
 		qsort0 [$xs -> while fetch $x {
-			if test $x -le $pv {
+			if ($x <= $pv) {
 				yield $x
 			}
 		}]
 		yield $pv
 		qsort0 [$xs -> while fetch $x {
-			if test $x -gt $pv {
+			if ($x > $pv) {
 				yield $x
 			}
 		}]
@@ -124,13 +124,13 @@ fun qsort0 ($xs) {
 fun qsort1 {
 	if fetch $pv ($xs) {
 		$xs -> while fetch $x {
-			if test $x -le $pv {
+			if ($x <= $pv) {
 				yield $x
 			}
 		} | qsort1
 		yield $pv
 		$xs -> while fetch $x {
-			if test $x -gt $pv {
+			if ($x > $pv) {
 				yield $x
 			}
 		} | qsort1
@@ -144,7 +144,7 @@ fun redirect {
 fun returnInPipe {
 	range 16 | while fetch $i {
 		yield $i
-		if test $i -eq 8 {
+		if ($i == 8) {
 			return 0
 		}
 	}
@@ -253,7 +253,6 @@ fun localCwd {
 
 fun runTest {
 	yield (1 + 2 * 3) 7
-	echo *
 	echo "args: " $args
 	let $var = S
 	echo P[yield a b c][range 4]$var

@@ -121,6 +121,7 @@ struct Concat: VariantImpl<Expr, Concat> {
 struct BinOp: VariantImpl<Expr, BinOp> {
 	enum Operator {
 		add, sub, mul, div, mod,
+		eq, ne, le, ge, lt, gt,
 	};
 
 	BinOp( Operator o, unique_ptr<Expr>&& l, unique_ptr<Expr>&& r ):
