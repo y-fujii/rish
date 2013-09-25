@@ -14,6 +14,8 @@ struct Subst;
 struct Var;
 struct Pair;
 struct Concat;
+struct BinOp;
+struct UniOp;
 struct Null;
 using Expr = Variant<
 	Word,
@@ -21,6 +23,8 @@ using Expr = Variant<
 	Var,
 	Pair,
 	Concat,
+	BinOp,
+	UniOp,
 	Null
 >;
 
@@ -112,6 +116,31 @@ struct Concat: VariantImpl<Expr, Concat> {
 
 	unique_ptr<Expr> lhs;
 	unique_ptr<Expr> rhs;
+};
+
+struct BinOp: VariantImpl<Expr, BinOp> {
+	enum Operator {
+		add, sub, mul, div, mod,
+	};
+
+	BinOp( Operator o, unique_ptr<Expr>&& l, unique_ptr<Expr>&& r ):
+		op( o ), lhs( move( l ) ), rhs( move( r ) ) {}
+
+	Operator op;
+	unique_ptr<Expr> lhs;
+	unique_ptr<Expr> rhs;
+};
+
+struct UniOp: VariantImpl<Expr, UniOp> {
+	enum Operator {
+		pos, neg,
+	};
+
+	UniOp( Operator o, unique_ptr<Expr>&& l ):
+		op( o ), lhs( move( l ) ) {}
+
+	Operator op;
+	unique_ptr<Expr> lhs;
 };
 
 struct Null: VariantImpl<Expr, Null> {

@@ -54,6 +54,12 @@
 <N,C,I>"^"				{ BEGIN( I ); return '^'; }
 <N,C,I>"$"				{ BEGIN( I ); return '$'; }
 
+<N,C,I>"+"				{ BEGIN( N ); return '+'; }
+<N,C,I>"-"				{ BEGIN( N ); return '-'; }
+<N,C,I>"*"				{ BEGIN( N ); return '*'; }
+<N,C,I>"/"				{ BEGIN( N ); return '/'; }
+<N,C,I>"%"				{ BEGIN( N ); return '%'; }
+
 <N,C,I>"&&"				{ BEGIN( I ); return TK_AND2; }
 <N,C,I>"||"				{ BEGIN( I ); return TK_OR2; }
 <N,C,I>"->"				{ BEGIN( I ); return TK_ARROW; }

@@ -74,6 +74,13 @@ void Annotator::annotate( ast::Expr* expr, Annotator::Local& local ) {
 		VCASE( Subst, e ) {
 			annotate( e->body.get(), local );
 		}
+		VCASE( BinOp, e ) {
+			annotate( e->lhs.get(), local );
+			annotate( e->rhs.get(), local );
+		}
+		VCASE( UniOp, e ) {
+			annotate( e->lhs.get(), local );
+		}
 		VCASE( Null, _ ) {
 		}
 		VDEFAULT {
