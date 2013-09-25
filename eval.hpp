@@ -265,6 +265,12 @@ tailRec:
 					case BinOp::mul: r = lval * rval; break;
 					case BinOp::div: r = lval / rval; break;
 					case BinOp::mod: r = lval % rval; break;
+					case BinOp::eq:  r = (lval == rval) ? 0 : 1; break;
+					case BinOp::ne:  r = (lval != rval) ? 0 : 1; break;
+					case BinOp::le:  r = (lval <= rval) ? 0 : 1; break;
+					case BinOp::ge:  r = (lval >= rval) ? 0 : 1; break;
+					case BinOp::lt:  r = (lval <  rval) ? 0 : 1; break;
+					case BinOp::gt:  r = (lval >  rval) ? 0 : 1; break;
 				}
 				*dst++ = to_string( r );
 				++lit;
@@ -296,6 +302,14 @@ tailRec:
 template<class Iter>
 int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd, int ofd ) {
 	assert( argsE - argsB >= 1 );
+
+	if( argsE - argsB == 1 ) {
+		try {
+			return stoll( argsB[0] );
+		}
+		catch( invalid_argument const& ) {
+		}
+	}
 
 	mutexGlobal.lock();
 	auto fit = closures.find( argsB[0] );
