@@ -31,7 +31,7 @@
 %type<word>  TK_WORD symbols
 %type<var>   TK_VAR
 %type<expr>  expr_prim expr_concat expr_pair
-%type<expr>  arith_prim arith_pos arith_mul arith_add arith_bool
+%type<expr>  arith_prim arith_pair arith_pos arith_mul arith_add arith_bool
 %type<lexpr> lexpr_prim
 %type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
 %type<stmt>  stmt_redir stmt_pipe stmt_prim if_ else_
@@ -165,9 +165,13 @@ arith_mul
 	| arith_pos
 
 arith_pos
-	: '+' arith_prim					{ $$ = new UniOp( UniOp::pos, $2 ); }
-	| '-' arith_prim					{ $$ = new UniOp( UniOp::neg, $2 ); }
-	| arith_prim
+	: '+' arith_pair					{ $$ = new UniOp( UniOp::pos, $2 ); }
+	| '-' arith_pair					{ $$ = new UniOp( UniOp::neg, $2 ); }
+	| arith_pair
+
+arith_pair
+	: arith_prim arith_pair				{ $$ = new Pair( $1, $2 ); }
+	| arith_prim 						{ $$ = $1; }
 
 arith_prim
 	: TK_WORD							{ $$ = $1; }
