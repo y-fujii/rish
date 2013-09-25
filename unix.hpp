@@ -120,19 +120,16 @@ void closefrom( int lowfd ) {
 	auto closer = scopeExit( bind( closedir, dir ) );
 
 	while( true ) {
-		dirent entry;
-		dirent* result;
-		if( readdir_r( dir, &entry, &result ) != 0 ) {
-			return;
-		}
-		if( result == NULL ) {
+		// readdir() IS reentrant.
+		dirent* entry = readdir( dir );
+		if( entry == nullptr ) {
 			break;
 		}
-		if( entry.d_type == DT_DIR ) {
+		if( entry->d_type == DT_DIR ) {
 			continue;
 		}
 		int fd = -1;
-		sscanf( entry.d_name, "%d", &fd );
+		sscanf( entry->d_name, "%d", &fd );
 		if( fd >= lowfd ) {
 			close( fd );
 		}
