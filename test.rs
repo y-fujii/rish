@@ -240,8 +240,8 @@ fun emulPrevNext {
 
 fun testZip {
 	zip || yield "NG"
-	zip [yield]
-	zip [yield 0 1 2] [yield a b c]
+	zip ()
+	zip (0 1 2) (a b c)
 }
 
 fun localCwd {
@@ -255,7 +255,7 @@ fun runTest {
 	yield (1 6 + 2 1 * 3 1)
 	echo "args: " $args
 	let $var = S
-	echo P[yield a b c][range 4]$var
+	echo P(a b c)[range 4]$var
 	testLet
 	factorialRec 16
 	factorialLoop 16
