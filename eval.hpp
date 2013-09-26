@@ -263,8 +263,8 @@ tailRec:
 					case BinOp::add: r = lval + rval; break;
 					case BinOp::sub: r = lval - rval; break;
 					case BinOp::mul: r = lval * rval; break;
-					case BinOp::div: r = lval / rval; break;
-					case BinOp::mod: r = lval % rval; break;
+					case BinOp::div: r = idiv( lval, rval ); break;
+					case BinOp::mod: r = imod( lval, rval ); break;
 					case BinOp::eq:  r = (lval == rval) ? 0 : 1; break;
 					case BinOp::ne:  r = (lval != rval) ? 0 : 1; break;
 					case BinOp::le:  r = (lval <= rval) ? 0 : 1; break;
