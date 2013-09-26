@@ -22,8 +22,20 @@ constexpr size_t size( T const (&)[N] ) {
 	return N;
 }
 
-constexpr int imod( int a, int b ) {
-	return (a * b < 0) ? (a % b + b) : (a % b);
+constexpr int64_t idiv( int64_t a, int64_t b ) {
+	return (
+		(a % b == 0) ? (a / b    ) :
+		(a * b <  0) ? (a / b - 1) :
+		               (a / b    )
+	);
+}
+
+constexpr int64_t imod( int64_t a, int64_t b ) {
+	return (
+		(a % b == 0) ? (a % b    ) :
+		(a * b <  0) ? (a % b + b) :
+		               (a % b    )
+	);
 }
 
 template<class T, class... Args>

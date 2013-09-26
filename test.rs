@@ -251,6 +251,13 @@ fun localCwd {
 	pwd
 }
 
+fun testDivMod {
+	let ($as) = (+13 -13 +13 -13 +20 -20 +20 -20)
+	let ($bs) = (+10 +10 -10 -10 +10 +10 -10 -10)
+	echo ($as / $bs == +1 -2 -2 +1 +2 -2 -2 +2)
+	echo ($as % $bs == +3 +7 -7 -3  0  0  0  0)
+}
+
 fun runTest {
 	yield (1 6 + 2 1 * 3 1)
 	echo "args: " $args
@@ -282,6 +289,8 @@ fun runTest {
 		//comment //comment
 	}
 	localCwd
+
+	testDivMod
 }
 
 runTest
