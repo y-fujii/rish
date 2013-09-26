@@ -256,6 +256,7 @@ fun testDivMod {
 	let ($bs) = (+10 +10 -10 -10 +10 +10 -10 -10)
 	echo ($as / $bs == +1 -2 -2 +1 +2 -2 -2 +2)
 	echo ($as % $bs == +3 +7 -7 -3  0  0  0  0)
+	echo (2 * 3 / 3 * 2 == 1)
 }
 
 fun runTest {

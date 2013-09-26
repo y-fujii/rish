@@ -31,7 +31,7 @@
 %type<word>  TK_WORD symbols
 %type<var>   TK_VAR
 %type<expr>  expr_prim expr_concat expr_pair
-%type<expr>  arith_prim arith_pair arith_pos arith_mul arith_add arith_bool
+%type<expr>  arith_prim arith_pair arith_pos arith_mul arith_div arith_add arith_bool
 %type<lexpr> lexpr_prim
 %type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
 %type<stmt>  stmt_redir stmt_pipe stmt_prim if_ else_
@@ -155,14 +155,17 @@ arith_bool
 	| arith_add '>'   arith_add			{ $$ = new BinOp( BinOp::gt, $1, $3 ); }
 
 arith_add
-	: arith_add '+' arith_mul			{ $$ = new BinOp( BinOp::add, $1, $3 ); }
-	| arith_add '-' arith_mul			{ $$ = new BinOp( BinOp::sub, $1, $3 ); }
+	: arith_add '+' arith_div			{ $$ = new BinOp( BinOp::add, $1, $3 ); }
+	| arith_add '-' arith_div			{ $$ = new BinOp( BinOp::sub, $1, $3 ); }
+	| arith_div
+
+arith_div
+	: arith_div '/' arith_mul			{ $$ = new BinOp( BinOp::div, $1, $3 ); }
+	| arith_div '%' arith_mul			{ $$ = new BinOp( BinOp::mod, $1, $3 ); }
 	| arith_mul
 
 arith_mul
 	: arith_mul '*' arith_pos			{ $$ = new BinOp( BinOp::mul, $1, $3 ); }
-	| arith_mul '/' arith_pos			{ $$ = new BinOp( BinOp::div, $1, $3 ); }
-	| arith_mul '%' arith_pos			{ $$ = new BinOp( BinOp::mod, $1, $3 ); }
 	| arith_pos
 
 arith_pos
