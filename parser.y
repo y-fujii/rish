@@ -144,6 +144,7 @@ expr_prim
 	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
 	| '(' arith_bool ')'				{ $$ = $2; }
 	| '(' arith_add  ')'				{ $$ = $2; }
+	| '(' ')'							{ $$ = new Null(); }
 
 arith_bool
 	: arith_add TK_EQ arith_add			{ $$ = new BinOp( BinOp::eq, $1, $3 ); }
@@ -176,6 +177,7 @@ arith_pair
 arith_prim
 	: TK_WORD							{ $$ = $1; }
 	| TK_VAR							{ $$ = $1; }
+	| '(' ')'							{ $$ = new Null(); }
 	| '(' arith_add ')'					{ $$ = $2; }
 	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
 
