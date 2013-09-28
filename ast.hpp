@@ -16,6 +16,8 @@ struct Pair;
 struct Concat;
 struct BinOp;
 struct UniOp;
+struct Index;
+struct Slice;
 struct Null;
 using Expr = Variant<
 	Word,
@@ -25,6 +27,8 @@ using Expr = Variant<
 	Concat,
 	BinOp,
 	UniOp,
+	Index,
+	Slice,
 	Null
 >;
 
@@ -142,6 +146,23 @@ struct UniOp: VariantImpl<Expr, UniOp> {
 
 	Operator op;
 	unique_ptr<Expr> lhs;
+};
+
+struct Index: VariantImpl<Expr, Index> {
+	Index( unique_ptr<Var>&& v, unique_ptr<Expr>&& i ):
+		var( move( v ) ), idx( move( i ) ) {}
+
+	unique_ptr<Var> var;
+	unique_ptr<Expr> idx;
+};
+
+struct Slice: VariantImpl<Expr, Slice> {
+	Slice( unique_ptr<Var>&& v, unique_ptr<Expr>&& b, unique_ptr<Expr>&& e ):
+		var( move( v ) ), bgn( move( b ) ), end( move( e ) ) {}
+
+	unique_ptr<Var> var;
+	unique_ptr<Expr> bgn;
+	unique_ptr<Expr> end;
 };
 
 struct Null: VariantImpl<Expr, Null> {

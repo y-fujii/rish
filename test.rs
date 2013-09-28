@@ -170,20 +170,20 @@ fun runBg {
 	yield "finished join"
 }
 
-//fun testSlice {
-//	let ($arr) = [range 8]
-//	echo $arr(0)
-//	echo $arr(0 2)
-//	echo $arr(0 -1)
-//	echo $arr(-1 0)
-//
-//	let ($err) =
-//	! echo $err(0) &&
-//	! echo $err(0 2) &&
-//	! echo $err(0 -1) &&
-//	! echo $err(-2 -1) &&
-//	echo "slice OK"
-//}
+fun testSlice {
+	let ($arr) = [range 8]
+	echo $arr[0]
+	echo $arr[ 0 :  2]
+	echo $arr[ 0 : -1]
+	echo $arr[-1 :  0]
+
+	let ($err) =
+	! echo $err[0] &&
+	! echo $err[ 0 :  2] &&
+	! echo $err[ 0 : -1] &&
+	! echo $err[-2 : -1] &&
+	echo "slice OK"
+}
 
 fun emulPrevNext {
 	let $cwDir = "/0"
@@ -269,7 +269,7 @@ fun runTest {
 	factorialLoop 16
 	ackermann 3 2
 	echo 29
-	// testSlice
+	testSlice
 	testDefer
 	range 16 | index 4
 	range 16 | slice 4 6
