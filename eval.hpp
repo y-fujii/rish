@@ -250,14 +250,19 @@ tailRec:
 			parallel( writer, reader );
 		}
 		VCASE( BinOp, e ) {
-			deque<MetaString> lhs, rhs;
-			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
-			evalExpr( e->rhs.get(), local, back_inserter( rhs ) );
-			auto lit = lhs.cbegin();
-			auto rit = rhs.cbegin();
-			while( lit != lhs.cend() && rit != rhs.cend() ) {
-				int64_t lval = stoll( string( lit->cbegin(), lit->cend() ) );
-				int64_t rval = stoll( string( rit->cbegin(), rit->cend() ) );
+			deque<MetaString> lhss, rhss;
+			evalExpr( e->lhs.get(), local, back_inserter( lhss ) );
+			evalExpr( e->rhs.get(), local, back_inserter( rhss ) );
+			if( (lhss.size() != 0 && rhss.size() == 0) ||
+			    (lhss.size() == 0 && rhss.size() != 0) ) {
+				throw ArgError();
+			}
+
+			for( size_t i = 0; i < lhss.size() || i < rhss.size(); ++i ) {
+				MetaString const& lhs = lhss[i % lhss.size()];
+				MetaString const& rhs = rhss[i % rhss.size()];
+				int64_t lval = stoll( string( lhs.cbegin(), lhs.cend() ) );
+				int64_t rval = stoll( string( rhs.cbegin(), rhs.cend() ) );
 				int64_t r;
 				switch( e->op ) {
 					case BinOp::add: r = lval + rval; break;
@@ -273,8 +278,6 @@ tailRec:
 					case BinOp::gt:  r = (lval >  rval) ? 0 : -1; break;
 				}
 				*dst++ = to_string( r );
-				++lit;
-				++rit;
 			}
 		}
 		VCASE( UniOp, e ) {
