@@ -29,7 +29,7 @@
 }
 
 %type<word>  TK_WORD symbols
-%type<var>   TK_VAR
+%type<var>   TK_VAR TK_INDEX
 %type<expr>  expr_prim expr_concat expr_pair
 %type<expr>  arith_prim arith_pair arith_pos arith_mul arith_div arith_add arith_bool
 %type<lexpr> lexpr_prim
@@ -40,6 +40,7 @@
 %token TK_AND2 TK_OR2 TK_RDT1 TK_RDT2 TK_RDFR TK_WORD TK_VAR TK_IF TK_ELSE
 %token TK_WHILE TK_BREAK TK_RETURN TK_LET TK_FUN TK_WHEN TK_FETCH TK_YIELD
 %token TK_DEFER TK_FOR TK_ZIP TK_CHDIR TK_ARROW TK_EQ TK_NE TK_LE TK_GE
+%token TK_INDEX
 
 %start top
 
@@ -138,13 +139,9 @@ expr_concat
 	| expr_prim
 
 expr_prim
-	: TK_WORD							{ $$ = $1; }
-	| symbols							{ $$ = $1; }
-	| TK_VAR							{ $$ = $1; }
-	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
+	: symbols							{ $$ = $1; }
+	| arith_prim
 	| '(' arith_bool ')'				{ $$ = $2; }
-	| '(' arith_add  ')'				{ $$ = $2; }
-	| '(' ')'							{ $$ = new Null(); }
 
 arith_bool
 	: arith_add TK_EQ arith_add			{ $$ = new BinOp( BinOp::eq, $1, $3 ); }
@@ -175,11 +172,13 @@ arith_pos
 
 arith_pair
 	: arith_prim arith_pair				{ $$ = new Pair( $1, $2 ); }
-	| arith_prim 						{ $$ = $1; }
+	| arith_prim
 
 arith_prim
 	: TK_WORD							{ $$ = $1; }
 	| TK_VAR							{ $$ = $1; }
+	| TK_INDEX arith_add ']'			{ $$ = new Index( $1, $2 ); }
+	| TK_INDEX arith_add ':' arith_add ']'	{ $$ = new Slice( $1, $2, $4 ); }
 	| '(' ')'							{ $$ = new Null(); }
 	| '(' arith_add ')'					{ $$ = $2; }
 	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
