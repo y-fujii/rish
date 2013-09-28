@@ -191,6 +191,7 @@ symbols
 	| '%'								{ $$ = new Word( basic_string<uint16_t>{ '%' } ); }
 	| '<'								{ $$ = new Word( basic_string<uint16_t>{ '<' } ); }
 	| '>'								{ $$ = new Word( basic_string<uint16_t>{ '>' } ); }
+	| ':'								{ $$ = new Word( basic_string<uint16_t>{ ':' } ); }
 	| TK_EQ								{ $$ = new Word( basic_string<uint16_t>{ '=', '=' } ); }
 	| TK_NE								{ $$ = new Word( basic_string<uint16_t>{ '!', '=' } ); }
 	| TK_LE								{ $$ = new Word( basic_string<uint16_t>{ '<', '=' } ); }
