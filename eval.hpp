@@ -280,7 +280,7 @@ tailRec:
 		VCASE( UniOp, e ) {
 			deque<MetaString> lhs;
 			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
-			for( auto v: lhs ) {
+			for( auto const& v: lhs ) {
 				int64_t val = stoll( string( v.cbegin(), v.cend() ) );
 				int64_t r;
 				switch( e->op ) {
