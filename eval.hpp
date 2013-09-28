@@ -291,45 +291,51 @@ tailRec:
 			}
 		}
 		VCASE( Index, e ) {
-			deque<MetaString> sIdx;
-			evalExpr( e->idx.get(), local, back_inserter( sIdx ) );
-			if( sIdx.size() != 1 ) {
-				throw ArgError();
-			}
-			int64_t idx = stoll( string( sIdx.back().begin(), sIdx.back().end() ) );
+			deque<MetaString> sIdcs;
+			evalExpr( e->idx.get(), local, back_inserter( sIdcs ) );
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
 			if( val.size() == 0 ) {
 				throw ArgError();
 			}
-			idx = imod( idx, val.size() );
-			*dst++ = val[idx];
+			for( auto const& sIdx: sIdcs ) {
+				int64_t idx = stoll( string( sIdx.cbegin(), sIdx.cend() ) );
+				idx = imod( idx, val.size() );
+				*dst++ = val[idx];
+			}
 		}
 		VCASE( Slice, e ) {
-			deque<MetaString> sBgn;
-			deque<MetaString> sEnd;
-			evalExpr( e->bgn.get(), local, back_inserter( sBgn ) );
-			evalExpr( e->end.get(), local, back_inserter( sEnd ) );
-			if( sBgn.size() != 1 || sEnd.size() != 1 ) {
+			deque<MetaString> sBgns;
+			deque<MetaString> sEnds;
+			evalExpr( e->bgn.get(), local, back_inserter( sBgns ) );
+			evalExpr( e->end.get(), local, back_inserter( sEnds ) );
+			if( sBgns.size() != sEnds.size() ) {
 				throw ArgError();
 			}
-			int64_t bgn = stoll( string( sBgn.back().begin(), sBgn.back().end() ) );
-			int64_t end = stoll( string( sEnd.back().begin(), sEnd.back().end() ) );
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
 			if( val.size() == 0 ) {
 				throw ArgError();
 			}
-			bgn = imod( bgn, val.size() );
-			end = imod( end, val.size() );
-			if( bgn < end ) {
-				dst = copy( val.begin() + bgn, val.begin() + end, dst );
-			}
-			else {
-				dst = copy( val.begin() + bgn, val.end(), dst );
-				dst = copy( val.begin(), val.begin() + end, dst );
+
+			auto bit = sBgns.cbegin();
+			auto eit = sEnds.cbegin();
+			while( bit != sBgns.cend() ) {
+				int64_t bgn = stoll( string( bit->cbegin(), bit->cend() ) );
+				int64_t end = stoll( string( eit->cbegin(), eit->cend() ) );
+				bgn = imod( bgn, val.size() );
+				end = imod( end, val.size() );
+				if( bgn < end ) {
+					dst = copy( val.begin() + bgn, val.begin() + end, dst );
+				}
+				else {
+					dst = copy( val.begin() + bgn, val.end(), dst );
+					dst = copy( val.begin(), val.begin() + end, dst );
+				}
+				++bit;
+				++eit;
 			}
 		}
 		VCASE( Null, _ ) {
