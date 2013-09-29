@@ -313,7 +313,8 @@ tailRec:
 			deque<MetaString> sEnds;
 			evalExpr( e->bgn.get(), local, back_inserter( sBgns ) );
 			evalExpr( e->end.get(), local, back_inserter( sEnds ) );
-			if( sBgns.size() != sEnds.size() ) {
+			if( (sBgns.size() != 0 && sEnds.size() == 0) ||
+			    (sBgns.size() == 0 && sEnds.size() != 0) ) {
 				throw ArgError();
 			}
 
@@ -323,11 +324,11 @@ tailRec:
 				throw ArgError();
 			}
 
-			auto bit = sBgns.cbegin();
-			auto eit = sEnds.cbegin();
-			while( bit != sBgns.cend() ) {
-				int64_t bgn = stoll( string( bit->cbegin(), bit->cend() ) );
-				int64_t end = stoll( string( eit->cbegin(), eit->cend() ) );
+			for( size_t i = 0; i < sBgns.size() || i < sEnds.size(); ++i ) {
+				MetaString const& sBgn = sBgns[i % sBgns.size()];
+				MetaString const& sEnd = sEnds[i % sEnds.size()];
+				int64_t bgn = stoll( string( sBgn.cbegin(), sBgn.cend() ) );
+				int64_t end = stoll( string( sEnd.cbegin(), sEnd.cend() ) );
 				bgn = imod( bgn, val.size() );
 				end = imod( end, val.size() );
 				if( bgn < end ) {
@@ -337,8 +338,6 @@ tailRec:
 					dst = copy( val.begin() + bgn, val.end(), dst );
 					dst = copy( val.begin(), val.begin() + end, dst );
 				}
-				++bit;
-				++eit;
 			}
 		}
 		VCASE( Null, _ ) {

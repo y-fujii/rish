@@ -172,12 +172,15 @@ fun runBg {
 
 fun testSlice {
 	let ($arr) = [range 8]
-	echo $arr[0]
-	echo $arr[0 2 4 8]
-	echo $arr[0 * 0 + 2]
-	echo $arr[ 0 :  2]
-	echo $arr[ 0 : -1]
-	echo $arr[-1 :  0]
+	echo $arr[0]			"|" 0 
+	echo $arr[0 2 4 8]		"|" 0 2 4 0
+	echo $arr[0 * 0 + 2]	"|" 2
+	echo $arr[ 0 :  2]		"|" 0 1
+	echo $arr[ 0 : -1]		"|" 0 1 2 3 4 5 6
+	echo $arr[-1 :  1]		"|" 7 0
+	echo $arr[1 2 3 : 4]	"|" 1 2 3 2 3 3
+	echo $arr[0 : 0]		"|" 0 1 2 3 4 5 6 7
+	echo $arr[-2 : -2]		"|" 6 7 0 1 2 3 4 5
 
 	let ($err) =
 	! echo $err[0] &&
