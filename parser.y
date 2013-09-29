@@ -177,8 +177,8 @@ arith_pair
 arith_prim
 	: TK_WORD							{ $$ = $1; }
 	| TK_VAR							{ $$ = $1; }
-	| TK_INDEX arith_add ']'			{ $$ = new Index( $1, $2 ); }
-	| TK_INDEX arith_add ':' arith_add ']'	{ $$ = new Slice( $1, $2, $4 ); }
+	| TK_INDEX arith_add ')'			{ $$ = new Index( $1, $2 ); }
+	| TK_INDEX arith_add ':' arith_add ')'	{ $$ = new Slice( $1, $2, $4 ); }
 	| '(' ')'							{ $$ = new Null(); }
 	| '(' arith_add ')'					{ $$ = $2; }
 	| '[' stmt_seq ']'					{ $$ = new Subst( $2 ); }
