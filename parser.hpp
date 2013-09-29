@@ -24,6 +24,7 @@ inline unique_ptr<ast::Stmt>&& parse( istream& istr ) {
 	parserResult = nullptr;
 	lexerInit( &istr );
 	yyparse();
+	lexerInit( nullptr );
 	assert( parserResult );
 
 	return std::move( parserResult );

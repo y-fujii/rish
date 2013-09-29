@@ -14,8 +14,8 @@
 
 	using namespace std;
 
-	istream* lexerIStream;
-	size_t lexerLineNo;
+	istream* lexerIStream = nullptr;
+	size_t   lexerLineNo  = 0;
 
 	#define YY_INPUT( buf, result, bufSize ) {		\
 		lexerIStream->read( buf, bufSize );			\
@@ -173,8 +173,8 @@ extern "C" int yywrap() {
 }
 
 void lexerInit( istream* istr ) {
-	lexerLineNo = 0;
 	lexerIStream = istr;
+	lexerLineNo  = 0;
 	BEGIN( N );
 }
 
