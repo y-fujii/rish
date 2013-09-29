@@ -113,11 +113,13 @@ struct UnixIStream: istream {
 void closefrom( int lowfd ) {
 	assert( lowfd >= 0 );
 
+	// XXX: we must use async-signal-safe functions only.
+
 	DIR* dir = opendir( "/proc/self/fd" );
-	if( dir == NULL ) {
+	if( dir == nullptr ) {
 		return;
 	}
-	auto closer = scopeExit( bind( closedir, dir ) );
+	int dfd = dirfd( dir );
 
 	while( true ) {
 		// readdir() IS reentrant.
@@ -130,10 +132,12 @@ void closefrom( int lowfd ) {
 		}
 		int fd = -1;
 		sscanf( entry->d_name, "%d", &fd );
-		if( fd >= lowfd ) {
+		if( fd >= lowfd && fd != dfd ) {
 			close( fd );
 		}
 	}
+
+	closedir( dir );
 }
 #endif
 
