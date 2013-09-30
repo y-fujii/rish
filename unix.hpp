@@ -101,12 +101,12 @@ struct UnixStreamBuf: streambuf {
 template<size_t N = PIPE_BUF>
 struct UnixIStream: istream {
 	explicit UnixIStream( int fd ):
-		istream( new UnixStreamBuf<N>( fd ) ) {
+		istream( &_buf ), // _buf is not initialized here.
+		_buf( fd ) {
 	}
 
-	~UnixIStream() {
-		delete rdbuf();
-	}
+	private:
+		UnixStreamBuf<N> _buf;
 };
 
 #if defined( __linux__ )
