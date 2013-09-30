@@ -114,7 +114,6 @@ void closefrom( int lowfd ) {
 	assert( lowfd >= 0 );
 
 	// XXX: we must use async-signal-safe functions only.
-
 	DIR* dir = opendir( "/proc/self/fd" );
 	if( dir == nullptr ) {
 		return;
@@ -130,8 +129,15 @@ void closefrom( int lowfd ) {
 		if( entry->d_type == DT_DIR ) {
 			continue;
 		}
-		int fd = -1;
-		sscanf( entry->d_name, "%d", &fd );
+
+		int fd = 0;
+		char* it = entry->d_name;
+		while( '0' <= *it && *it <= '9' ) {
+			fd = fd * 10 + (*it - '0');
+			++it;
+		}
+		assert( it != entry->d_name );
+
 		if( fd >= lowfd && fd != dfd ) {
 			close( fd );
 		}
