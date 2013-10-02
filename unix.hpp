@@ -28,7 +28,7 @@ struct ThreadSupport {
 		memset( &sa, 0, sizeof( sa ) );
 		sa.sa_flags = 0;
 		sa.sa_handler = _sigHandler;
-		if( sigaction( SIGUSR1, &sa, NULL ) < 0 ) {
+		if( sigaction( SIGUSR1, &sa, nullptr ) < 0 ) {
 			throw system_error( errno, system_category() );
 		}
 	}
@@ -186,7 +186,7 @@ pid_t forkExec( Iter argsB, Iter argsE, int ifd, int ofd, string const& cwd ) {
 	for( size_t i = 0; i < size; ++i ) {
 		argsRaw[i] = argsB[i].c_str();
 	}
-	argsRaw[size] = NULL;
+	argsRaw[size] = nullptr;
 
 	pid_t pid = vfork();
 	checkSysCall( pid );
