@@ -8,6 +8,9 @@ SRCS = \
 	parser.hpp ast.hpp annotate.hpp eval.hpp glob.hpp \
 	builtins.hpp repl.hpp main.cpp
 
+.PHONY: all
+all: rish pprint str
+
 rish: $(SRCS) makefile
 	$(YACC) -dv parser.y; \
 	mv y.tab.h tokens.hpp; \
@@ -16,9 +19,15 @@ rish: $(SRCS) makefile
 	$(LEX) -olexer.cpp lexer.l; \
 	$(CXX) -orish main.cpp lexer.cpp parser.cpp -lreadline
 
+pprint: cmd_pprint.cpp makefile
+	$(CXX) -opprint cmd_pprint.cpp
+
+str: cmd_str.cpp makefile
+	$(CXX) -ostr cmd_str.cpp
+
 test: rish
 	wc $(SRCS)
 	./rish test.rs
 
 clean:
-	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish
+	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish pprint str
