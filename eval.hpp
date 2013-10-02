@@ -58,9 +58,6 @@ struct Evaluator {
 		int const retv;
 	};
 
-	struct ArgError {
-	};
-
 	using ArgIter = move_iterator<deque<string>::iterator>;
 	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, Local const&, int, int )>;
 
@@ -255,7 +252,7 @@ tailRec:
 			evalExpr( e->rhs.get(), local, back_inserter( rhss ) );
 			if( (lhss.size() != 0 && rhss.size() == 0) ||
 			    (lhss.size() == 0 && rhss.size() != 0) ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			for( size_t i = 0; i < lhss.size() || i < rhss.size(); ++i ) {
@@ -300,7 +297,7 @@ tailRec:
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
 			if( val.size() == 0 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 			for( auto const& sIdx: sIdcs ) {
 				int64_t idx = stoll( string( sIdx.cbegin(), sIdx.cend() ) );
@@ -315,13 +312,13 @@ tailRec:
 			evalExpr( e->end.get(), local, back_inserter( sEnds ) );
 			if( (sBgns.size() != 0 && sEnds.size() == 0) ||
 			    (sBgns.size() == 0 && sEnds.size() != 0) ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
 			if( val.size() == 0 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			for( size_t i = 0; i < sBgns.size() || i < sEnds.size(); ++i ) {
@@ -370,7 +367,7 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd,
 		auto child = make_shared<Local>();
 		child->vars.resize( cl.nVar );
 		if( !child->assign( cl.args.get(), argsB + 1, argsE ) ) {
-			throw ArgError(); // or allow overloaded functions?
+			throw invalid_argument( "" ); // or allow overloaded functions?
 		}
 		child->outer = move( cl.env );
 		child->cwd = local.cwd;
@@ -523,7 +520,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->file.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			int fd = open( args[0].c_str(), O_RDONLY );
@@ -535,7 +532,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->file.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			int fd = open( args[0].c_str(), O_WRONLY | O_CREAT, 0644 );
@@ -560,7 +557,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			throw ReturnException( stoi( args[0] ) ) ;
@@ -569,7 +566,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->name.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -580,7 +577,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->name.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -616,7 +613,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 			throw BreakException( stoi( args[0] ) );
 		}
@@ -760,7 +757,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->args.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
-				throw ArgError();
+				throw invalid_argument( "" );
 			}
 
 			lock_guard<mutex> lock( mutexGlobal );
@@ -774,7 +771,7 @@ tailRec:
 			assert( false );
 		}
 	} }
-	catch( ArgError const& ) {
+	catch( invalid_argument const& ) {
 		return -1;
 	}
 	catch( system_error const& ) {
