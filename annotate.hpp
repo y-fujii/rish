@@ -81,6 +81,9 @@ void Annotator::annotate( ast::Expr* expr, Annotator::Local& local ) {
 		VCASE( UniOp, e ) {
 			annotate( e->lhs.get(), local );
 		}
+		VCASE( Size, e ) {
+			annotate( e->var.get(), local );
+		}
 		VCASE( Index, e ) {
 			annotate( e->var.get(), local );
 			annotate( e->idx.get(), local );

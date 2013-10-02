@@ -297,6 +297,8 @@ fun runTest {
 	localCwd
 
 	testDivMod
+	let ($xs) = 0 1 2 3
+	echo [$xs -> size] #xs
 }
 
 runTest

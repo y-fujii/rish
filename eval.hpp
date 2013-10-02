@@ -290,6 +290,11 @@ tailRec:
 				*dst++ = to_string( r );
 			}
 		}
+		VCASE( Size, e ) {
+			lock_guard<mutex> lock( mutexGlobal );
+			auto& val = local->value( e->var.get() );
+			*dst++ = to_string( val.size() );
+		}
 		VCASE( Index, e ) {
 			deque<MetaString> sIdcs;
 			evalExpr( e->idx.get(), local, back_inserter( sIdcs ) );
