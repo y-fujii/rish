@@ -62,7 +62,6 @@ struct Evaluator {
 	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, Local const&, int, int )>;
 
 	template<class Iter> int callCommand( Iter, Iter, Local const&, int, int );
-	template<class Iter> Iter evalArith( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
@@ -311,7 +310,7 @@ tailRec:
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
-			if( val.size() == 0 ) {
+			if( val.size() == 0 && sIdcs.size() != 0 ) {
 				throw invalid_argument( "" );
 			}
 			for( auto const& sIdx: sIdcs ) {
@@ -332,7 +331,7 @@ tailRec:
 
 			lock_guard<mutex> lock( mutexGlobal );
 			auto& val = local->value( e->var.get() );
-			if( val.size() == 0 ) {
+			if( val.size() == 0 && (sBgns.size() != 0 || sEnds.size() != 0) ) {
 				throw invalid_argument( "" );
 			}
 
