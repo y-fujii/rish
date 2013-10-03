@@ -561,11 +561,14 @@ tailRec:
 		VCASE( Return, s ) {
 			deque<string> args;
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
-			if( args.size() != 1 ) {
-				throw invalid_argument( "" );
+			switch( args.size() ) {
+				case 0:
+					throw ReturnException( 0 );
+				case 1:
+					throw ReturnException( stoi( args[0] ) );
+				default:
+					throw invalid_argument( "" );
 			}
-
-			throw ReturnException( stoi( args[0] ) ) ;
 		}
 		VCASE( Fun, s ) {
 			deque<string> args;
@@ -617,10 +620,14 @@ tailRec:
 		VCASE( Break, s ) {
 			deque<string> args;
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
-			if( args.size() != 1 ) {
-				throw invalid_argument( "" );
+			switch( args.size() ) {
+				case 0:
+					throw BreakException( 0 );
+				case 1:
+					throw BreakException( stoi( args[0] ) );
+				default:
+					throw invalid_argument( "" );
 			}
-			throw BreakException( stoi( args[0] ) );
 		}
 		VCASE( Let, s ) {
 			deque<string> vals;
