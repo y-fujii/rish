@@ -57,6 +57,23 @@ fun any {
 	return 0
 }
 
+fun sqrt $x {
+	if ($x == 0) {
+		yield 0
+		return
+	}
+
+	let $t = $x
+	while 0 {
+		let $u = (($t * $t + $x) / 2 * $t)
+		if ($u >= $t) {
+			break
+		}
+		let $t = $u
+	}
+	yield $u
+}
+
 fun testLet {
 	yield "test let"
 	let name = name || yield NG
@@ -299,6 +316,7 @@ fun runTest {
 	testDivMod
 	let ($xs) = 0 1 2 3
 	echo [$xs -> size] #xs
+	sqrt 2000000000000
 }
 
 runTest
