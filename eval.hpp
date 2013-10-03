@@ -265,14 +265,24 @@ tailRec:
 					case BinOp::add: r = lval + rval; break;
 					case BinOp::sub: r = lval - rval; break;
 					case BinOp::mul: r = lval * rval; break;
-					case BinOp::div: r = idiv( lval, rval ); break;
-					case BinOp::mod: r = imod( lval, rval ); break;
-					case BinOp::eq:  r = (lval == rval) ? 0 : -1; break;
-					case BinOp::ne:  r = (lval != rval) ? 0 : -1; break;
-					case BinOp::le:  r = (lval <= rval) ? 0 : -1; break;
-					case BinOp::ge:  r = (lval >= rval) ? 0 : -1; break;
-					case BinOp::lt:  r = (lval <  rval) ? 0 : -1; break;
-					case BinOp::gt:  r = (lval >  rval) ? 0 : -1; break;
+					case BinOp::div:
+						if( rval == 0 ) {
+							throw invalid_argument( "" );
+						}
+						r = idiv( lval, rval );
+						break;
+					case BinOp::mod:
+						if( rval == 0 ) {
+							throw invalid_argument( "" );
+						}
+						r = imod( lval, rval );
+						break;
+					case BinOp::eq: r = (lval == rval) ? 0 : -1; break;
+					case BinOp::ne: r = (lval != rval) ? 0 : -1; break;
+					case BinOp::le: r = (lval <= rval) ? 0 : -1; break;
+					case BinOp::ge: r = (lval >= rval) ? 0 : -1; break;
+					case BinOp::lt: r = (lval <  rval) ? 0 : -1; break;
+					case BinOp::gt: r = (lval >  rval) ? 0 : -1; break;
 				}
 				*dst++ = to_string( r );
 			}
