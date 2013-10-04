@@ -31,7 +31,8 @@
 %type<word>  TK_WORD symbols
 %type<var>   TK_VAR TK_INDEX TK_SIZE
 %type<expr>  expr_prim expr_concat expr_pair
-%type<expr>  arith_prim arith_pair arith_pos arith_mul arith_div arith_add arith_bool
+%type<expr>  arith_prim arith_concat arith_pair arith_pos arith_mul arith_div
+%type<expr>  arith_add arith_bool
 %type<lexpr> lexpr_prim
 %type<stmt>  stmt_seq stmt_empty stmt_bg stmt_par stmt_andor stmt_not
 %type<stmt>  stmt_redir stmt_pipe stmt_prim if_ else_
@@ -172,7 +173,11 @@ arith_pos
 	| arith_pair
 
 arith_pair
-	: arith_prim arith_pair				{ $$ = new Pair( $1, $2 ); }
+	: arith_concat arith_pair			{ $$ = new Pair( $1, $2 ); }
+	| arith_concat
+
+arith_concat
+	: arith_concat '^' arith_prim		{ $$ = new Concat( $1, $3 ); }
 	| arith_prim
 
 arith_prim
