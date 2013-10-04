@@ -196,7 +196,7 @@ tailRec:
 			*dst++ = e->word;
 		}
 		VCASE( Pair, e ) {
-			evalExpr( e->lhs.get(), local, dst );
+			dst = evalExpr( e->lhs.get(), local, dst );
 
 			// evalExpr( e->rhs.get(), local, dst );
 			expr = e->rhs.get();
