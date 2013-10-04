@@ -51,7 +51,7 @@
 <N,C,I>"&"				{ BEGIN( I ); return '&'; }
 <N,C,I>"!"				{ BEGIN( I ); return '!'; }
 <N,C,I>"|"				{ BEGIN( I ); return '|'; }
-<N,C,I>"="				{ BEGIN( N ); return '='; }
+<N,C,I>"="				{ BEGIN( I ); return '='; }
 <N,C,I>"^"				{ BEGIN( I ); return '^'; }
 <N,C,I>"$"				{ BEGIN( I ); return '$'; }
 

@@ -97,7 +97,8 @@ stmt_prim
 	| TK_FOR lexpr_prim TK_IF stmt_andor '{' stmt_seq '}' else_ { $$ = nullptr; }
 	| TK_BREAK expr_pair								{ $$ = new Break( $2 ); }
 	| TK_RETURN expr_pair								{ $$ = new Return( $2 ); }
-	| TK_LET lexpr_prim '=' expr_pair					{ $$ = new Let( $2, $4 ); }
+	| TK_LET lexpr_prim '=' arith_bool					{ $$ = new Let( $2, $4 ); }
+	| TK_LET lexpr_prim '=' arith_add					{ $$ = new Let( $2, $4 ); }
 	| TK_FETCH lexpr_prim								{ $$ = new Fetch( $2 ); }
 	| TK_YIELD expr_pair								{ $$ = new Yield( $2 ); }
 	| TK_ZIP expr_list									{ $$ = new Zip( move( *$2 ) ); delete $2; }
