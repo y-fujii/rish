@@ -1,7 +1,7 @@
 fun size {
 	let $n = 0
 	while fetch $e {
-		let $n = ($n + 1)
+		let $n = $n + 1
 	}
 	yield $n
 }
@@ -27,7 +27,7 @@ fun range $n {
 	let $i = 0
 	while ($i < $n) {
 		yield $i
-		let $i = ($i + 1)
+		let $i = $i + 1
 	}
 }
 
@@ -35,7 +35,7 @@ fun enumerate {
 	let $i = 0 
 	while fetch $e {
 		yield $i $e
-		let $i = ($i + 1)
+		let $i = $i + 1
 	}
 }
 
@@ -65,7 +65,7 @@ fun sqrt $x {
 
 	let $t = $x
 	while 0 {
-		let $u = (($t * $t + $x) / 2 * $t)
+		let $u = ($t * $t + $x) / 2 * $t
 		if ($u >= $t) {
 			break
 		}
@@ -96,7 +96,7 @@ fun testDefer {
 fun factorialLoop $n {
 	let $result = 1
 	range $n | while fetch $i {
-		let $result = ($result * ($i + 1))
+		let $result = $result * ($i + 1)
 	}
 	yield $result
 }
@@ -199,7 +199,7 @@ fun testSlice {
 	echo $arr(0 : 0)		"|" 0 1 2 3 4 5 6 7
 	echo $arr(-2 : -2)		"|" 6 7 0 1 2 3 4 5
 
-	let ($err) =
+	let ($err) = ()
 	! echo $err(0) &&
 	! echo $err( 0 :  2) &&
 	! echo $err( 0 : -1) &&
@@ -219,14 +219,14 @@ fun emulPrevNext {
 		echo $dir
 	}
 
-	let ($dir_prev) =
-	let ($dir_next) =
+	let ($dir_prev) = ()
+	let ($dir_next) = ()
 
 	fun cd $dir {
 		let $cwd = [std.pwd]
 		if std.cd $dir {
 			let ($dir_prev) = $dir_prev $cwd
-			let ($dir_next) =
+			let ($dir_next) = ()
 		}
 	}
 
