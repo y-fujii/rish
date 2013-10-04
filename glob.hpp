@@ -26,12 +26,12 @@ MetaString::value_type const star = '*' | metaMask;
 MetaString::value_type const any1 = '?' | metaMask;
 MetaString::value_type const home = '~' | metaMask;
 
-inline bool isMeta( MetaString::value_type c ) {
+inline bool isMeta( basic_string<uint16_t>::value_type c ) {
 	return (c & metaMask) != 0;
 }
 
 // O(#ptrn) space, O(#ptrn * #src) time wildcard matcher
-inline bool matchGlob( MetaString const& ptrn, string const& src ) {
+inline bool matchGlob( basic_string<uint16_t> const& ptrn, string const& src ) {
 	deque<bool> mark( ptrn.size() );
 	bool prev = true;
 
@@ -88,10 +88,10 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 }
 
 template<class DstIter>
-DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt ) {
+DstIter expandGlobRec( string const& root, basic_string<uint16_t> const& ptrn, DstIter dstIt ) {
 	size_t slash = ptrn.find( '/' );
-	if( slash == MetaString::npos ) {
-		deque<pair<string, int> > dirs;
+	if( slash == basic_string<uint16_t>::npos ) {
+		deque<pair<string, int>> dirs;
 		listDir( root, back_inserter( dirs ) );
 		for( auto it = dirs.cbegin(); it != dirs.cend(); ++it ) {
 			if( !(it->second & DT_DIR) && matchGlob( ptrn, it->first ) ) {
@@ -101,10 +101,11 @@ DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt
 	}
 	else {
 		assert( slash != 0 );
-		MetaString base = ptrn.substr( 0, slash );
-		MetaString rest = ptrn.substr( slash + 1 );
+		auto base = ptrn.substr( 0, slash );
+		auto rest = ptrn.substr( slash + 1 );
 
-		if( base == MetaString( "." ) || base == MetaString( ".." ) ) {
+		if( base == basic_string<uint16_t>{ '.' } ||
+		    base == basic_string<uint16_t>{ '.', '.' } ) {
 			dstIt = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dstIt );
 		}
 		else {
@@ -128,7 +129,7 @@ DstIter expandGlobRec( string const& root, MetaString const& ptrn, DstIter dstIt
 
 template<class DstIter>
 DstIter expandGlob( MetaString const& src, string const& cwd, DstIter dstIt ) {
-	MetaString ptrn;
+	basic_string<uint16_t> ptrn;
 	if( src.size() >= 1 && src[0] == home ) {
 		ptrn = MetaString( getenv( "HOME" ) ) + src.substr( 1 );
 	}
