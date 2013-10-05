@@ -21,12 +21,16 @@ struct MetaString: basic_string<uint16_t> {
 	MetaString( Iter bgn, Iter end )              : basic_string<uint16_t>( bgn, end ) {}
 };
 
-MetaString::value_type const metaMask = 1 << 15;
-MetaString::value_type const star = '*' | metaMask;
-MetaString::value_type const any1 = '?' | metaMask;
-MetaString::value_type const home = '~' | metaMask;
+inline bool operator!=( MetaString const& lhs, string rhs ) {
+	return lhs != MetaString( rhs );
+}
 
-inline bool isMeta( basic_string<uint16_t>::value_type c ) {
+uint16_t const metaMask = 1 << 15;
+uint16_t const star = '*' | metaMask;
+uint16_t const any1 = '?' | metaMask;
+uint16_t const home = '~' | metaMask;
+
+inline bool isMeta( uint16_t c ) {
 	return (c & metaMask) != 0;
 }
 

@@ -101,7 +101,7 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Iter rhsB, Iter rhsE ) {
 	// test
 	for( size_t i = 0; i < lhs->var.size(); ++i ) {
 		auto word = match<Word>( lhs->var[i].get() );
-		if( word && word->word != MetaString( rhsB[i] ) ) {
+		if( word && word->word != rhsB[i] ) {
 			return false;
 		}
 	}
@@ -131,7 +131,7 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Iter rhsB, Iter rhsE ) {
 	// test varL
 	for( size_t i = 0; i < lhs->varL.size(); ++i ) {
 		auto word = match<Word>( lhs->varL[i].get() );
-		if( word && word->word != MetaString( rhsL[i] ) ) {
+		if( word && word->word != rhsL[i] ) {
 			return false;
 		}
 	}
@@ -139,7 +139,7 @@ bool Evaluator::Local::assign( ast::VarVar* lhs, Iter rhsB, Iter rhsE ) {
 	// test varR
 	for( size_t i = 0; i < lhs->varR.size(); ++i ) {
 		auto word = match<Word>( lhs->varR[i].get() );
-		if( word && word->word != MetaString( rhsR[i] ) ) {
+		if( word && word->word != rhsR[i] ) {
 			return false;
 		}
 	}
@@ -255,8 +255,8 @@ tailRec:
 			}
 
 			for( size_t i = 0; i < lhss.size() || i < rhss.size(); ++i ) {
-				MetaString const& lhs = lhss[i % lhss.size()];
-				MetaString const& rhs = rhss[i % rhss.size()];
+				auto const& lhs = lhss[i % lhss.size()];
+				auto const& rhs = rhss[i % rhss.size()];
 				int64_t lval = stoll( string( lhs.cbegin(), lhs.cend() ) );
 				int64_t rval = stoll( string( rhs.cbegin(), rhs.cend() ) );
 				int64_t r;
@@ -336,8 +336,8 @@ tailRec:
 			}
 
 			for( size_t i = 0; i < sBgns.size() || i < sEnds.size(); ++i ) {
-				MetaString const& sBgn = sBgns[i % sBgns.size()];
-				MetaString const& sEnd = sEnds[i % sEnds.size()];
+				auto const& sBgn = sBgns[i % sBgns.size()];
+				auto const& sEnd = sEnds[i % sEnds.size()];
 				int64_t bgn = stoll( string( sBgn.cbegin(), sBgn.cend() ) );
 				int64_t end = stoll( string( sEnd.cbegin(), sEnd.cend() ) );
 				bgn = imod( bgn, val.size() );
@@ -443,6 +443,10 @@ DstIter Evaluator::evalArgs( ast::Expr* expr, shared_ptr<Local> local, DstIter d
 			return *this;
 		}
 		Inserter& operator++( int ) {
+			return *this;
+		}
+		Inserter operator=( MetaString&& str ) {
+			this->dstIt = expandGlob( move( str ), *this->cwd, this->dstIt );
 			return *this;
 		}
 		Inserter operator=( MetaString const& str ) {
