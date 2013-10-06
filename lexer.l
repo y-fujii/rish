@@ -55,6 +55,7 @@
 <N,C,I>"^"				{ BEGIN( I ); return '^'; }
 <N,C,I>"$"				{ BEGIN( I ); return '$'; }
 
+<C>"~"					{ INSERT_CARET(); }
 <C>"+"					{ INSERT_CARET(); }
 <C>"-"					{ INSERT_CARET(); }
 <C>"*"					{ INSERT_CARET(); }
@@ -66,17 +67,18 @@
 <C>"!="					{ INSERT_CARET(); }
 <C>"<="					{ INSERT_CARET(); }
 <C>">="					{ INSERT_CARET(); }
-<N,I>"+"				{ BEGIN( N ); return '+'; }
-<N,I>"-"				{ BEGIN( N ); return '-'; }
-<N,I>"*"				{ BEGIN( N ); return '*'; }
-<N,I>"/"				{ BEGIN( N ); return '/'; }
-<N,I>"%"				{ BEGIN( N ); return '%'; }
-<N,I>"<"				{ BEGIN( N ); return '<'; }
-<N,I>">"				{ BEGIN( N ); return '>'; }
-<N,I>"=="				{ BEGIN( N ); return TK_EQ; }
-<N,I>"!="				{ BEGIN( N ); return TK_NE; }
-<N,I>"<="				{ BEGIN( N ); return TK_LE; }
-<N,I>">="				{ BEGIN( N ); return TK_GE; }
+<N,I>"~"				{ BEGIN( C ); return '~'; }
+<N,I>"+"				{ BEGIN( C ); return '+'; }
+<N,I>"-"				{ BEGIN( C ); return '-'; }
+<N,I>"*"				{ BEGIN( C ); return '*'; }
+<N,I>"/"				{ BEGIN( C ); return '/'; }
+<N,I>"%"				{ BEGIN( C ); return '%'; }
+<N,I>"<"				{ BEGIN( C ); return '<'; }
+<N,I>">"				{ BEGIN( C ); return '>'; }
+<N,I>"=="				{ BEGIN( C ); return TK_EQ; }
+<N,I>"!="				{ BEGIN( C ); return TK_NE; }
+<N,I>"<="				{ BEGIN( C ); return TK_LE; }
+<N,I>">="				{ BEGIN( C ); return TK_GE; }
 
 <N,C,I>"&&"				{ BEGIN( I ); return TK_AND2; }
 <N,C,I>"||"				{ BEGIN( I ); return TK_OR2; }
@@ -120,14 +122,8 @@
 	return TK_INDEX;
 }
 
-<C>[^()\[\]$" \t\n]+ { INSERT_CARET(); }
-<N,I>[^()\[\]$" \t\n]+ {
-	if( yytext[0] == '~' ) {
-		yyless( 1 );
-		BEGIN( C );
-		return '~';
-	}
-
+<C>[^~()\[\]$" \t\n][^()\[\]$" \t\n]* { INSERT_CARET(); }
+<N,I>[^~()\[\]$" \t\n][^()\[\]$" \t\n]* {
 	MetaString w( yytext, yytext + yyleng );
 	for( auto& c: w ) {
 		if( c == '*' || c == '?' ) {
