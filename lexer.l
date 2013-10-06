@@ -22,12 +22,6 @@
 		result = lexerIStream->gcount();			\
 	}
 
-	#define INSERT_CARET() {	\
-		BEGIN( N );				\
-		yyless( 0 );			\
-		return '^';				\
-	}
-
 	#pragma GCC diagnostic ignored "-Wsign-compare"
 	#pragma GCC diagnostic ignored "-Wunused-function"
 %}
@@ -37,36 +31,28 @@
 
 %%
 
-<C>"("					{ INSERT_CARET(); }
-<C>"["					{ INSERT_CARET(); }
 <N,I>"("				{ BEGIN( I ); return '('; }
 <N,I>"["				{ BEGIN( I ); return '['; }
 <N,C,I>")"				{ BEGIN( C ); return ')'; }
 <N,C,I>"]"				{ BEGIN( C ); return ']'; }
-<N,C,I>"{"				{ BEGIN( I ); return '{'; }
-<N,C,I>"}"				{ BEGIN( N ); return '}'; }
+<N,I>"{"				{ BEGIN( I ); return '{'; }
+<N,I>"}"				{ BEGIN( N ); return '}'; }
 
-<N,C,I>";"				{ BEGIN( I ); return ';'; }
-<N,C,I>":"				{ BEGIN( I ); return ':'; }
-<N,C,I>"&"				{ BEGIN( I ); return '&'; }
-<N,C,I>"!"				{ BEGIN( I ); return '!'; }
-<N,C,I>"|"				{ BEGIN( I ); return '|'; }
-<N,C,I>"="				{ BEGIN( I ); return '='; }
-<N,C,I>"^"				{ BEGIN( I ); return '^'; }
-<N,C,I>"$"				{ BEGIN( I ); return '$'; }
+<N,I>";"				{ BEGIN( I ); return ';'; }
+<N,I>":"				{ BEGIN( I ); return ':'; }
+<N,I>"&"				{ BEGIN( I ); return '&'; }
+<N,I>"!"				{ BEGIN( I ); return '!'; }
+<N,I>"|"				{ BEGIN( I ); return '|'; }
+<N,I>"="				{ BEGIN( I ); return '='; }
+<N,I>"^"				{ BEGIN( I ); return '^'; }
+<N,I>"$"				{ BEGIN( I ); return '$'; }
+<N,I>"&&"				{ BEGIN( I ); return TK_AND2; }
+<N,I>"||"				{ BEGIN( I ); return TK_OR2; }
+<N,I>"->"				{ BEGIN( I ); return TK_ARROW; }
+<N,I>">|"				{ BEGIN( I ); return TK_RDFR; }
+<N,I>"|>"				{ BEGIN( I ); return TK_RDT1; }
+<N,I>"|>>"				{ BEGIN( I ); return TK_RDT2; }
 
-<C>"~"					{ INSERT_CARET(); }
-<C>"+"					{ INSERT_CARET(); }
-<C>"-"					{ INSERT_CARET(); }
-<C>"*"					{ INSERT_CARET(); }
-<C>"/"					{ INSERT_CARET(); }
-<C>"%"					{ INSERT_CARET(); }
-<C>"<"					{ INSERT_CARET(); }
-<C>">"					{ INSERT_CARET(); }
-<C>"=="					{ INSERT_CARET(); }
-<C>"!="					{ INSERT_CARET(); }
-<C>"<="					{ INSERT_CARET(); }
-<C>">="					{ INSERT_CARET(); }
 <N,I>"~"				{ BEGIN( C ); return '~'; }
 <N,I>"+"				{ BEGIN( C ); return '+'; }
 <N,I>"-"				{ BEGIN( C ); return '-'; }
@@ -80,49 +66,38 @@
 <N,I>"<="				{ BEGIN( C ); return TK_LE; }
 <N,I>">="				{ BEGIN( C ); return TK_GE; }
 
-<N,C,I>"&&"				{ BEGIN( I ); return TK_AND2; }
-<N,C,I>"||"				{ BEGIN( I ); return TK_OR2; }
-<N,C,I>"->"				{ BEGIN( I ); return TK_ARROW; }
-<N,C,I>">|"				{ BEGIN( I ); return TK_RDFR; }
-<N,C,I>"|>"				{ BEGIN( I ); return TK_RDT1; }
-<N,C,I>"|>>"			{ BEGIN( I ); return TK_RDT2; }
+<N,I>"if"				{ BEGIN( N ); return TK_IF; }
+<N,I>"else"				{ BEGIN( N ); return TK_ELSE; }
+<N,I>\n[ \t]*"else"		{ BEGIN( N ); ++lexerLineNo; return TK_ELSE; }
+<N,I>"while"			{ BEGIN( N ); return TK_WHILE; }
+<N,I>"break"			{ BEGIN( N ); return TK_BREAK; }
+<N,I>"return"			{ BEGIN( N ); return TK_RETURN; }
+<N,I>"let"				{ BEGIN( N ); return TK_LET; }
+<N,I>"fun"				{ BEGIN( N ); return TK_FUN; }
+<N,I>"fetch"			{ BEGIN( N ); return TK_FETCH; }
+<N,I>"yield"			{ BEGIN( N ); return TK_YIELD; }
+<N,I>"zip"				{ BEGIN( N ); return TK_ZIP; }
+<N,I>"defer"			{ BEGIN( N ); return TK_DEFER; }
+<N,I>"chdir"			{ BEGIN( N ); return TK_CHDIR; }
 
-<N,C,I>"if"				{ BEGIN( N ); return TK_IF; }
-<N,C,I>"else"			{ BEGIN( N ); return TK_ELSE; }
-<N,C,I>\n[ \t]*"else"	{ BEGIN( N ); ++lexerLineNo; return TK_ELSE; }
-<N,C,I>"while"			{ BEGIN( N ); return TK_WHILE; }
-<N,C,I>"break"			{ BEGIN( N ); return TK_BREAK; }
-<N,C,I>"return"			{ BEGIN( N ); return TK_RETURN; }
-<N,C,I>"let"			{ BEGIN( N ); return TK_LET; }
-<N,C,I>"fun"			{ BEGIN( N ); return TK_FUN; }
-<N,C,I>"fetch"			{ BEGIN( N ); return TK_FETCH; }
-<N,C,I>"yield"			{ BEGIN( N ); return TK_YIELD; }
-<N,C,I>"zip"			{ BEGIN( N ); return TK_ZIP; }
-<N,C,I>"defer"			{ BEGIN( N ); return TK_DEFER; }
-<N,C,I>"chdir"			{ BEGIN( N ); return TK_CHDIR; }
-
-<C>\$[a-zA-Z0-9_]+ { INSERT_CARET(); }
 <N,I>\$[a-zA-Z0-9_]+ {
 	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), lexerLineNo );
 	BEGIN( C );
 	return TK_VAR;
 }
 
-<C>#[a-zA-Z0-9_]+ { INSERT_CARET(); }
 <N,I>#[a-zA-Z0-9_]+ {
 	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), lexerLineNo );
 	BEGIN( C );
 	return TK_SIZE;
 }
 
-<C>\$[a-zA-Z0-9_]+\( { INSERT_CARET(); }
 <N,I>\$[a-zA-Z0-9_]+\( {
 	yylval.var = new ast::Var( string( yytext + 1, yyleng - 2 ), lexerLineNo );
 	BEGIN( I );
 	return TK_INDEX;
 }
 
-<C>[^~()\[\]$" \t\n][^()\[\]$" \t\n]* { INSERT_CARET(); }
 <N,I>[^~()\[\]$" \t\n][^()\[\]$" \t\n]* {
 	MetaString w( yytext, yytext + yyleng );
 	for( auto& c: w ) {
@@ -136,8 +111,9 @@
 	return TK_WORD;
 }
 
-<N,C,I>\"(\\.|[^\\"])*\" {
+<N,I>\"(\\.|[^\\"])*\" {
 	MetaString w;
+	w.reserve( yyleng );
 	for( int i = 1; i < yyleng - 1; ++i ) {
 		char c;
 		if( yytext[i] == '\\' ) {
@@ -173,12 +149,14 @@
 	return TK_WORD;
 }
 
-<I>[ \t]+		{}
-<N,C>[ \t]+		{ BEGIN( N ); }
-<I>"\n"			{ ++lexerLineNo; }
-<N,C>"\n"		{ BEGIN( N ); ++lexerLineNo; return ';'; }
-<I>\/\/[^\n]*	{}
-<N,C>\/\/[^\n]*	{ BEGIN( N ); }
+<C>[^\)\] \t\n]		{ BEGIN( N ); yyless( 0 ); return '^'; }
+<I>[ \t]+			{}
+<N,C>[ \t]+			{ BEGIN( N ); }
+<I>"\n"				{ ++lexerLineNo; }
+<N,C>"\n"			{ BEGIN( N ); ++lexerLineNo; return ';'; }
+
+<I>"//"[^\n]*		{}
+<N,C>"//"[^\n]*		{ BEGIN( N ); }
 
 %%
 
