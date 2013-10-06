@@ -60,6 +60,8 @@ void Annotator::annotate( ast::Expr* expr, Annotator::Local& local ) {
 	VSWITCH( expr ) {
 		VCASE( Word, e ) {
 		}
+		VCASE( Home, e ) {
+		}
 		VCASE( Pair, e ) {
 			annotate( e->lhs.get(), local );
 			annotate( e->rhs.get(), local );

@@ -10,6 +10,7 @@ namespace ast {
 
 
 struct Word;
+struct Home;
 struct Subst;
 struct Var;
 struct Pair;
@@ -22,6 +23,7 @@ struct Slice;
 struct Null;
 using Expr = Variant<
 	Word,
+	Home,
 	Subst,
 	Var,
 	Pair,
@@ -89,6 +91,9 @@ struct Word: VariantImpl<Expr, Word> {
 		word( w ) {}
 
 	MetaString word;
+};
+
+struct Home: VariantImpl<Expr, Home> {
 };
 
 struct Subst: VariantImpl<Expr, Subst> {

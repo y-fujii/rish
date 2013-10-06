@@ -55,17 +55,28 @@
 <N,C,I>"^"				{ BEGIN( I ); return '^'; }
 <N,C,I>"$"				{ BEGIN( I ); return '$'; }
 
-<N,C,I>"+"				{ BEGIN( N ); return '+'; }
-<N,C,I>"-"				{ BEGIN( N ); return '-'; }
-<N,C,I>"*"				{ BEGIN( N ); return '*'; }
-<N,C,I>"/"				{ BEGIN( N ); return '/'; }
-<N,C,I>"%"				{ BEGIN( N ); return '%'; }
-<N,C,I>"<"				{ BEGIN( N ); return '<'; }
-<N,C,I>">"				{ BEGIN( N ); return '>'; }
-<N,C,I>"=="				{ BEGIN( N ); return TK_EQ; }
-<N,C,I>"!="				{ BEGIN( N ); return TK_NE; }
-<N,C,I>"<="				{ BEGIN( N ); return TK_LE; }
-<N,C,I>">="				{ BEGIN( N ); return TK_GE; }
+<C>"+"					{ INSERT_CARET(); }
+<C>"-"					{ INSERT_CARET(); }
+<C>"*"					{ INSERT_CARET(); }
+<C>"/"					{ INSERT_CARET(); }
+<C>"%"					{ INSERT_CARET(); }
+<C>"<"					{ INSERT_CARET(); }
+<C>">"					{ INSERT_CARET(); }
+<C>"=="					{ INSERT_CARET(); }
+<C>"!="					{ INSERT_CARET(); }
+<C>"<="					{ INSERT_CARET(); }
+<C>">="					{ INSERT_CARET(); }
+<N,I>"+"				{ BEGIN( N ); return '+'; }
+<N,I>"-"				{ BEGIN( N ); return '-'; }
+<N,I>"*"				{ BEGIN( N ); return '*'; }
+<N,I>"/"				{ BEGIN( N ); return '/'; }
+<N,I>"%"				{ BEGIN( N ); return '%'; }
+<N,I>"<"				{ BEGIN( N ); return '<'; }
+<N,I>">"				{ BEGIN( N ); return '>'; }
+<N,I>"=="				{ BEGIN( N ); return TK_EQ; }
+<N,I>"!="				{ BEGIN( N ); return TK_NE; }
+<N,I>"<="				{ BEGIN( N ); return TK_LE; }
+<N,I>">="				{ BEGIN( N ); return TK_GE; }
 
 <N,C,I>"&&"				{ BEGIN( I ); return TK_AND2; }
 <N,C,I>"||"				{ BEGIN( I ); return TK_OR2; }
@@ -111,17 +122,17 @@
 
 <C>[^()\[\]$" \t\n]+ { INSERT_CARET(); }
 <N,I>[^()\[\]$" \t\n]+ {
-	MetaString w( yytext, yytext + yyleng );
-	auto it = w.begin();
-	assert( it != w.end() );
-	if( *it == '~' ) {
-		*it |= metaMask;
+	if( yytext[0] == '~' ) {
+		yyless( 1 );
+		BEGIN( C );
+		return '~';
 	}
-	while( it != w.end() ) {
-		if( *it == '*' || *it == '?' ) {
-			*it |= metaMask;
+
+	MetaString w( yytext, yytext + yyleng );
+	for( auto& c: w ) {
+		if( c == '*' || c == '?' ) {
+			c |= metaMask;
 		}
-		++it;
 	}
 
 	yylval.word = new ast::Word( move( w ) );
