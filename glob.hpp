@@ -13,12 +13,18 @@ using namespace std;
 
 
 struct MetaString: basic_string<uint16_t> {
-	MetaString()                                  : basic_string<uint16_t>() {}
-	MetaString( MetaString const& s )             : basic_string<uint16_t>( s ) {}
+	MetaString()                                  = default;
+	MetaString( MetaString&& )                    = default;
+	MetaString( MetaString const& )               = default;
+	MetaString( basic_string<uint16_t>&& s )      : basic_string<uint16_t>( move( s ) ) {}
 	MetaString( basic_string<uint16_t> const& s ) : basic_string<uint16_t>( s ) {}
 	MetaString( string const& s )                 : basic_string<uint16_t>( s.begin(), s.end() ) {}
 	template<class Iter>
 	MetaString( Iter bgn, Iter end )              : basic_string<uint16_t>( bgn, end ) {}
+
+	explicit operator string() const {
+		return string( cbegin(), cend() );
+	}
 };
 
 inline bool operator!=( MetaString const& lhs, string rhs ) {
@@ -84,7 +90,7 @@ DstIter listDir( string const& root, DstIter dstIt ) {
 		}
 		string name( entry->d_name );
 		if( name != "." && name != ".." ) {
-			*dstIt++ = make_pair( name, int( entry->d_type ) );
+			*dstIt++ = make_tuple( name, int( entry->d_type ) );
 		}
 	}
 
@@ -95,11 +101,15 @@ template<class DstIter>
 DstIter expandGlobRec( string const& root, basic_string<uint16_t> const& ptrn, DstIter dstIt ) {
 	size_t slash = ptrn.find( '/' );
 	if( slash == basic_string<uint16_t>::npos ) {
-		deque<pair<string, int>> dirs;
-		listDir( root, back_inserter( dirs ) );
-		for( auto it = dirs.cbegin(); it != dirs.cend(); ++it ) {
-			if( !(it->second & DT_DIR) && matchGlob( ptrn, it->first ) ) {
-				*dstIt++ = root + it->first;
+		deque<tuple<string, int>> dirs;
+		try {
+			listDir( root, back_inserter( dirs ) );
+		}
+		catch( system_error const& ) {}
+
+		for( auto const& dir: dirs ) {
+			if( !(get<1>( dir ) & DT_DIR) && matchGlob( ptrn, get<0>( dir ) ) ) {
+				*dstIt++ = root + get<0>( dir );
 			}
 		}
 	}
@@ -113,15 +123,19 @@ DstIter expandGlobRec( string const& root, basic_string<uint16_t> const& ptrn, D
 			dstIt = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dstIt );
 		}
 		else {
-			deque<pair<string, int> > dirs;
-			listDir( root, back_inserter( dirs ) );
-			for( auto it = dirs.cbegin(); it != dirs.cend(); ++it ) {
-				if( (it->second & DT_DIR) && matchGlob( base, it->first ) ) {
+			deque<tuple<string, int>> dirs;
+			try {
+				listDir( root, back_inserter( dirs ) );
+			}
+			catch( system_error const& ) {}
+
+			for( auto const& dir: dirs ) {
+				if( (get<1>( dir ) & DT_DIR) && matchGlob( base, get<0>( dir ) ) ) {
 					if( rest.size() == 0 ) {
-						*dstIt++ = root + it->first + "/";
+						*dstIt++ = root + get<0>( dir ) + "/";
 					}
 					else {
-						dstIt = expandGlobRec( root + it->first + "/", rest, dstIt );
+						dstIt = expandGlobRec( root + get<0>( dir ) + "/", rest, dstIt );
 					}
 				}
 			}
@@ -133,23 +147,16 @@ DstIter expandGlobRec( string const& root, basic_string<uint16_t> const& ptrn, D
 
 template<class DstIter>
 DstIter expandGlob( MetaString const& src, string const& cwd, DstIter dstIt ) {
-	basic_string<uint16_t> ptrn;
-	if( src.size() >= 1 && src[0] == home ) {
-		ptrn = MetaString( getenv( "HOME" ) ) + src.substr( 1 );
-	}
-	else {
-		ptrn = src;
-	}
-
-	if( !any_of( ptrn.begin(), ptrn.end(), isMeta ) ) {
-		*dstIt++ = string( ptrn.begin(), ptrn.end() );
+	if( !any_of( src.begin(), src.end(), isMeta ) ) {
+		*dstIt++ = string( src );
 		return dstIt;
 	}
 
-	if( ptrn.size() >= 1 && ptrn[0] == '/' ) {
-		return expandGlobRec( "/", ptrn.substr( 1 ), dstIt );
+	assert( src.size() > 0 );
+	if( src[0] == '/' ) {
+		return expandGlobRec( "/", src.substr( 1 ), dstIt );
 	}
 	else {
-		return expandGlobRec( cwd + "/", ptrn, dstIt );
+		return expandGlobRec( cwd + "/", src, dstIt );
 	}
 }

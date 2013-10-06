@@ -195,6 +195,10 @@ tailRec:
 		VCASE( Word, e ) {
 			*dst++ = e->word;
 		}
+		VCASE( Home, e ) {
+			// XXX
+			*dst++ = string( getenv( "HOME" ) );
+		}
 		VCASE( Pair, e ) {
 			dst = evalExpr( e->lhs.get(), local, dst );
 
@@ -257,8 +261,8 @@ tailRec:
 			for( size_t i = 0; i < lhss.size() || i < rhss.size(); ++i ) {
 				auto const& lhs = lhss[i % lhss.size()];
 				auto const& rhs = rhss[i % rhss.size()];
-				int64_t lval = stoll( string( lhs.cbegin(), lhs.cend() ) );
-				int64_t rval = stoll( string( rhs.cbegin(), rhs.cend() ) );
+				int64_t lval = stoll( string( lhs ) );
+				int64_t rval = stoll( string( rhs ) );
 				int64_t r;
 				switch( e->op ) {
 					case BinOp::add: r = lval + rval; break;
@@ -292,7 +296,7 @@ tailRec:
 			deque<MetaString> lhs;
 			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
 			for( auto const& v: lhs ) {
-				int64_t val = stoll( string( v.cbegin(), v.cend() ) );
+				int64_t val = stoll( string( v ) );
 				int64_t r;
 				switch( e->op ) {
 					case UniOp::pos: r = +val; break;
@@ -318,7 +322,7 @@ tailRec:
 				throw invalid_argument( "" );
 			}
 			for( auto const& sIdx: sIdcs ) {
-				int64_t idx = stoll( string( sIdx.cbegin(), sIdx.cend() ) );
+				int64_t idx = stoll( string( sIdx ) );
 				idx = imod( idx, val.size() );
 				*dst++ = val[idx];
 			}
@@ -342,8 +346,8 @@ tailRec:
 			for( size_t i = 0; i < sBgns.size() || i < sEnds.size(); ++i ) {
 				auto const& sBgn = sBgns[i % sBgns.size()];
 				auto const& sEnd = sEnds[i % sEnds.size()];
-				int64_t bgn = stoll( string( sBgn.cbegin(), sBgn.cend() ) );
-				int64_t end = stoll( string( sEnd.cbegin(), sEnd.cend() ) );
+				int64_t bgn = stoll( string( sBgn ) );
+				int64_t end = stoll( string( sEnd ) );
 				bgn = imod( bgn, val.size() );
 				end = imod( end, val.size() );
 				if( bgn < end ) {

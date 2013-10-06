@@ -273,6 +273,16 @@ fun localCwd {
 	pwd
 }
 
+fun testHome {
+	echo /
+	echo ~/
+	echo /~
+	let $x = aa
+	echo $x~
+	echo [echo aa]a
+	echo [echo ++]/
+}
+
 fun testDivMod {
 	let ($as) = (+13 -13 +13 -13 +20 -20 +20 -20)
 	let ($bs) = (+10 +10 -10 -10 +10 +10 -10 -10)
@@ -317,6 +327,7 @@ fun runTest {
 	let ($xs) = 0 1 2 3
 	echo [$xs -> size] #xs
 	sqrt 2000000000000
+	testHome
 }
 
 runTest

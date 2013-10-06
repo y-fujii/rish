@@ -92,9 +92,7 @@ stmt_prim
 	: if_
 	| TK_WHILE stmt_andor '{' stmt_seq '}' else_		{ $$ = new While( $2, $4, $6 ); }
 	| TK_FOR lexpr_prim '{' stmt_seq '}' else_			{ $$ = nullptr; }
-	/*
-	| TK_FOR lexpr_prim TK_IF stmt_andor				{ $$ = nullptr; }
-	*/
+	| TK_FOR lexpr_prim TK_IF stmt_andor TK_YIELD expr_pair { $$ = nullptr; }
 	| TK_FOR lexpr_prim TK_IF stmt_andor '{' stmt_seq '}' else_ { $$ = nullptr; }
 	| TK_BREAK expr_pair								{ $$ = new Break( $2 ); }
 	| TK_RETURN expr_pair								{ $$ = new Return( $2 ); }
@@ -182,6 +180,7 @@ arith_concat
 
 arith_prim
 	: TK_WORD							{ $$ = $1; }
+	| '~'								{ $$ = new Home(); }
 	| TK_VAR							{ $$ = $1; }
 	| TK_SIZE							{ $$ = new Size( $1 ); }
 	| TK_INDEX arith_add ')'			{ $$ = new Index( $1, $2 ); }
