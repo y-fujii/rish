@@ -282,6 +282,8 @@ tailRec:
 					case BinOp::ge: r = (lval >= rval) ? 0 : -1; break;
 					case BinOp::lt: r = (lval <  rval) ? 0 : -1; break;
 					case BinOp::gt: r = (lval >  rval) ? 0 : -1; break;
+					default:
+						assert( false );
 				}
 				*dst++ = to_string( r );
 			}
@@ -295,6 +297,8 @@ tailRec:
 				switch( e->op ) {
 					case UniOp::pos: r = +val; break;
 					case UniOp::neg: r = -val; break;
+					default:
+						assert( false );
 				}
 				*dst++ = to_string( r );
 			}
