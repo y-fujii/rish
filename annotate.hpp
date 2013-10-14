@@ -9,7 +9,7 @@
 using namespace std;
 
 
-struct Annotator {
+struct Annotator: ast::Visitor<Annotator> {
 	struct Local {
 		Local(): outer( nullptr ) {}
 
@@ -49,173 +49,44 @@ struct Annotator {
 		map<string, int> vars;
 	};
 
-	void annotate( ast::Expr*, Local& );
-	void annotate( ast::LeftExpr*, Local& );
-	void annotate( ast::Stmt*, Local& );
+	using ast::Visitor<Annotator>::operator();
+
+	void operator()( ast::Var* e, Local& local ) {
+		local.value( e );
+	}
+
+	void operator()( ast::LeftFix* e, Local& local ) {
+		for( auto& v: e->var ) {
+			if( auto var = match<ast::Var>( v.get() ) ) {
+				local.assign( var );
+			}
+		}
+	}
+
+	void operator()( ast::LeftVar* e, Local& local ) {
+		for( auto& v: e->varL ) {
+			if( auto var = match<ast::Var>( v.get() ) ) {
+				local.assign( var );
+			}
+		}
+		local.assign( e->varM.get() );
+		for( auto& v: e->varR ) {
+			if( auto var = match<ast::Var>( v.get() ) ) {
+				local.assign( var );
+			}
+		}
+	}
+
+	void operator()( ast::Fun* s, Local& local ) {
+		(*this)( s->name.get(), local );
+		Local child;
+		(*this)( s->args.get(), child );
+		child.outer = &local;
+		(*this)( s->body.get(), child );
+		s->nVar = child.vars.size();
+	}
 };
 
-void Annotator::annotate( ast::Expr* expr, Annotator::Local& local ) {
-	using namespace ast;
-
-	VSWITCH( expr ) {
-		VCASE( Word, e ) {
-		}
-		VCASE( Home, e ) {
-		}
-		VCASE( Pair, e ) {
-			annotate( e->lhs.get(), local );
-			annotate( e->rhs.get(), local );
-		}
-		VCASE( Concat, e ) {
-			annotate( e->lhs.get(), local );
-			annotate( e->rhs.get(), local );
-		}
-		VCASE( Var, e ) {
-			local.value( e );
-		}
-		VCASE( Subst, e ) {
-			annotate( e->body.get(), local );
-		}
-		VCASE( BinOp, e ) {
-			annotate( e->lhs.get(), local );
-			annotate( e->rhs.get(), local );
-		}
-		VCASE( UniOp, e ) {
-			annotate( e->lhs.get(), local );
-		}
-		VCASE( Size, e ) {
-			annotate( e->var.get(), local );
-		}
-		VCASE( Index, e ) {
-			annotate( e->var.get(), local );
-			annotate( e->idx.get(), local );
-		}
-		VCASE( Slice, e ) {
-			annotate( e->var.get(), local );
-			annotate( e->bgn.get(), local );
-			annotate( e->end.get(), local );
-		}
-		VCASE( Null, _ ) {
-		}
-		VDEFAULT {
-			assert( false );
-		}
-	}
-}
-
-void Annotator::annotate( ast::LeftExpr* expr, Local& local ) {
-	using namespace ast;
-
-	VSWITCH( expr ) {
-		VCASE( VarFix, e ) {
-			for( auto& v: e->var ) {
-				if( auto var = match<Var>( v.get() ) ) {
-					local.assign( var );
-				}
-			}
-		}
-		VCASE( VarVar, e ) {
-			for( auto& v: e->varL ) {
-				if( auto var = match<Var>( v.get() ) ) {
-					local.assign( var );
-				}
-			}
-			local.assign( e->varM.get() );
-			for( auto& v: e->varR ) {
-				if( auto var = match<Var>( v.get() ) ) {
-					local.assign( var );
-				}
-			}
-		}
-		VDEFAULT {
-			assert( false );
-		}
-	}
-}
-
-void Annotator::annotate( ast::Stmt* stmt, Local& local ) {
-	using namespace ast;
-
-tailRec:
-	VSWITCH( stmt ) {
-		VCASE( Sequence, s ) {
-			annotate( s->lhs.get(), local );
-			annotate( s->rhs.get(), local );
-		}
-		VCASE( Parallel, s ) {
-			annotate( s->lhs.get(), local );
-			annotate( s->rhs.get(), local );
-		}
-		VCASE( Bg, s ) {
-			annotate( s->body.get(), local );
-		}
-		VCASE( RedirFr, s ) {
-			annotate( s->file.get(), local );
-			annotate( s->body.get(), local );
-		}
-		VCASE( RedirTo, s ) {
-			annotate( s->file.get(), local );
-			annotate( s->body.get(), local );
-		}
-		VCASE( Command, s ) {
-			annotate( s->args.get(), local );
-		}
-		VCASE( Return, s ) {
-			annotate( s->retv.get(), local );
-		}
-		VCASE( Fun, s ) {
-			annotate( s->name.get(), local );
-			Local child;
-			annotate( s->args.get(), child );
-			child.outer = &local;
-			annotate( s->body.get(), child );
-			s->nVar = child.vars.size();
-		}
-		VCASE( FunDel, s ) {
-			annotate( s->name.get(), local );
-		}
-		VCASE( If, s ) {
-			annotate( s->cond.get(), local );
-			annotate( s->then.get(), local );
-			annotate( s->elze.get(), local );
-		}
-		VCASE( While, s ) {
-			annotate( s->cond.get(), local );
-			annotate( s->body.get(), local );
-			annotate( s->elze.get(), local );
-		}
-		VCASE( Break, s ) {
-			annotate( s->retv.get(), local );
-		}
-		VCASE( Let, s ) {
-			annotate( s->lhs.get(), local );
-			annotate( s->rhs.get(), local );
-		}
-		VCASE( Fetch, s ) {
-			annotate( s->lhs.get(), local );
-		}
-		VCASE( Yield, s ) {
-			annotate( s->rhs.get(), local );
-		}
-		VCASE( Pipe, s ) {
-			annotate( s->lhs.get(), local );
-			annotate( s->rhs.get(), local );
-		}
-		VCASE( Zip, s ) {
-			for( auto& e: s->exprs ) {
-				annotate( e.get(), local );
-			}
-		}
-		VCASE( Defer, s ) {
-			annotate( s->args.get(), local );
-		}
-		VCASE( ChDir, s ) {
-			annotate( s->args.get(), local );
-		}
-		VCASE( None, s ) {
-		}
-		VDEFAULT {
-			assert( false );
-		}
-	}
+inline void annotate( ast::Stmt* s, Annotator::Local& local ) {
+	Annotator()( s, local );
 }

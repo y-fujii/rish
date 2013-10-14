@@ -49,7 +49,7 @@ int main( int argc, char** argv ) {
 
 			ifstream ifs( argv[optind] );
 			unique_ptr<ast::Stmt> ast = parse( ifs );
-			Annotator().annotate( ast.get(), alocal );
+			annotate( ast.get(), alocal );
 			Evaluator eval;
 			eval.evalStmt( ast.get(), elocal, 0, 1 );
 			eval.join();

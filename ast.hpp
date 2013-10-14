@@ -36,11 +36,11 @@ using Expr = Variant<
 	Null
 >;
 
-struct VarFix;
-struct VarVar;
+struct LeftFix;
+struct LeftVar;
 using LeftExpr = Variant<
-	VarFix,
-	VarVar
+	LeftFix,
+	LeftVar
 >;
 
 struct If;
@@ -183,15 +183,15 @@ struct Null: VariantImpl<Expr, Null> {
 	Null() {}
 };
 
-struct VarFix: VariantImpl<LeftExpr, VarFix> {
-	VarFix( deque<unique_ptr<Expr>>&& v ):
+struct LeftFix: VariantImpl<LeftExpr, LeftFix> {
+	LeftFix( deque<unique_ptr<Expr>>&& v ):
 		var( move( v ) ) {}
 
 	deque<unique_ptr<Expr>> var;
 };
 
-struct VarVar: VariantImpl<LeftExpr, VarVar> {
-	VarVar( deque<unique_ptr<Expr>>&& vL, unique_ptr<Var>&& vM, deque<unique_ptr<Expr>>&& vR ):
+struct LeftVar: VariantImpl<LeftExpr, LeftVar> {
+	LeftVar( deque<unique_ptr<Expr>>&& vL, unique_ptr<Var>&& vM, deque<unique_ptr<Expr>>&& vR ):
 		varL( move( vL ) ), varM( move( vM ) ), varR( move( vR ) )  {}
 
 	deque<unique_ptr<Expr>> varL;
@@ -350,6 +350,421 @@ struct None: VariantImpl<Stmt, None> {
 		retv( r ) {}
 
 	int retv;
+};
+
+
+template<class Visitor, class... Args>
+void walk( Visitor& visit, Expr* expr, Args&... args ) {
+	VSWITCH( expr ) {
+		VCASE( Word, e ) {
+		}
+		VCASE( Home, e ) {
+		}
+		VCASE( Pair, e ) {
+			visit( e->lhs.get(), args... );
+			visit( e->rhs.get(), args... );
+		}
+		VCASE( Concat, e ) {
+			visit( e->lhs.get(), args... );
+			visit( e->rhs.get(), args... );
+		}
+		VCASE( Var, e ) {
+		}
+		VCASE( Subst, e ) {
+			visit( e->body.get(), args... );
+		}
+		VCASE( BinOp, e ) {
+			visit( e->lhs.get(), args... );
+			visit( e->rhs.get(), args... );
+		}
+		VCASE( UniOp, e ) {
+			visit( e->lhs.get(), args... );
+		}
+		VCASE( Size, e ) {
+			visit( e->var.get(), args... );
+		}
+		VCASE( Index, e ) {
+			visit( e->idx.get(), args... );
+			visit( e->var.get(), args... );
+		}
+		VCASE( Slice, e ) {
+			visit( e->bgn.get(), args... );
+			visit( e->end.get(), args... );
+			visit( e->var.get(), args... );
+		}
+		VCASE( Null, _ ) {
+		}
+		VDEFAULT {
+			assert( false );
+		}
+	}
+}
+
+template<class Visitor, class... Args>
+void walk( Visitor& visit, LeftExpr* expr, Args&... args ) {
+	VSWITCH( expr ) {
+		VCASE( LeftFix, e ) {
+			for( auto& v: e->var ) {
+				visit( v.get(), args... );
+			}
+		}
+		VCASE( LeftVar, e ) {
+			for( auto& v: e->varL ) {
+				visit( v.get(), args... );
+			}
+			visit( e->varM.get(), args... );
+			for( auto& v: e->varR ) {
+				visit( v.get(), args... );
+			}
+		}
+		VDEFAULT {
+			assert( false );
+		}
+	}
+}
+
+template<class Visitor, class... Args>
+void walk( Visitor& visit, Stmt* stmt, Args&... args ) {
+	VSWITCH( stmt ) {
+		VCASE( Sequence, s ) {
+			visit( s->lhs.get(), args... );
+			visit( s->rhs.get(), args... );
+		}
+		VCASE( Parallel, s ) {
+			visit( s->lhs.get(), args... );
+			visit( s->rhs.get(), args... );
+		}
+		VCASE( Bg, s ) {
+			visit( s->body.get(), args... );
+		}
+		VCASE( RedirFr, s ) {
+			visit( s->file.get(), args... );
+			visit( s->body.get(), args... );
+		}
+		VCASE( RedirTo, s ) {
+			visit( s->file.get(), args... );
+			visit( s->body.get(), args... );
+		}
+		VCASE( Command, s ) {
+			visit( s->args.get(), args... );
+		}
+		VCASE( Return, s ) {
+			visit( s->retv.get(), args... );
+		}
+		VCASE( Fun, s ) {
+			visit( s->name.get(), args... );
+			visit( s->args.get(), args... );
+			visit( s->body.get(), args... );
+		}
+		VCASE( FunDel, s ) {
+			visit( s->name.get(), args... );
+		}
+		VCASE( If, s ) {
+			visit( s->cond.get(), args... );
+			visit( s->then.get(), args... );
+			visit( s->elze.get(), args... );
+		}
+		VCASE( While, s ) {
+			visit( s->cond.get(), args... );
+			visit( s->body.get(), args... );
+			visit( s->elze.get(), args... );
+		}
+		VCASE( Break, s ) {
+			visit( s->retv.get(), args... );
+		}
+		VCASE( Let, s ) {
+			visit( s->lhs.get(), args... );
+			visit( s->rhs.get(), args... );
+		}
+		VCASE( Fetch, s ) {
+			visit( s->lhs.get(), args... );
+		}
+		VCASE( Yield, s ) {
+			visit( s->rhs.get(), args... );
+		}
+		VCASE( Pipe, s ) {
+			visit( s->lhs.get(), args... );
+			visit( s->rhs.get(), args... );
+		}
+		VCASE( Zip, s ) {
+			for( auto& e: s->exprs ) {
+				visit( e.get(), args... );
+			}
+		}
+		VCASE( Defer, s ) {
+			visit( s->args.get(), args... );
+		}
+		VCASE( ChDir, s ) {
+			visit( s->args.get(), args... );
+		}
+		VCASE( None, s ) {
+		}
+		VDEFAULT {
+			assert( false );
+		}
+	}
+}
+
+
+template<class Sub>
+struct Visitor {
+	Sub& sub() {
+		return *static_cast<Sub*>( this );
+	}
+
+	template<class... Args>
+	void operator()( Expr* expr, Args&&... args ) {
+		VSWITCH( expr ) {
+			VCASE( Word,   e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Home,   e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Pair,   e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Concat, e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Var,    e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Subst,  e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( BinOp,  e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( UniOp,  e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Size,   e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Index,  e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Slice,  e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Null,   e ) { sub()( e, forward<Args>( args )... ); }
+			VDEFAULT {
+				assert( false );
+			}
+		}
+	}
+
+	template<class... Args>
+	void operator()( LeftExpr* expr, Args&&... args ) {
+		VSWITCH( expr ) {
+			VCASE( LeftFix, e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( LeftVar, e ) { sub()( e, forward<Args>( args )... ); }
+			VDEFAULT {
+				assert( false );
+			}
+		}
+	}
+
+	template<class... Args>
+	void operator()( Stmt* stmt, Args&&... args ) {
+		VSWITCH( stmt ) {
+			VCASE( Sequence, s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Parallel, s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Bg,       s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( RedirFr,  s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( RedirTo,  s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Command,  s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Return,   s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Fun,      s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( FunDel,   s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( If,       s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( While,    s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Break,    s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Let,      s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Fetch,    s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Yield,    s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Pipe,     s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Zip,      s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Defer,    s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( ChDir,    s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( None,     s ) { sub()( s, forward<Args>( args )... ); }
+			VDEFAULT {
+				assert( false );
+			}
+		}
+	}
+
+	template<class... Args>
+	void operator()( Word*, Args&... ) {
+	}
+
+	template<class... Args>
+	void operator()( Home*, Args&... ) {
+	}
+
+	template<class... Args>
+	void operator()( Pair* e, Args&... args ) {
+		sub()( e->lhs.get(), args... );
+		sub()( e->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Concat* e, Args&... args ) {
+		sub()( e->lhs.get(), args... );
+		sub()( e->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Var*, Args&... ) {
+	}
+
+	template<class... Args>
+	void operator()( Subst* e, Args&... args ) {
+		sub()( e->body.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( BinOp* e, Args&... args ) {
+		sub()( e->lhs.get(), args... );
+		sub()( e->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( UniOp* e, Args&... args ) {
+		sub()( e->lhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Size* e, Args&... args ) {
+		sub()( e->var.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Index* e, Args&... args ) {
+		sub()( e->var.get(), args... );
+		sub()( e->idx.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Slice* e, Args&... args ) {
+		sub()( e->var.get(), args... );
+		sub()( e->bgn.get(), args... );
+		sub()( e->end.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Null*, Args&... ) {
+	}
+
+	template<class... Args>
+	void operator()( LeftFix* e, Args&... args ) {
+		for( auto& v: e->var ) {
+			sub()( v.get(), args... );
+		}
+	}
+
+	template<class... Args>
+	void operator()( LeftVar* e, Args&... args ) {
+		for( auto& v: e->varL ) {
+			sub()( v.get(), args... );
+		}
+		sub()( e->varM.get(), args... );
+		for( auto& v: e->varR ) {
+			sub()( v.get(), args... );
+		}
+	}
+
+	template<class... Args>
+	void operator()( Sequence* s, Args&... args ) {
+		sub()( s->lhs.get(), args... );
+		sub()( s->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Parallel* s, Args&... args ) {
+		sub()( s->lhs.get(), args... );
+		sub()( s->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Bg* s, Args&... args ) {
+		sub()( s->body.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( RedirFr* s, Args&... args ) {
+		sub()( s->file.get(), args... );
+		sub()( s->body.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( RedirTo* s, Args&... args ) {
+		sub()( s->file.get(), args... );
+		sub()( s->body.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Command* s, Args&... args ) {
+		sub()( s->args.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Return* s, Args&... args ) {
+		sub()( s->retv.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Fun* s, Args&... args ) {
+		sub()( s->name.get(), args... );
+		sub()( s->args.get(), args... );
+		sub()( s->body.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( FunDel* s, Args&... args ) {
+		sub()( s->name.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( If* s, Args&... args ) {
+		sub()( s->cond.get(), args... );
+		sub()( s->then.get(), args... );
+		sub()( s->elze.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( While* s, Args&... args ) {
+		sub()( s->cond.get(), args... );
+		sub()( s->body.get(), args... );
+		sub()( s->elze.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Break* s, Args&... args ) {
+		sub()( s->retv.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Let* s, Args&... args ) {
+		sub()( s->lhs.get(), args... );
+		sub()( s->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Fetch* s, Args&... args ) {
+		sub()( s->lhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Yield* s, Args&... args ) {
+		sub()( s->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Pipe* s, Args&... args ) {
+		sub()( s->lhs.get(), args... );
+		sub()( s->rhs.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( Zip* s, Args&... args ) {
+		for( auto& e: s->exprs ) {
+			sub()( e.get(), args... );
+		}
+	}
+
+	template<class... Args>
+	void operator()( Defer* s, Args&... args ) {
+		sub()( s->args.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( ChDir* s, Args&... args ) {
+		sub()( s->args.get(), args... );
+	}
+
+	template<class... Args>
+	void operator()( None*, Args&... ) {
+	}
 };
 
 

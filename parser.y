@@ -117,8 +117,8 @@ else_
 	| 									{ $$ = new None( 0 ); }
 
 lexpr_prim
-	: lexpr_list						{ $$ = new VarFix( move( *$1 ) ); delete $1; }
-	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new VarVar( move( *$1 ), $3, move( *$5 ) ); delete $1; delete $5; }
+	: lexpr_list						{ $$ = new LeftFix( move( *$1 ) ); delete $1; }
+	| lexpr_list '(' TK_VAR ')' lexpr_list	{ $$ = new LeftVar( move( *$1 ), $3, move( *$5 ) ); delete $1; delete $5; }
 
 lexpr_list
 	: lexpr_list TK_VAR					{ $1->push_back( $2 ); $$ = $1; }
