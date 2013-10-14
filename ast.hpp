@@ -473,8 +473,8 @@ void walk( Visitor& visit, Stmt* stmt, Args&... args ) {
 			visit( s->retv.get(), args... );
 		}
 		VCASE( Let, s ) {
-			visit( s->lhs.get(), args... );
 			visit( s->rhs.get(), args... );
+			visit( s->lhs.get(), args... );
 		}
 		VCASE( Fetch, s ) {
 			visit( s->lhs.get(), args... );
@@ -695,8 +695,8 @@ struct Visitor {
 	}
 
 	void operator()( Let* s, Args... args ) {
-		sub()( s->lhs.get(), args... );
 		sub()( s->rhs.get(), args... );
+		sub()( s->lhs.get(), args... );
 	}
 
 	void operator()( Fetch* s, Args... args ) {
