@@ -506,144 +506,127 @@ void walk( Visitor& visit, Stmt* stmt, Args&... args ) {
 }
 
 
-template<class Sub>
+template<class Sub, class... Args>
 struct Visitor {
 	Sub& sub() {
 		return *static_cast<Sub*>( this );
 	}
 
-	template<class... Args>
-	void operator()( Expr* expr, Args&&... args ) {
+	void operator()( Expr* expr, Args... args ) {
 		VSWITCH( expr ) {
-			VCASE( Word,   e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Home,   e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Pair,   e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Concat, e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Var,    e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Subst,  e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( BinOp,  e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( UniOp,  e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Size,   e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Index,  e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Slice,  e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( Null,   e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( Word,   e ) { sub()( e, args... ); }
+			VCASE( Home,   e ) { sub()( e, args... ); }
+			VCASE( Pair,   e ) { sub()( e, args... ); }
+			VCASE( Concat, e ) { sub()( e, args... ); }
+			VCASE( Var,    e ) { sub()( e, args... ); }
+			VCASE( Subst,  e ) { sub()( e, args... ); }
+			VCASE( BinOp,  e ) { sub()( e, args... ); }
+			VCASE( UniOp,  e ) { sub()( e, args... ); }
+			VCASE( Size,   e ) { sub()( e, args... ); }
+			VCASE( Index,  e ) { sub()( e, args... ); }
+			VCASE( Slice,  e ) { sub()( e, args... ); }
+			VCASE( Null,   e ) { sub()( e, args... ); }
 			VDEFAULT {
 				assert( false );
 			}
 		}
 	}
 
-	template<class... Args>
-	void operator()( LeftExpr* expr, Args&&... args ) {
+	void operator()( LeftExpr* expr, Args... args ) {
 		VSWITCH( expr ) {
-			VCASE( LeftFix, e ) { sub()( e, forward<Args>( args )... ); }
-			VCASE( LeftVar, e ) { sub()( e, forward<Args>( args )... ); }
+			VCASE( LeftFix, e ) { sub()( e, args... ); }
+			VCASE( LeftVar, e ) { sub()( e, args... ); }
 			VDEFAULT {
 				assert( false );
 			}
 		}
 	}
 
-	template<class... Args>
-	void operator()( Stmt* stmt, Args&&... args ) {
+	void operator()( Stmt* stmt, Args... args ) {
 		VSWITCH( stmt ) {
-			VCASE( Sequence, s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Parallel, s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Bg,       s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( RedirFr,  s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( RedirTo,  s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Command,  s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Return,   s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Fun,      s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( FunDel,   s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( If,       s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( While,    s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Break,    s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Let,      s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Fetch,    s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Yield,    s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Pipe,     s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Zip,      s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( Defer,    s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( ChDir,    s ) { sub()( s, forward<Args>( args )... ); }
-			VCASE( None,     s ) { sub()( s, forward<Args>( args )... ); }
+			VCASE( Sequence, s ) { sub()( s, args... ); }
+			VCASE( Parallel, s ) { sub()( s, args... ); }
+			VCASE( Bg,       s ) { sub()( s, args... ); }
+			VCASE( RedirFr,  s ) { sub()( s, args... ); }
+			VCASE( RedirTo,  s ) { sub()( s, args... ); }
+			VCASE( Command,  s ) { sub()( s, args... ); }
+			VCASE( Return,   s ) { sub()( s, args... ); }
+			VCASE( Fun,      s ) { sub()( s, args... ); }
+			VCASE( FunDel,   s ) { sub()( s, args... ); }
+			VCASE( If,       s ) { sub()( s, args... ); }
+			VCASE( While,    s ) { sub()( s, args... ); }
+			VCASE( Break,    s ) { sub()( s, args... ); }
+			VCASE( Let,      s ) { sub()( s, args... ); }
+			VCASE( Fetch,    s ) { sub()( s, args... ); }
+			VCASE( Yield,    s ) { sub()( s, args... ); }
+			VCASE( Pipe,     s ) { sub()( s, args... ); }
+			VCASE( Zip,      s ) { sub()( s, args... ); }
+			VCASE( Defer,    s ) { sub()( s, args... ); }
+			VCASE( ChDir,    s ) { sub()( s, args... ); }
+			VCASE( None,     s ) { sub()( s, args... ); }
 			VDEFAULT {
 				assert( false );
 			}
 		}
 	}
 
-	template<class... Args>
-	void operator()( Word*, Args&... ) {
+	void operator()( Word*, Args... ) {
 	}
 
-	template<class... Args>
-	void operator()( Home*, Args&... ) {
+	void operator()( Home*, Args... ) {
 	}
 
-	template<class... Args>
-	void operator()( Pair* e, Args&... args ) {
+	void operator()( Pair* e, Args... args ) {
 		sub()( e->lhs.get(), args... );
 		sub()( e->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Concat* e, Args&... args ) {
+	void operator()( Concat* e, Args... args ) {
 		sub()( e->lhs.get(), args... );
 		sub()( e->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Var*, Args&... ) {
+	void operator()( Var*, Args... ) {
 	}
 
-	template<class... Args>
-	void operator()( Subst* e, Args&... args ) {
+	void operator()( Subst* e, Args... args ) {
 		sub()( e->body.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( BinOp* e, Args&... args ) {
+	void operator()( BinOp* e, Args... args ) {
 		sub()( e->lhs.get(), args... );
 		sub()( e->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( UniOp* e, Args&... args ) {
+	void operator()( UniOp* e, Args... args ) {
 		sub()( e->lhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Size* e, Args&... args ) {
+	void operator()( Size* e, Args... args ) {
 		sub()( e->var.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Index* e, Args&... args ) {
+	void operator()( Index* e, Args... args ) {
 		sub()( e->var.get(), args... );
 		sub()( e->idx.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Slice* e, Args&... args ) {
+	void operator()( Slice* e, Args... args ) {
 		sub()( e->var.get(), args... );
 		sub()( e->bgn.get(), args... );
 		sub()( e->end.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Null*, Args&... ) {
+	void operator()( Null*, Args... ) {
 	}
 
-	template<class... Args>
-	void operator()( LeftFix* e, Args&... args ) {
+	void operator()( LeftFix* e, Args... args ) {
 		for( auto& v: e->var ) {
 			sub()( v.get(), args... );
 		}
 	}
 
-	template<class... Args>
-	void operator()( LeftVar* e, Args&... args ) {
+	void operator()( LeftVar* e, Args... args ) {
 		for( auto& v: e->varL ) {
 			sub()( v.get(), args... );
 		}
@@ -653,117 +636,97 @@ struct Visitor {
 		}
 	}
 
-	template<class... Args>
-	void operator()( Sequence* s, Args&... args ) {
+	void operator()( Sequence* s, Args... args ) {
 		sub()( s->lhs.get(), args... );
 		sub()( s->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Parallel* s, Args&... args ) {
+	void operator()( Parallel* s, Args... args ) {
 		sub()( s->lhs.get(), args... );
 		sub()( s->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Bg* s, Args&... args ) {
+	void operator()( Bg* s, Args... args ) {
 		sub()( s->body.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( RedirFr* s, Args&... args ) {
+	void operator()( RedirFr* s, Args... args ) {
 		sub()( s->file.get(), args... );
 		sub()( s->body.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( RedirTo* s, Args&... args ) {
+	void operator()( RedirTo* s, Args... args ) {
 		sub()( s->file.get(), args... );
 		sub()( s->body.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Command* s, Args&... args ) {
+	void operator()( Command* s, Args... args ) {
 		sub()( s->args.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Return* s, Args&... args ) {
+	void operator()( Return* s, Args... args ) {
 		sub()( s->retv.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Fun* s, Args&... args ) {
+	void operator()( Fun* s, Args... args ) {
 		sub()( s->name.get(), args... );
 		sub()( s->args.get(), args... );
 		sub()( s->body.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( FunDel* s, Args&... args ) {
+	void operator()( FunDel* s, Args... args ) {
 		sub()( s->name.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( If* s, Args&... args ) {
+	void operator()( If* s, Args... args ) {
 		sub()( s->cond.get(), args... );
 		sub()( s->then.get(), args... );
 		sub()( s->elze.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( While* s, Args&... args ) {
+	void operator()( While* s, Args... args ) {
 		sub()( s->cond.get(), args... );
 		sub()( s->body.get(), args... );
 		sub()( s->elze.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Break* s, Args&... args ) {
+	void operator()( Break* s, Args... args ) {
 		sub()( s->retv.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Let* s, Args&... args ) {
+	void operator()( Let* s, Args... args ) {
 		sub()( s->lhs.get(), args... );
 		sub()( s->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Fetch* s, Args&... args ) {
+	void operator()( Fetch* s, Args... args ) {
 		sub()( s->lhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Yield* s, Args&... args ) {
+	void operator()( Yield* s, Args... args ) {
 		sub()( s->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Pipe* s, Args&... args ) {
+	void operator()( Pipe* s, Args... args ) {
 		sub()( s->lhs.get(), args... );
 		sub()( s->rhs.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( Zip* s, Args&... args ) {
+	void operator()( Zip* s, Args... args ) {
 		for( auto& e: s->exprs ) {
 			sub()( e.get(), args... );
 		}
 	}
 
-	template<class... Args>
-	void operator()( Defer* s, Args&... args ) {
+	void operator()( Defer* s, Args... args ) {
 		sub()( s->args.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( ChDir* s, Args&... args ) {
+	void operator()( ChDir* s, Args... args ) {
 		sub()( s->args.get(), args... );
 	}
 
-	template<class... Args>
-	void operator()( None*, Args&... ) {
+	void operator()( None*, Args... ) {
 	}
 };
 
