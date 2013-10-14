@@ -31,8 +31,8 @@ struct Evaluator {
 
 	struct Local {
 		deque<string>& value( ast::Var* );
-		template<class Iter> bool assign( ast::VarFix*, Iter, Iter );
-		template<class Iter> bool assign( ast::VarVar*, Iter, Iter );
+		template<class Iter> bool assign( ast::LeftFix*, Iter, Iter );
+		template<class Iter> bool assign( ast::LeftVar*, Iter, Iter );
 		template<class Iter> bool assign( ast::LeftExpr*, Iter, Iter );
 
 		shared_ptr<Local> outer;
@@ -91,7 +91,7 @@ inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
 }
 
 template<class Iter>
-bool Evaluator::Local::assign( ast::VarFix* lhs, Iter rhsB, Iter rhsE ) {
+bool Evaluator::Local::assign( ast::LeftFix* lhs, Iter rhsB, Iter rhsE ) {
 	using namespace ast;
 
 	if( lhs->var.size() != size_t( rhsE - rhsB ) ) {
@@ -117,7 +117,7 @@ bool Evaluator::Local::assign( ast::VarFix* lhs, Iter rhsB, Iter rhsE ) {
 }
 
 template<class Iter>
-bool Evaluator::Local::assign( ast::VarVar* lhs, Iter rhsB, Iter rhsE ) {
+bool Evaluator::Local::assign( ast::LeftVar* lhs, Iter rhsB, Iter rhsE ) {
 	using namespace ast;
 
 	if( lhs->varL.size() + lhs->varR.size() > size_t( rhsE - rhsB ) ) {
@@ -171,10 +171,10 @@ bool Evaluator::Local::assign( ast::LeftExpr* lhs, Iter rhsB, Iter rhsE ) {
 	using namespace ast;
 
 	VSWITCH( lhs ) {
-		VCASE( VarFix, lhs ) {
+		VCASE( LeftFix, lhs ) {
 			return assign( lhs, rhsB, rhsE );
 		}
-		VCASE( VarVar, lhs ) {
+		VCASE( LeftVar, lhs ) {
 			return assign( lhs, rhsB, rhsE );
 		}
 		VDEFAULT {
@@ -663,7 +663,7 @@ tailRec:
 		}
 		VCASE( Fetch, s ) {
 			VSWITCH( s->lhs.get() ) {
-				VCASE( VarFix, lhs ) {
+				VCASE( LeftFix, lhs ) {
 					UnixIStream<1> ifs( ifd );
 					deque<string> rhs( lhs->var.size() );
 					for( auto& v: rhs ) {
@@ -679,7 +679,7 @@ tailRec:
 						make_move_iterator( rhs.end() )
 					) ? 0 : 1;
 				}
-				VCASE( VarVar, lhs ) {
+				VCASE( LeftVar, lhs ) {
 					deque<string> rhs;
 					UnixIStream<> ifs( ifd );
 					string buf;
