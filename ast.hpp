@@ -9,81 +9,47 @@ using namespace std;
 namespace ast {
 
 
-struct Word;
-struct Home;
-struct Subst;
-struct Var;
-struct Pair;
-struct Concat;
-struct BinOp;
-struct UniOp;
-struct Size;
-struct Index;
-struct Slice;
-struct Null;
 using Expr = Variant<
-	Word,
-	Home,
-	Subst,
-	Var,
-	Pair,
-	Concat,
-	BinOp,
-	UniOp,
-	Size,
-	Index,
-	Slice,
-	Null
+	struct Word,
+	struct Home,
+	struct Subst,
+	struct Var,
+	struct Pair,
+	struct Concat,
+	struct BinOp,
+	struct UniOp,
+	struct Size,
+	struct Index,
+	struct Slice,
+	struct Null
 >;
 
-struct LeftFix;
-struct LeftVar;
 using LeftExpr = Variant<
-	LeftFix,
-	LeftVar
+	struct LeftFix,
+	struct LeftVar
 >;
 
-struct If;
-struct Command;
-struct Fun;
-struct FunDel;
-struct Let;
-struct Fetch;
-struct Yield;
-struct Return;
-struct Break;
-struct While;
-struct Bg;
-struct Sequence;
-struct Parallel;
-struct RedirFr;
-struct RedirTo;
-struct Pipe;
-struct Zip;
-struct Defer;
-struct ChDir;
-struct None;
 using Stmt = Variant<
-	If,
-	Command,
-	Fun,
-	FunDel,
-	Let,
-	Fetch,
-	Yield,
-	Return,
-	Break,
-	While,
-	Bg,
-	Sequence,
-	Parallel,
-	RedirFr,
-	RedirTo,
-	Pipe,
-	Zip,
-	Defer,
-	ChDir,
-	None
+	struct If,
+	struct Command,
+	struct Fun,
+	struct FunDel,
+	struct Let,
+	struct Fetch,
+	struct Yield,
+	struct Return,
+	struct Break,
+	struct While,
+	struct Bg,
+	struct Sequence,
+	struct Parallel,
+	struct RedirFr,
+	struct RedirTo,
+	struct Pipe,
+	struct Zip,
+	struct Defer,
+	struct ChDir,
+	struct None
 >;
 
 struct Word: VariantImpl<Expr, Word> {
@@ -504,231 +470,6 @@ void walk( Visitor& visit, Stmt* stmt, Args&... args ) {
 		}
 	}
 }
-
-
-template<class Sub, class... Args>
-struct Visitor {
-	Sub& sub() {
-		return *static_cast<Sub*>( this );
-	}
-
-	void operator()( Expr* expr, Args... args ) {
-		VSWITCH( expr ) {
-			VCASE( Word,   e ) { sub()( e, args... ); }
-			VCASE( Home,   e ) { sub()( e, args... ); }
-			VCASE( Pair,   e ) { sub()( e, args... ); }
-			VCASE( Concat, e ) { sub()( e, args... ); }
-			VCASE( Var,    e ) { sub()( e, args... ); }
-			VCASE( Subst,  e ) { sub()( e, args... ); }
-			VCASE( BinOp,  e ) { sub()( e, args... ); }
-			VCASE( UniOp,  e ) { sub()( e, args... ); }
-			VCASE( Size,   e ) { sub()( e, args... ); }
-			VCASE( Index,  e ) { sub()( e, args... ); }
-			VCASE( Slice,  e ) { sub()( e, args... ); }
-			VCASE( Null,   e ) { sub()( e, args... ); }
-			VDEFAULT {
-				assert( false );
-			}
-		}
-	}
-
-	void operator()( LeftExpr* expr, Args... args ) {
-		VSWITCH( expr ) {
-			VCASE( LeftFix, e ) { sub()( e, args... ); }
-			VCASE( LeftVar, e ) { sub()( e, args... ); }
-			VDEFAULT {
-				assert( false );
-			}
-		}
-	}
-
-	void operator()( Stmt* stmt, Args... args ) {
-		VSWITCH( stmt ) {
-			VCASE( Sequence, s ) { sub()( s, args... ); }
-			VCASE( Parallel, s ) { sub()( s, args... ); }
-			VCASE( Bg,       s ) { sub()( s, args... ); }
-			VCASE( RedirFr,  s ) { sub()( s, args... ); }
-			VCASE( RedirTo,  s ) { sub()( s, args... ); }
-			VCASE( Command,  s ) { sub()( s, args... ); }
-			VCASE( Return,   s ) { sub()( s, args... ); }
-			VCASE( Fun,      s ) { sub()( s, args... ); }
-			VCASE( FunDel,   s ) { sub()( s, args... ); }
-			VCASE( If,       s ) { sub()( s, args... ); }
-			VCASE( While,    s ) { sub()( s, args... ); }
-			VCASE( Break,    s ) { sub()( s, args... ); }
-			VCASE( Let,      s ) { sub()( s, args... ); }
-			VCASE( Fetch,    s ) { sub()( s, args... ); }
-			VCASE( Yield,    s ) { sub()( s, args... ); }
-			VCASE( Pipe,     s ) { sub()( s, args... ); }
-			VCASE( Zip,      s ) { sub()( s, args... ); }
-			VCASE( Defer,    s ) { sub()( s, args... ); }
-			VCASE( ChDir,    s ) { sub()( s, args... ); }
-			VCASE( None,     s ) { sub()( s, args... ); }
-			VDEFAULT {
-				assert( false );
-			}
-		}
-	}
-
-	void operator()( Word*, Args... ) {
-	}
-
-	void operator()( Home*, Args... ) {
-	}
-
-	void operator()( Pair* e, Args... args ) {
-		sub()( e->lhs.get(), args... );
-		sub()( e->rhs.get(), args... );
-	}
-
-	void operator()( Concat* e, Args... args ) {
-		sub()( e->lhs.get(), args... );
-		sub()( e->rhs.get(), args... );
-	}
-
-	void operator()( Var*, Args... ) {
-	}
-
-	void operator()( Subst* e, Args... args ) {
-		sub()( e->body.get(), args... );
-	}
-
-	void operator()( BinOp* e, Args... args ) {
-		sub()( e->lhs.get(), args... );
-		sub()( e->rhs.get(), args... );
-	}
-
-	void operator()( UniOp* e, Args... args ) {
-		sub()( e->lhs.get(), args... );
-	}
-
-	void operator()( Size* e, Args... args ) {
-		sub()( e->var.get(), args... );
-	}
-
-	void operator()( Index* e, Args... args ) {
-		sub()( e->var.get(), args... );
-		sub()( e->idx.get(), args... );
-	}
-
-	void operator()( Slice* e, Args... args ) {
-		sub()( e->var.get(), args... );
-		sub()( e->bgn.get(), args... );
-		sub()( e->end.get(), args... );
-	}
-
-	void operator()( Null*, Args... ) {
-	}
-
-	void operator()( LeftFix* e, Args... args ) {
-		for( auto& v: e->var ) {
-			sub()( v.get(), args... );
-		}
-	}
-
-	void operator()( LeftVar* e, Args... args ) {
-		for( auto& v: e->varL ) {
-			sub()( v.get(), args... );
-		}
-		sub()( e->varM.get(), args... );
-		for( auto& v: e->varR ) {
-			sub()( v.get(), args... );
-		}
-	}
-
-	void operator()( Sequence* s, Args... args ) {
-		sub()( s->lhs.get(), args... );
-		sub()( s->rhs.get(), args... );
-	}
-
-	void operator()( Parallel* s, Args... args ) {
-		sub()( s->lhs.get(), args... );
-		sub()( s->rhs.get(), args... );
-	}
-
-	void operator()( Bg* s, Args... args ) {
-		sub()( s->body.get(), args... );
-	}
-
-	void operator()( RedirFr* s, Args... args ) {
-		sub()( s->file.get(), args... );
-		sub()( s->body.get(), args... );
-	}
-
-	void operator()( RedirTo* s, Args... args ) {
-		sub()( s->file.get(), args... );
-		sub()( s->body.get(), args... );
-	}
-
-	void operator()( Command* s, Args... args ) {
-		sub()( s->args.get(), args... );
-	}
-
-	void operator()( Return* s, Args... args ) {
-		sub()( s->retv.get(), args... );
-	}
-
-	void operator()( Fun* s, Args... args ) {
-		sub()( s->name.get(), args... );
-		sub()( s->args.get(), args... );
-		sub()( s->body.get(), args... );
-	}
-
-	void operator()( FunDel* s, Args... args ) {
-		sub()( s->name.get(), args... );
-	}
-
-	void operator()( If* s, Args... args ) {
-		sub()( s->cond.get(), args... );
-		sub()( s->then.get(), args... );
-		sub()( s->elze.get(), args... );
-	}
-
-	void operator()( While* s, Args... args ) {
-		sub()( s->cond.get(), args... );
-		sub()( s->body.get(), args... );
-		sub()( s->elze.get(), args... );
-	}
-
-	void operator()( Break* s, Args... args ) {
-		sub()( s->retv.get(), args... );
-	}
-
-	void operator()( Let* s, Args... args ) {
-		sub()( s->rhs.get(), args... );
-		sub()( s->lhs.get(), args... );
-	}
-
-	void operator()( Fetch* s, Args... args ) {
-		sub()( s->lhs.get(), args... );
-	}
-
-	void operator()( Yield* s, Args... args ) {
-		sub()( s->rhs.get(), args... );
-	}
-
-	void operator()( Pipe* s, Args... args ) {
-		sub()( s->lhs.get(), args... );
-		sub()( s->rhs.get(), args... );
-	}
-
-	void operator()( Zip* s, Args... args ) {
-		for( auto& e: s->exprs ) {
-			sub()( e.get(), args... );
-		}
-	}
-
-	void operator()( Defer* s, Args... args ) {
-		sub()( s->args.get(), args... );
-	}
-
-	void operator()( ChDir* s, Args... args ) {
-		sub()( s->args.get(), args... );
-	}
-
-	void operator()( None*, Args... ) {
-	}
-};
 
 
 } // namespace ast
