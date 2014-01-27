@@ -24,6 +24,7 @@
 
 	#pragma GCC diagnostic ignored "-Wsign-compare"
 	#pragma GCC diagnostic ignored "-Wunused-function"
+	#pragma GCC diagnostic ignored "-Wdeprecated"
 %}
 
 /* [N]ormal, auto [C]aret, [I]gnore newline */
