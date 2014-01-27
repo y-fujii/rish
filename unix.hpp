@@ -110,7 +110,58 @@ struct UnixIStream: istream {
 };
 
 #if defined( __linux__ )
-void closefrom( int lowfd ) {
+#include <sys/syscall.h>
+inline void closefrom( int lowfd ) {
+	assert( lowfd >= 0 );
+
+	// use low-level syscall to make closefrom() async-signal-safe.
+
+	struct linux_dirent {
+		uint64_t d_ino;
+		off_t    d_off;
+		uint16_t d_reclen;
+		char     d_name[1];
+	};
+
+	int dfd = open( "/proc/self/fd", O_RDONLY | O_DIRECTORY );
+	if( dfd < 0 ) {
+		return;
+	}
+
+	while( true ) {
+		uint8_t buf[PIPE_BUF];
+		int n = syscall( SYS_getdents, dfd, buf, PIPE_BUF );
+		if( n <= 0 ) {
+			break;
+		}
+
+		int offset = 0;
+		while( offset < n ) {
+			linux_dirent* entry = reinterpret_cast<linux_dirent*>( buf + offset );
+			uint8_t d_type = buf[offset + entry->d_reclen - 1];
+
+			if( d_type != DT_DIR ) {
+				int fd = 0;
+				char* it = entry->d_name;
+				while( '0' <= *it && *it <= '9' ) {
+					fd = fd * 10 + (*it - '0');
+					++it;
+				}
+				assert( it != entry->d_name && *it == '\0' );
+
+				if( fd >= lowfd && fd != dfd ) {
+					close( fd );
+				}
+			}
+
+			offset += entry->d_reclen;
+		}
+	}
+
+	close( dfd );
+}
+#elif 0
+inline void closefrom( int lowfd ) {
 	assert( lowfd >= 0 );
 
 	// XXX: we must use async-signal-safe functions only.
