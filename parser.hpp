@@ -20,7 +20,7 @@ struct SyntaxError: exception {
 	size_t line;
 };
 
-inline unique_ptr<ast::Stmt>&& parse( istream& istr ) {
+inline unique_ptr<ast::Stmt> parse( istream& istr ) {
 	parserResult = nullptr;
 	lexerInit( &istr );
 	yyparse();

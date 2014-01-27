@@ -1,4 +1,4 @@
-CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -stdlib=libc++ -lc++abi -pthread -g -O4
+CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -stdlib=libc++ -lc++abi -pthread -g -O3 -flto
 #CXX = g++ -std=c++11 -pedantic -Wall -Wextra -pthread -g -O0
 LEX = flex
 

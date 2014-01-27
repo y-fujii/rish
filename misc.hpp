@@ -154,7 +154,7 @@ T* match( Variant<Tn...>* v ) {
 
 template<class T>
 struct FalseWrapper {
-	operator bool() const {
+	constexpr operator bool() const {
 		return false;
 	}
 
@@ -162,7 +162,7 @@ struct FalseWrapper {
 };
 
 template<class T>
-inline FalseWrapper<T> falseWrap( T v ) {
+constexpr FalseWrapper<T> falseWrap( T v ) {
 	static_assert( is_pointer<T>::value, "" );
 	return FalseWrapper<T>{ v };
 }
