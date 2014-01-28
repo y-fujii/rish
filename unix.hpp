@@ -117,10 +117,10 @@ inline void closefrom( int lowfd ) {
 	// use low-level syscall to make closefrom() async-signal-safe.
 
 	struct linux_dirent {
-		uint64_t d_ino;
-		off_t    d_off;
-		uint16_t d_reclen;
-		char     d_name[1];
+		unsigned long d_ino;
+		unsigned long d_off;
+		uint16_t      d_reclen;
+		char          d_name[1];
 	};
 
 	int dfd = open( "/proc/self/fd", O_RDONLY | O_DIRECTORY );
