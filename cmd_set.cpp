@@ -1,7 +1,7 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
 #include <algorithm>
-#include <set>
+#include <vector>
 #include <string>
 #include <iostream>
 #include <unistd.h>
@@ -23,50 +23,53 @@ int main( int argc, char** argv ) {
 		return error();
 	}
 
-	string cmd( argv[optind++] );
-	set<string> ys( argv + optind, argv + argc );
+	string cmd = argv[optind++];
+	char** ysBgn = argv + optind;
+	char** ysEnd = argv + argc;
+	sort( ysBgn, ysEnd );
+	ysEnd = unique( ysBgn, ysEnd );
 
 	if( cmd == "isect" ) {
 		string buf;
 		while( cin >> buf ) {
-			if( ys.find( buf ) != ys.end() ) {
+			if( binary_search( ysBgn, ysEnd, buf ) ) {
 				cout << buf << '\n';
 			}
 		}
 	}
 	else if( cmd == "union" ) {
+		vector<bool> flags( ysEnd - ysBgn, true );
 		string buf;
 		while( cin >> buf ) {
-			auto it = ys.find( buf );
-			if( it != ys.end() ) {
-				ys.erase( it );
+			char** it = lower_bound( ysBgn, ysEnd, buf );
+			if( it != ysEnd ) {
+				flags[it - ysBgn] = false;
 			}
 			cout << buf << '\n';
 		}
-		for( string const& y: ys ) {
-			cout << y << '\n';
+		for( int i = 0; i < ysEnd - ysBgn; ++i ) {
+			if( flags[i] ) {
+				cout << ysBgn[i] << '\n';
+			}
 		}
 	}
 	else if( cmd == "diff" ) {
 		string buf;
 		while( cin >> buf ) {
-			if( ys.find( buf ) == ys.end() ) {
+			if( !binary_search( ysBgn, ysEnd, buf ) ) {
 				cout << buf << '\n';
 			}
 		}
 	}
 	else if( cmd == "contain" ) {
-		set<string> xs;
+		vector<string> xs;
 		string buf;
 		while( cin >> buf ) {
-			xs.insert( buf );
+			xs.push_back( buf );
 		}
-		bool r = all_of( ys.begin(), ys.end(),
-			[&xs]( string const& y ) {
-				return xs.find( y ) != xs.end();
-			}
-		);
+		sort( xs.begin(), xs.end() );
 
+		bool r = includes( xs.begin(), xs.end(), ysBgn, ysEnd );
 		return r ? 0 : 1;
 	}
 	else {
