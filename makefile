@@ -9,7 +9,7 @@ SRCS = \
 	builtins.hpp repl.hpp main.cpp
 
 .PHONY: all
-all: rish pprint str
+all: rish pprint str set
 
 rish: $(SRCS) makefile
 	$(YACC) -dv parser.y; \
@@ -24,6 +24,9 @@ pprint: cmd_pprint.cpp makefile
 
 str: cmd_str.cpp makefile
 	$(CXX) -ostr cmd_str.cpp
+
+set: cmd_set.cpp makefile
+	$(CXX) -oset cmd_set.cpp
 
 test: rish
 	wc $(SRCS)
