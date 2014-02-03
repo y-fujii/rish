@@ -74,8 +74,10 @@
 <N,I>"break"			{ BEGIN( N ); return TK_BREAK; }
 <N,I>"return"			{ BEGIN( N ); return TK_RETURN; }
 <N,I>"let"				{ BEGIN( N ); return TK_LET; }
+<N,I>"let!"				{ BEGIN( N ); return TK_LETBANG; }
 <N,I>"fun"				{ BEGIN( N ); return TK_FUN; }
 <N,I>"fetch"			{ BEGIN( N ); return TK_FETCH; }
+<N,I>"fetch!"			{ BEGIN( N ); return TK_FETCHBANG; }
 <N,I>"yield"			{ BEGIN( N ); return TK_YIELD; }
 <N,I>"zip"				{ BEGIN( N ); return TK_ZIP; }
 <N,I>"defer"			{ BEGIN( N ); return TK_DEFER; }
