@@ -33,4 +33,4 @@ test: rish
 	./rish test.rs
 
 clean:
-	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish pprint str
+	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish pprint str set
