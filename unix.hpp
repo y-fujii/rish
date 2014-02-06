@@ -110,7 +110,16 @@ struct UnixIStream: istream {
 };
 
 #if defined( __linux__ )
+
 #include <sys/syscall.h>
+
+inline void closefrom_fallback( int lowfd ) {
+	int maxfd = sysconf( _SC_OPEN_MAX );
+	for( int fd = lowfd; fd < maxfd; ++fd ) {
+		close( fd );
+	}
+}
+
 inline void closefrom( int lowfd ) {
 	assert( lowfd >= 0 );
 
@@ -125,7 +134,7 @@ inline void closefrom( int lowfd ) {
 
 	int dfd = open( "/proc/self/fd", O_RDONLY | O_DIRECTORY );
 	if( dfd < 0 ) {
-		return;
+		return closefrom_fallback( lowfd );
 	}
 
 	while( true ) {
@@ -147,7 +156,11 @@ inline void closefrom( int lowfd ) {
 					fd = fd * 10 + (*it - '0');
 					++it;
 				}
-				assert( it != entry->d_name && *it == '\0' );
+				if( it == entry->d_name || *it != '\0' ) {
+					// /proc may not be procfs.
+					close( dfd );
+					return closefrom_fallback( lowfd );
+				}
 
 				if( fd >= lowfd && fd != dfd ) {
 					close( fd );
@@ -160,7 +173,9 @@ inline void closefrom( int lowfd ) {
 
 	close( dfd );
 }
+
 #elif 0
+
 inline void closefrom( int lowfd ) {
 	assert( lowfd >= 0 );
 
@@ -196,6 +211,7 @@ inline void closefrom( int lowfd ) {
 
 	closedir( dir );
 }
+
 #endif
 
 inline void writeAll( int ofd, string const& src ) {
