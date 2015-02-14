@@ -221,10 +221,7 @@ fun contain ($ys) {
 	return 0
 }
 
-fun dict:new {
-}
-
-fun dict:get $key {
+fun assoc $key {
 	while fetch $k $v {
 		if ($k == $key) {
 			yield $v
@@ -232,39 +229,11 @@ fun dict:get $key {
 	}
 }
 
-fun dict:add $key $val {
-	while fetch $k $v {
-		yield $k $v
-	}
-	yield $key $val
-}
-
-fun dict:set $key $val {
+fun remove $key {
 	while fetch $k $v {
 		if ($k != $key) {
 			yield $k $v
 		}
-	}
-	yield $key $val
-}
-
-fun dict:del $key {
-	while fetch $k $v {
-		if ($k != $key) {
-			yield $k $v
-		}
-	}
-}
-
-fun dict:keys {
-	while fetch $k $v {
-		yield $k
-	}
-}
-
-fun dict:vals {
-	while fetch $k $v {
-		yield $v
 	}
 }
 
