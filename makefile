@@ -1,4 +1,4 @@
-CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -stdlib=libc++ -lc++abi -pthread -g -O3 -flto
+CXX = clang++ -std=c++11 -pedantic -Wall -Wextra -stdlib=libc++ -lc++abi -pthread -g -O3
 #CXX = g++ -std=c++11 -pedantic -Wall -Wextra -pthread -g -O0
 LEX = flex
 
@@ -9,7 +9,7 @@ SRCS = \
 	builtins.hpp repl.hpp main.cpp
 
 .PHONY: all
-all: rish pprint str set
+all: rish str
 
 rish: $(SRCS) makefile
 	$(YACC) -dv parser.y; \
@@ -19,18 +19,12 @@ rish: $(SRCS) makefile
 	$(LEX) -olexer.cpp lexer.l; \
 	$(CXX) -orish main.cpp lexer.cpp parser.cpp -lreadline
 
-pprint: cmd_pprint.cpp makefile
-	$(CXX) -opprint cmd_pprint.cpp
-
 str: cmd_str.cpp makefile
 	$(CXX) -ostr cmd_str.cpp
-
-set: cmd_set.cpp makefile
-	$(CXX) -oset cmd_set.cpp
 
 test: rish
 	wc $(SRCS)
 	./rish test.rs
 
 clean:
-	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish pprint str set
+	rm -f tokens.hpp parser.cpp parser.out lexer.cpp rish str
