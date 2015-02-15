@@ -21,7 +21,7 @@ struct SyntaxError: exception {
 };
 
 inline unique_ptr<ast::Stmt> parse( istream& istr ) {
-	parserResult = nullptr;
+	assert( !parserResult );
 	lexerInit( &istr );
 	yyparse();
 	lexerInit( nullptr );
