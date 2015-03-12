@@ -38,10 +38,14 @@ constexpr int64_t imod( int64_t a, int64_t b ) {
 	);
 }
 
-template<class T, class... Args>
-inline unique_ptr<T> make_unique( Args&&... args ) {
-	return unique_ptr<T>( new T( forward<Args>( args )... ) );
+#if __cplusplus < 201402L
+namespace std {
+	template<class T, class... Args>
+	inline unique_ptr<T> make_unique( Args&&... args ) {
+		return unique_ptr<T>( new T( forward<Args>( args )... ) );
+	}
 }
+#endif
 
 template<class Func0, class Func1>
 tuple<exception_ptr, exception_ptr> parallel( Func0 const& f0, Func1 const& f1 ) {
