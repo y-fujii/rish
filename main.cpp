@@ -13,11 +13,47 @@
 #include "parser.hpp"
 #include "annotate.hpp"
 #include "eval.hpp"
-#include "repl.hpp"
+//#include "repl.hpp"
 //#include "builtins.hpp"
 
 using namespace std;
 
+
+// toriaezu tekito-
+struct TaskManager: Evaluator::Listener {
+	using ArgIter = Evaluator::ArgIter;
+
+	virtual int onCommand( ArgIter argsB, ArgIter argsE, int ifd, int ofd, string const& cwd ) override {
+		pid_t pid = forkExec( argsB, argsE, ifd, ofd, cwd );
+		int status;
+		checkSysCall( waitpid( pid, &status, 0 ) );
+		return WEXITSTATUS( status );
+	}
+
+	virtual void onBgTask( thread&& thr ) override {
+		_threads.push_back( move( thr ) );
+	}
+
+	void join() {
+		while( true ) {
+			vector<thread> tmp;
+			{
+				lock_guard<mutex> lock( _mutex );
+				swap( tmp, _threads );
+			}
+			if( tmp.empty() ) {
+				break;
+			}
+			for( auto& t: tmp ) {
+				t.join();
+			}
+		}
+	}
+
+	private:
+		mutex _mutex;
+		vector<thread> _threads;
+};
 
 int main( int argc, char** argv ) {
 	int opt;
@@ -50,9 +86,11 @@ int main( int argc, char** argv ) {
 			ifstream ifs( argv[optind] );
 			unique_ptr<ast::Stmt> ast = parse( ifs );
 			annotate( ast.get(), alocal );
-			Evaluator eval;
+			TaskManager taskMan;
+			Evaluator eval( &taskMan );
 			eval.evalStmt( ast.get(), elocal, 0, 1 );
-			eval.join();
+
+			taskMan.join();
 		}
 		catch( SyntaxError const& err ) {
 			cerr << "Syntax error on #" << err.line + 1 << "." << endl;
