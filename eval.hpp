@@ -27,7 +27,12 @@ using namespace std;
 
 
 struct Evaluator {
-	Evaluator(): separator( '\n' ) {} // XXX
+	using ArgIter = move_iterator<deque<string>::iterator>;
+
+	struct Listener {
+		virtual int  onCommand( ArgIter, ArgIter, int, int, const string& ) = 0;
+		virtual void onBgTask( thread&& ) = 0;
+	};
 
 	struct Local {
 		deque<string>& value( ast::Var* );
@@ -58,24 +63,17 @@ struct Evaluator {
 		int const retv;
 	};
 
-	using ArgIter = move_iterator<deque<string>::iterator>;
-	using Builtin = function<int ( ArgIter, ArgIter, Evaluator&, Local const&, int, int )>;
+	Evaluator( Listener* l ): separator( '\n' ), listener( l ) {} // XXX
 
 	template<class Iter> int callCommand( Iter, Iter, Local const&, int, int );
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
-	future<int> evaluate( ast::Stmt*, shared_ptr<Local>, int, int );
-	void join();
-	void interrupt();
-
-	map<string, Closure> closures;
-	map<string, Builtin> builtins;
-	map<thread::id, thread> foregrounds;
-	map<thread::id, thread> backgrounds;
-	mutex mutexGlobal;
 
 	char separator; // XXX: better to be function local?
+	Listener* listener;
+	map<string, Closure> closures;
+	mutex mutexGlobal;
 };
 
 
@@ -419,20 +417,7 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd,
 		mutexGlobal.unlock();
 	}
 
-	auto bit = builtins.find( argsB[0] );
-	if( bit != builtins.end() ) {
-		try {
-			return bit->second( argsB + 1, argsE, *this, local, ifd, ofd );
-		}
-		catch( std::exception const& ) {
-			return 1;
-		}
-	}
-
-	pid_t pid = forkExec( argsB, argsE, ifd, ofd, local.cwd );
-	int status;
-	checkSysCall( waitpid( pid, &status, 0 ) );
-	return WEXITSTATUS( status );
+	return listener->onCommand( argsB, argsE, ifd, ofd, local.cwd );
 }
 
 template<class DstIter>
@@ -531,10 +516,8 @@ tailRec:
 				this->evalStmt( body.get(), local, ifd, ofd );
 			} );
 			thread::id id = thr.get_id();
-			{
-				lock_guard<mutex> lock( mutexGlobal );
-				backgrounds[id] = move( thr );
-			}
+
+			listener->onBgTask( move( thr ) );
 
 			ostringstream ofs;
 			ofs.exceptions( ios_base::failbit | ios_base::badbit );
@@ -816,43 +799,4 @@ tailRec:
 
 	assert( false );
 	return -1;
-}
-
-inline future<int> Evaluator::evaluate( ast::Stmt* stmt, shared_ptr<Local> local, int ifd, int ofd ) {
-	return async( [&]() -> int {
-		return evalStmt( stmt, local, ifd, ofd );
-	} );
-}
-
-inline void Evaluator::join() {
-	while( true ) {
-		map<thread::id, thread> fg;
-		map<thread::id, thread> bg;
-		{
-			lock_guard<mutex> lock( mutexGlobal );
-			swap( fg, foregrounds );
-			swap( bg, backgrounds );
-		}
-
-		if( fg.empty() && bg.empty() ) {
-			break;
-		}
-
-		for( auto& t: fg ) {
-			t.second.join();
-		}
-		for( auto& t: bg ) {
-			t.second.join();
-		}
-	}
-}
-
-inline void Evaluator::interrupt() {
-	lock_guard<mutex> lock( mutexGlobal );
-	for( auto& t: foregrounds ) {
-		pthread_kill( t.second.native_handle(), SIGUSR1 );
-	}
-	for( auto& t: backgrounds ) {
-		pthread_kill( t.second.native_handle(), SIGUSR1 );
-	}
 }
