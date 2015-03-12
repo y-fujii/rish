@@ -237,12 +237,10 @@ fun remove $key {
 	}
 }
 
-fun test {
+fun testStd {
 	let ($xs) = [range 64 | while fetch $_ { random }]
 	([$xs -> msort] == [$xs -> qsort]) -> all || yield NG
 	([1 1 2 3 3 3 4 4 5 6 8 -> uniq] == 1 2 3 4 5 6 8) -> all || yield NG
 	([0 1 2 3 4 5 6 -> diff 1 3 5 7 9] == 0 2 4 6) -> all || yield NG
 	([0 1 2 3 4 5 6 -> select (0 1 2 3 4 5 6 % 2 == 0)] == 0 2 4 6) -> all || yield NG
 }
-
-test
