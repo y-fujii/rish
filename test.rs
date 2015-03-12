@@ -1,78 +1,5 @@
-fun size {
-	let $n = 0
-	while fetch $e {
-		let $n = $n + 1
-	}
-	yield $n
-}
+import std.rs
 
-fun index $n {
-	enumerate | while fetch $i $e {
-		if ($i == $n) {
-			yield $e
-			break 0
-		}
-	}
-}
-
-fun slice $bgn $end {
-	enumerate | while fetch $i $e {
-		if ($bgn <= $i) && ($i < $end) {
-			yield $e
-		}
-	}
-}
-
-fun range $n {
-	let $i = 0
-	while ($i < $n) {
-		yield $i
-		let $i = $i + 1
-	}
-}
-
-fun enumerate {
-	let $i = 0 
-	while fetch $e {
-		yield $i $e
-		let $i = $i + 1
-	}
-}
-
-fun all {
-	while fetch $e {
-		if ($e == 0) {
-			return 0
-		}
-	}
-	return 1
-}
-
-fun any {
-	while fetch $e {
-		if ($e != 0) {
-			return 1
-		}
-	}
-	return 0
-}
-
-fun sqrt $x {
-	if ($x == 0) {
-		yield 0
-		return
-	}
-
-	let $t = $x
-	while 0 {
-		let $u = ($t * $t + $x) / 2 * $t
-		if ($u >= $t) {
-			break
-		}
-		let $t = $u
-	}
-	yield $u
-}
 
 fun testLet {
 	yield "test let"
@@ -331,3 +258,4 @@ fun runTest {
 }
 
 runTest
+testStd

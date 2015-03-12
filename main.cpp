@@ -23,28 +23,24 @@ using namespace std;
 struct TaskManager: Evaluator::Listener {
 	using ArgIter = Evaluator::ArgIter;
 
-	TaskManager( char** ab, char** ae ): _argsB( ab ), _argsE( ae ) {}
-
-	virtual int onCommand( ArgIter argsB, ArgIter argsE, int ifd, int ofd, string const& cwd ) override {
-		if( argsB[0] == "args" ) {
-			ostringstream ofs;
-			ofs.exceptions( ios_base::failbit | ios_base::badbit );
-			for( char** it = _argsB; it != _argsE; ++it ) {
-				ofs << *it << '\n';
-			}
-			writeAll( ofd, ofs.str() );
-			return 0;
-		}
-
-		pid_t pid = forkExec( argsB, argsE, ifd, ofd, cwd );
-		int status;
-		checkSysCall( waitpid( pid, &status, 0 ) );
-		return WEXITSTATUS( status );
+	TaskManager( char** ab, char** ae, string const& c ):
+		_evaluator( this ),
+		_argsB( ab ),
+		_argsE( ae ),
+		_cwd( c ) {
 	}
 
-	virtual void onBgTask( thread&& thr ) override {
-		lock_guard<mutex> lock( _mutex );
-		_threads.push_back( move( thr ) );
+	int evaluate( istream& ifs ) {
+		unique_ptr<ast::Stmt> ast = parse( ifs );
+
+		Annotator::Local alocal;
+		annotate( ast.get(), alocal );
+
+		auto elocal = make_shared<Evaluator::Local>();
+		elocal->vars.resize( alocal.vars.size() );
+		elocal->cwd = _cwd;
+
+		return _evaluator.evalStmt( ast.get(), elocal, 0, 1 );
 	}
 
 	void join() {
@@ -63,9 +59,42 @@ struct TaskManager: Evaluator::Listener {
 		}
 	}
 
+	protected:
+		virtual int onCommand( ArgIter argsB, ArgIter argsE, int ifd, int ofd, string const& cwd ) override {
+			if( argsB[0] == "args" ) {
+				ostringstream ofs;
+				ofs.exceptions( ios_base::failbit | ios_base::badbit );
+				for( char** it = _argsB; it != _argsE; ++it ) {
+					ofs << *it << '\n';
+				}
+				writeAll( ofd, ofs.str() );
+				return 0;
+			}
+			else if( argsB[0] == "import" ) {
+				if( argsE - argsB != 2 ) {
+					return 1;
+				}
+
+				ifstream ifs( argsB[1] );
+				return evaluate( ifs );
+			}
+
+			pid_t pid = forkExec( argsB, argsE, ifd, ofd, cwd );
+			int status;
+			checkSysCall( waitpid( pid, &status, 0 ) );
+			return WEXITSTATUS( status );
+		}
+
+		virtual void onBgTask( thread&& thr ) override {
+			lock_guard<mutex> lock( _mutex );
+			_threads.push_back( move( thr ) );
+		}
+
 	private:
+		Evaluator _evaluator;
 		char** _argsB;
 		char** _argsE;
+		string _cwd;
 		mutex _mutex;
 		vector<thread> _threads;
 };
@@ -83,20 +112,12 @@ int main( int argc, char** argv ) {
 
 	array<char, MAXPATHLEN> buf;
 	getcwd( buf.data(), buf.size() );
-	string cwd( buf.data() );
 
 	if( optind < argc ) {
+		TaskManager taskMan( &argv[optind + 1], &argv[argc], buf.data() );
+		ifstream ifs( argv[optind] );
 		try {
-			ifstream ifs( argv[optind] );
-			unique_ptr<ast::Stmt> ast = parse( ifs );
-			annotate( ast.get() );
-
-			TaskManager taskMan( &argv[optind + 1], &argv[argc] );
-			Evaluator eval( &taskMan );
-			auto elocal = make_shared<Evaluator::Local>();
-			elocal->cwd = cwd;
-			eval.evalStmt( ast.get(), elocal, 0, 1 );
-
+			taskMan.evaluate( ifs );
 			taskMan.join();
 		}
 		catch( SyntaxError const& err ) {
