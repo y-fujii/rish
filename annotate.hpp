@@ -105,6 +105,7 @@ struct Annotator {
 	}
 };
 
-inline void annotate( ast::Stmt* s, Annotator::Local& local ) {
+inline void annotate( ast::Stmt* s ) {
+	Annotator::Local local;
 	Annotator()( s, local );
 }

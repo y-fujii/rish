@@ -293,7 +293,7 @@ fun testDivMod {
 
 fun runTest {
 	yield (1 6 + 2 1 * 3 1)
-	echo "args: " $args
+	echo "args: " [args]
 	let $var = S
 	echo P(a b c)[range 4]$var
 	testLet
