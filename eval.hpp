@@ -54,26 +54,25 @@ struct Evaluator {
 	};
 
 	struct BreakException {
-		explicit BreakException( int r ): retv( r ) {}
 		int const retv;
 	};
 
 	struct ReturnException {
-		explicit ReturnException( int r ): retv( r ) {}
 		int const retv;
 	};
 
-	Evaluator( Listener* l ): separator( '\n' ), listener( l ) {} // XXX
+	Evaluator( Listener* l ): _separator( '\n' ), _listener( l ) {}
 
 	template<class Iter> int callCommand( Iter, Iter, Local const&, int, int );
 	template<class Iter> Iter evalExpr( ast::Expr*, shared_ptr<Local>, Iter );
 	template<class Iter> Iter evalArgs( ast::Expr*, shared_ptr<Local>, Iter );
 	int evalStmt( ast::Stmt*, shared_ptr<Local>, int, int );
 
-	char separator; // XXX: better to be function local?
-	Listener* listener;
-	map<string, Closure> closures;
-	mutex mutexGlobal;
+	private:
+		char                 _separator; // XXX: better to be function local?
+		Listener*            _listener;
+		map<string, Closure> _closures;
+		mutex                _mutex;
 };
 
 
@@ -216,7 +215,7 @@ tailRec:
 			}
 		}
 		VCASE( Var, e ) {
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			auto& val = local->value( e );
 			dst = copy( val.cbegin(), val.cend(), dst );
 		}
@@ -228,7 +227,7 @@ tailRec:
 				auto closer = scopeExit( bind( close, fds[0] ) );
 				UnixIStream<> ifs( fds[0] );
 				string buf;
-				while( getline( ifs, buf, separator ) ) {
+				while( getline( ifs, buf, _separator ) ) {
 					*dst++ = buf;
 				}
 			};
@@ -306,7 +305,7 @@ tailRec:
 			}
 		}
 		VCASE( Size, e ) {
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			auto& val = local->value( e->var.get() );
 			*dst++ = to_string( val.size() );
 		}
@@ -314,7 +313,7 @@ tailRec:
 			deque<MetaString> sIdcs;
 			evalExpr( e->idx.get(), local, back_inserter( sIdcs ) );
 
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			auto& val = local->value( e->var.get() );
 			if( val.size() == 0 && sIdcs.size() != 0 ) {
 				throw invalid_argument( "" );
@@ -335,7 +334,7 @@ tailRec:
 				throw invalid_argument( "" );
 			}
 
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			auto& val = local->value( e->var.get() );
 			if( val.size() == 0 && (sBgns.size() != 0 || sEnds.size() != 0) ) {
 				throw invalid_argument( "" );
@@ -378,11 +377,11 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd,
 		}
 	}
 
-	mutexGlobal.lock();
-	auto fit = closures.find( argsB[0] );
-	if( fit != closures.end() ) {
+	_mutex.lock();
+	auto fit = _closures.find( argsB[0] );
+	if( fit != _closures.end() ) {
 		Closure cl = fit->second;
-		mutexGlobal.unlock();
+		_mutex.unlock();
 
 		auto child = make_shared<Local>();
 		child->vars.resize( cl.nVar );
@@ -414,10 +413,10 @@ int Evaluator::callCommand( Iter argsB, Iter argsE, Local const& local, int ifd,
 		return retv;
 	}
 	else {
-		mutexGlobal.unlock();
+		_mutex.unlock();
 	}
 
-	return listener->onCommand( argsB, argsE, ifd, ofd, local.cwd );
+	return _listener->onCommand( argsB, argsE, ifd, ofd, local.cwd );
 }
 
 template<class DstIter>
@@ -497,10 +496,10 @@ tailRec:
 			};
 			parallel( evalLhs, evalRhs );
 			if( lret ) {
-				throw ReturnException( lval );
+				throw ReturnException{ lval };
 			}
 			if( rret ) {
-				throw ReturnException( rval );
+				throw ReturnException{ rval };
 			}
 			return lval || rval;
 		}
@@ -517,11 +516,11 @@ tailRec:
 			} );
 			thread::id id = thr.get_id();
 
-			listener->onBgTask( move( thr ) );
+			_listener->onBgTask( move( thr ) );
 
 			ostringstream ofs;
 			ofs.exceptions( ios_base::failbit | ios_base::badbit );
-			ofs << id << separator;
+			ofs << id << _separator;
 			writeAll( ofd, ofs.str() );
 			return 0;
 		}
@@ -567,9 +566,9 @@ tailRec:
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			switch( args.size() ) {
 				case 0:
-					throw ReturnException( 0 );
+					throw ReturnException{ 0 };
 				case 1:
-					throw ReturnException( stoi( args[0] ) );
+					throw ReturnException{ stoi( args[0] ) };
 				default:
 					throw invalid_argument( "" );
 			}
@@ -581,8 +580,8 @@ tailRec:
 				throw invalid_argument( "" );
 			}
 
-			lock_guard<mutex> lock( mutexGlobal );
-			closures[args[0]] = { s->nVar, s->args, s->body, local };
+			lock_guard<mutex> lock( _mutex );
+			_closures[args[0]] = { s->nVar, s->args, s->body, local };
 			return 0;
 		}
 		VCASE( FunDel, s ) {
@@ -592,8 +591,8 @@ tailRec:
 				throw invalid_argument( "" );
 			}
 
-			lock_guard<mutex> lock( mutexGlobal );
-			return closures.erase( args[0] ) != 0 ? 0 : 1;
+			lock_guard<mutex> lock( _mutex );
+			return _closures.erase( args[0] ) != 0 ? 0 : 1;
 		}
 		VCASE( If, s ) {
 			if( evalStmt( s->cond.get(), local, ifd, ofd ) == 0 ) {
@@ -626,9 +625,9 @@ tailRec:
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			switch( args.size() ) {
 				case 0:
-					throw BreakException( 0 );
+					throw BreakException{ 0 };
 				case 1:
-					throw BreakException( stoi( args[0] ) );
+					throw BreakException{ stoi( args[0] ) };
 				default:
 					throw invalid_argument( "" );
 			}
@@ -637,7 +636,7 @@ tailRec:
 			deque<string> vals;
 			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			return local->assign(
 				s->lhs.get(),
 				make_move_iterator( vals.begin() ),
@@ -650,12 +649,12 @@ tailRec:
 					UnixIStream<1> ifs( ifd );
 					deque<string> rhs( lhs->var.size() );
 					for( auto& v: rhs ) {
-						if( !getline( ifs, v, separator ) ) {
+						if( !getline( ifs, v, _separator ) ) {
 							return 1;
 						}
 					}
 
-					lock_guard<mutex> lock( mutexGlobal );
+					lock_guard<mutex> lock( _mutex );
 					return local->assign(
 						lhs,
 						make_move_iterator( rhs.begin() ),
@@ -666,11 +665,11 @@ tailRec:
 					deque<string> rhs;
 					UnixIStream<> ifs( ifd );
 					string buf;
-					while( getline( ifs, buf, separator ) ) {
+					while( getline( ifs, buf, _separator ) ) {
 						rhs.push_back( buf );
 					}
 
-					lock_guard<mutex> lock( mutexGlobal );
+					lock_guard<mutex> lock( _mutex );
 					return local->assign(
 						lhs,
 						make_move_iterator( rhs.begin() ),
@@ -687,7 +686,7 @@ tailRec:
 			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 			ostringstream buf;
 			for( auto const& v: vals ) {
-				buf << v << separator;
+				buf << v << _separator;
 			}
 			writeAll( ofd, buf.str() );
 			return 0;
@@ -728,10 +727,10 @@ tailRec:
 			};
 			parallel( evalLhs, evalRhs );
 			if( lret ) {
-				throw ReturnException( lval );
+				throw ReturnException{ lval };
 			}
 			if( rret ) {
-				throw ReturnException( rval );
+				throw ReturnException{ rval };
 			}
 			return lval || rval;
 		}
@@ -754,7 +753,7 @@ tailRec:
 			ostringstream buf;
 			for( size_t j = 0; j < vals[0].size(); ++j ) {
 				for( size_t i = 0; i < vals.size(); ++i ) {
-					buf << vals[i][j] << separator;
+					buf << vals[i][j] << _separator;
 				}
 			}
 			writeAll( ofd, buf.str() );
@@ -765,7 +764,7 @@ tailRec:
 			deque<string> args;
 			evalArgs( s->args.get(), local, back_inserter( args ) );
 
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			local->defs.push_back( move( args ) );
 			return 0;
 		}
@@ -776,7 +775,7 @@ tailRec:
 				throw invalid_argument( "" );
 			}
 
-			lock_guard<mutex> lock( mutexGlobal );
+			lock_guard<mutex> lock( _mutex );
 			local->cwd = args[0];
 			return 0;
 		}
