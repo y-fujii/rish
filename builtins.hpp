@@ -6,7 +6,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
-#include <stdlib.h>
+#include <cstdlib>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include "misc.hpp"

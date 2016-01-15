@@ -4,8 +4,8 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <cstdlib>
 #include <signal.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <readline/history.h>
 #include <readline/readline.h>
