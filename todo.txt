@@ -59,6 +59,8 @@ language:
 	- std.fdutil
 		fdutil --dup stdout stderr --redir-from ./file stdin
 
+	- https://github.com/mbrubeck/compleat
+
 UI:
 	- job control
 	- (att|det)atch process to std(in|out|err), pipes and files at any time
