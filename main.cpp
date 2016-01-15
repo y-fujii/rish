@@ -5,8 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <cstdlib>
 #include <signal.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include "misc.hpp"
 #include "ast.hpp"

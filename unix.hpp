@@ -6,10 +6,10 @@
 #include <iomanip>
 #include <map>
 #include <sstream>
+#include <cstring>
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
-#include <string.h>
 #include <unistd.h>
 #include "misc.hpp"
 #include "glob.hpp"
