@@ -2,7 +2,7 @@
 #pragma once
 
 #include <cstdint>
-#include <deque>
+#include <vector>
 #include <string>
 #include <system_error>
 #include <dirent.h>
@@ -42,7 +42,7 @@ inline bool isMeta( uint16_t c ) {
 
 // O(#ptrn) space, O(#ptrn * #src) time wildcard matcher
 inline bool matchGlob( basic_string<uint16_t> const& ptrn, string const& src ) {
-	deque<bool> mark( ptrn.size() );
+	vector<bool> mark( ptrn.size() );
 	bool prev = true;
 
 	for( size_t i = 0; i < ptrn.size(); ++i ) {
@@ -101,7 +101,7 @@ template<class DstIter>
 DstIter expandGlobRec( string const& root, basic_string<uint16_t> const& ptrn, DstIter dstIt ) {
 	size_t slash = ptrn.find( '/' );
 	if( slash == basic_string<uint16_t>::npos ) {
-		deque<tuple<string, int>> dirs;
+		vector<tuple<string, int>> dirs;
 		try {
 			listDir( root, back_inserter( dirs ) );
 		}
@@ -123,7 +123,7 @@ DstIter expandGlobRec( string const& root, basic_string<uint16_t> const& ptrn, D
 			dstIt = expandGlobRec( root + string( base.begin(), base.end() ) + "/", rest, dstIt );
 		}
 		else {
-			deque<tuple<string, int>> dirs;
+			vector<tuple<string, int>> dirs;
 			try {
 				listDir( root, back_inserter( dirs ) );
 			}

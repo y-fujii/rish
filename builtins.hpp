@@ -3,7 +3,7 @@
 
 #include <cassert>
 #include <cmath>
-#include <deque>
+#include <vector>
 #include <sstream>
 #include <string>
 #include <stdlib.h>
@@ -19,7 +19,7 @@ using namespace std;
 namespace builtins {
 
 
-int setEnv( deque<string> const& args, Evaluator&, int, int ) {
+int setEnv( vector<string> const& args, Evaluator&, int, int ) {
 	if( args.size() != 2 ) {
 		return 1;
 	}
@@ -27,7 +27,7 @@ int setEnv( deque<string> const& args, Evaluator&, int, int ) {
 	return 0;
 }
 
-int getEnv( deque<string> const& args, Evaluator&, int, int ofd ) {
+int getEnv( vector<string> const& args, Evaluator&, int, int ofd ) {
 	if( args.size() != 1 ) {
 		return 1;
 	}
@@ -39,7 +39,7 @@ int getEnv( deque<string> const& args, Evaluator&, int, int ofd ) {
 	return 0;
 }
 
-int join( deque<string> const& args, Evaluator& eval, int, int ) {
+int join( vector<string> const& args, Evaluator& eval, int, int ) {
 	static_assert( sizeof( thread::id ) == sizeof( uintptr_t ), "" );
 
 	for( auto const& arg: args ) {
@@ -66,7 +66,7 @@ int join( deque<string> const& args, Evaluator& eval, int, int ) {
 	return 0;
 }
 
-int wait( deque<string> const& args, Evaluator&, int, int ) {
+int wait( vector<string> const& args, Evaluator&, int, int ) {
 	int retv = 0;
 	for( auto const& arg: args ) {
 		pid_t pid = readValue<int>( arg );

@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <deque>
+#include <vector>
 #include <exception>
 #include <functional>
 #include <iterator>
@@ -27,7 +27,7 @@ using namespace std;
 
 
 struct Evaluator {
-	using ArgIter = move_iterator<deque<string>::iterator>;
+	using ArgIter = move_iterator<vector<string>::iterator>;
 
 	struct Listener {
 		virtual int  onCommand( ArgIter, ArgIter, int, int, const string& ) = 0;
@@ -35,14 +35,14 @@ struct Evaluator {
 	};
 
 	struct Local {
-		deque<string>& value( ast::Var* );
+		vector<string>& value( ast::Var* );
 		template<class Iter> bool assign( ast::LeftFix*, Iter, Iter );
 		template<class Iter> bool assign( ast::LeftVar*, Iter, Iter );
 		template<class Iter> bool assign( ast::LeftExpr*, Iter, Iter );
 
 		shared_ptr<Local> outer;
-		deque<deque<string>> vars;
-		deque<deque<string>> defs;
+		vector<vector<string>> vars;
+		vector<vector<string>> defs;
 		string cwd;
 	};
 
@@ -76,7 +76,7 @@ struct Evaluator {
 };
 
 
-inline deque<string>& Evaluator::Local::value( ast::Var* var ) {
+inline vector<string>& Evaluator::Local::value( ast::Var* var ) {
 	assert( var->depth >= 0 );
 	assert( var->index >= 0 );
 
@@ -204,8 +204,8 @@ tailRec:
 			goto tailRec;
 		}
 		VCASE( Concat, e ) {
-			deque<MetaString> lhs;
-			deque<MetaString> rhs;
+			vector<MetaString> lhs;
+			vector<MetaString> rhs;
 			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
 			evalExpr( e->rhs.get(), local, back_inserter( rhs ) );
 			for( auto const& lv: lhs ) {
@@ -247,7 +247,7 @@ tailRec:
 			parallel( writer, reader );
 		}
 		VCASE( BinOp, e ) {
-			deque<MetaString> lhss, rhss;
+			vector<MetaString> lhss, rhss;
 			evalExpr( e->lhs.get(), local, back_inserter( lhss ) );
 			evalExpr( e->rhs.get(), local, back_inserter( rhss ) );
 			if( (lhss.size() != 0 && rhss.size() == 0) ||
@@ -290,7 +290,7 @@ tailRec:
 			}
 		}
 		VCASE( UniOp, e ) {
-			deque<MetaString> lhs;
+			vector<MetaString> lhs;
 			evalExpr( e->lhs.get(), local, back_inserter( lhs ) );
 			for( auto const& v: lhs ) {
 				int64_t val = stoll( string( v ) );
@@ -310,7 +310,7 @@ tailRec:
 			*dst++ = to_string( val.size() );
 		}
 		VCASE( Index, e ) {
-			deque<MetaString> sIdcs;
+			vector<MetaString> sIdcs;
 			evalExpr( e->idx.get(), local, back_inserter( sIdcs ) );
 
 			lock_guard<mutex> lock( _mutex );
@@ -325,8 +325,8 @@ tailRec:
 			}
 		}
 		VCASE( Slice, e ) {
-			deque<MetaString> sBgns;
-			deque<MetaString> sEnds;
+			vector<MetaString> sBgns;
+			vector<MetaString> sEnds;
 			evalExpr( e->bgn.get(), local, back_inserter( sBgns ) );
 			evalExpr( e->end.get(), local, back_inserter( sEnds ) );
 			if( (sBgns.size() != 0 && sEnds.size() == 0) ||
@@ -525,7 +525,7 @@ tailRec:
 			return 0;
 		}
 		VCASE( RedirFr, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->file.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw invalid_argument( "" );
@@ -537,7 +537,7 @@ tailRec:
 			return evalStmt( s->body.get(), local, fd, ofd );
 		}
 		VCASE( RedirTo, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->file.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw invalid_argument( "" );
@@ -549,7 +549,7 @@ tailRec:
 			return evalStmt( s->body.get(), local, ifd, fd );
 		}
 		VCASE( Command, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->args.get(), local, back_inserter( args ) );
 			if( args.size() == 0 ) {
 				return 0;
@@ -562,7 +562,7 @@ tailRec:
 			);
 		}
 		VCASE( Return, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			switch( args.size() ) {
 				case 0:
@@ -574,7 +574,7 @@ tailRec:
 			}
 		}
 		VCASE( Fun, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->name.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw invalid_argument( "" );
@@ -585,7 +585,7 @@ tailRec:
 			return 0;
 		}
 		VCASE( FunDel, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->name.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw invalid_argument( "" );
@@ -621,7 +621,7 @@ tailRec:
 			goto tailRec;
 		}
 		VCASE( Break, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->retv.get(), local, back_inserter( args ) );
 			switch( args.size() ) {
 				case 0:
@@ -633,7 +633,7 @@ tailRec:
 			}
 		}
 		VCASE( Let, s ) {
-			deque<string> vals;
+			vector<string> vals;
 			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 
 			lock_guard<mutex> lock( _mutex );
@@ -647,7 +647,7 @@ tailRec:
 			VSWITCH( s->lhs.get() ) {
 				VCASE( LeftFix, lhs ) {
 					UnixIStream<1> ifs( ifd );
-					deque<string> rhs( lhs->var.size() );
+					vector<string> rhs( lhs->var.size() );
 					for( auto& v: rhs ) {
 						if( !getline( ifs, v, _separator ) ) {
 							return 1;
@@ -662,7 +662,7 @@ tailRec:
 					) ? 0 : 1;
 				}
 				VCASE( LeftVar, lhs ) {
-					deque<string> rhs;
+					vector<string> rhs;
 					UnixIStream<> ifs( ifd );
 					string buf;
 					while( getline( ifs, buf, _separator ) ) {
@@ -682,7 +682,7 @@ tailRec:
 			}
 		}
 		VCASE( Yield, s ) {
-			deque<string> vals;
+			vector<string> vals;
 			evalArgs( s->rhs.get(), local, back_inserter( vals ) );
 			ostringstream buf;
 			for( auto const& v: vals ) {
@@ -739,7 +739,7 @@ tailRec:
 				return 0;
 			}
 
-			deque<deque<string>> vals( s->exprs.size() );
+			vector<vector<string>> vals( s->exprs.size() );
 			// evaluate all elements even if they have different sizes
 			bool error = false;
 			for( size_t i = 0; i < s->exprs.size(); ++i ) {
@@ -761,7 +761,7 @@ tailRec:
 			return 0;
 		}
 		VCASE( Defer, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->args.get(), local, back_inserter( args ) );
 
 			lock_guard<mutex> lock( _mutex );
@@ -769,7 +769,7 @@ tailRec:
 			return 0;
 		}
 		VCASE( ChDir, s ) {
-			deque<string> args;
+			vector<string> args;
 			evalArgs( s->args.get(), local, back_inserter( args ) );
 			if( args.size() != 1 ) {
 				throw invalid_argument( "" );
@@ -790,9 +790,6 @@ tailRec:
 		return -1;
 	}
 	catch( system_error const& ) {
-		return -2;
-	}
-	catch( ios_base::failure const& ) {
 		return -2;
 	}
 
