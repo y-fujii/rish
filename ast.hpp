@@ -1,7 +1,7 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <deque>
+#include <vector>
 #include "glob.hpp"
 
 using namespace std;
@@ -150,19 +150,19 @@ struct Null: VariantImpl<Expr, Null> {
 };
 
 struct LeftFix: VariantImpl<LeftExpr, LeftFix> {
-	LeftFix( deque<unique_ptr<Expr>>&& v ):
+	LeftFix( vector<unique_ptr<Expr>>&& v ):
 		var( move( v ) ) {}
 
-	deque<unique_ptr<Expr>> var;
+	vector<unique_ptr<Expr>> var;
 };
 
 struct LeftVar: VariantImpl<LeftExpr, LeftVar> {
-	LeftVar( deque<unique_ptr<Expr>>&& vL, unique_ptr<Var>&& vM, deque<unique_ptr<Expr>>&& vR ):
+	LeftVar( vector<unique_ptr<Expr>>&& vL, unique_ptr<Var>&& vM, vector<unique_ptr<Expr>>&& vR ):
 		varL( move( vL ) ), varM( move( vM ) ), varR( move( vR ) )  {}
 
-	deque<unique_ptr<Expr>> varL;
+	vector<unique_ptr<Expr>> varL;
 	unique_ptr<Var> varM;
-	deque<unique_ptr<Expr>> varR;
+	vector<unique_ptr<Expr>> varR;
 };
 
 struct If: VariantImpl<Stmt, If> {
@@ -291,10 +291,10 @@ struct Pipe: VariantImpl<Stmt, Pipe> {
 };
 
 struct Zip: VariantImpl<Stmt, Zip> {
-	Zip( deque<unique_ptr<Expr>>&& e ):
+	Zip( vector<unique_ptr<Expr>>&& e ):
 		exprs( move( e ) ) {}
 
-	deque<unique_ptr<Expr>> exprs;
+	vector<unique_ptr<Expr>> exprs;
 };
 
 struct Defer: VariantImpl<Stmt, Defer> {

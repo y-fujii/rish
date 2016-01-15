@@ -2,7 +2,7 @@
 
 %{
 	#include <exception>
-	#include <deque>
+	#include <vector>
 	#include <fcntl.h>
 	#include "misc.hpp"
 	#include "ast.hpp"
@@ -25,7 +25,7 @@
 	StupidPtr<ast::Expr>     expr;
 	StupidPtr<ast::LeftExpr> lexpr;
 	StupidPtr<ast::Stmt>     stmt;
-	std::deque<unique_ptr<ast::Expr>>* exprs;
+	std::vector<unique_ptr<ast::Expr>>* exprs;
 }
 
 %type<word>  TK_WORD symbols
@@ -123,11 +123,11 @@ lexpr_prim
 lexpr_list
 	: lexpr_list TK_VAR					{ $1->push_back( $2 ); $$ = $1; }
 	| lexpr_list TK_WORD				{ $1->push_back( $2 ); $$ = $1; }
-	|									{ $$ = new deque<unique_ptr<Expr>>(); }
+	|									{ $$ = new vector<unique_ptr<Expr>>(); }
 
 expr_list
 	: expr_list expr_concat				{ $1->push_back( $2 ); $$ = $1; }
-	| 									{ $$ = new deque<unique_ptr<Expr>>(); }
+	| 									{ $$ = new vector<unique_ptr<Expr>>(); }
 
 /* use right recursion for tail-call optimized evaluator */
 expr_pair
