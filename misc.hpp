@@ -1,21 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <functional>
-#include <future>
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <thread>
-#include <type_traits>
-#include <vector>
-
-using namespace std;
-
 
 template<class T, size_t N>
 constexpr size_t size( T const (&)[N] ) {

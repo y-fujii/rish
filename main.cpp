@@ -1,22 +1,12 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
-#include <cassert>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <cstdlib>
-#include <signal.h>
-#include <unistd.h>
 #include "misc.hpp"
+#include "unix.hpp"
+#include "glob.hpp"
 #include "ast.hpp"
 #include "parser.hpp"
 #include "annotate.hpp"
 #include "eval.hpp"
-//#include "repl.hpp"
-//#include "builtins.hpp"
-
-using namespace std;
 
 
 // toriaezu tekito-
@@ -147,3 +137,7 @@ int main( int argc, char** argv ) {
 
 	return 0;
 }
+
+
+#include "lexer.cpp"
+#include "parser.cpp"

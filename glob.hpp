@@ -1,16 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <cstdint>
-#include <vector>
-#include <string>
-#include <system_error>
-#include <dirent.h>
-#include <sys/param.h>
-#include "misc.hpp"
-
-using namespace std;
-
 
 struct MetaString: basic_string<uint16_t> {
 	MetaString()                                  = default;

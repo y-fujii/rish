@@ -1,30 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <algorithm>
-#include <cassert>
-#include <vector>
-#include <exception>
-#include <functional>
-#include <iterator>
-#include <map>
-#include <numeric>
-#include <set>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <system_error>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/wait.h>
-#include "ast.hpp"
-#include "glob.hpp"
-#include "misc.hpp"
-#include "unix.hpp"
-
-using namespace std;
-
 
 struct Evaluator {
 	using ArgIter = move_iterator<vector<string>::iterator>;

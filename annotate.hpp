@@ -1,13 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <map>
-#include "ast.hpp"
-#include "misc.hpp"
-#include "parser.hpp"
-
-using namespace std;
-
 
 struct Annotator {
 	struct Local {
