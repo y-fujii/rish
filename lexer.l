@@ -1,15 +1,12 @@
 /* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
 
 %{
-	#include "tokens.hpp"
-
-
-	istream* lexerIStream = nullptr;
-	size_t   lexerLineNo  = 0;
+	istream* _lexerIStream = nullptr;
+	size_t   _lexerLineNo  = 0;
 
 	#define YY_INPUT( buf, result, bufSize ) {		\
-		lexerIStream->read( buf, bufSize );			\
-		result = lexerIStream->gcount();			\
+		_lexerIStream->read( buf, bufSize );			\
+		result = _lexerIStream->gcount();			\
 	}
 
 	#pragma GCC diagnostic ignored "-Wsign-compare"
@@ -58,7 +55,7 @@
 
 <N,I>"if"				{ BEGIN( N ); return TK_IF; }
 <N,I>"else"				{ BEGIN( N ); return TK_ELSE; }
-<N,I>\n[ \t]*"else"		{ BEGIN( N ); ++lexerLineNo; return TK_ELSE; }
+<N,I>\n[ \t]*"else"		{ BEGIN( N ); ++_lexerLineNo; return TK_ELSE; }
 <N,I>"while"			{ BEGIN( N ); return TK_WHILE; }
 <N,I>"break"			{ BEGIN( N ); return TK_BREAK; }
 <N,I>"return"			{ BEGIN( N ); return TK_RETURN; }
@@ -73,19 +70,19 @@
 <N,I>"chdir"			{ BEGIN( N ); return TK_CHDIR; }
 
 <N,I>\$[a-zA-Z0-9_]+ {
-	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), lexerLineNo );
+	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), _lexerLineNo );
 	BEGIN( C );
 	return TK_VAR;
 }
 
 <N,I>#[a-zA-Z0-9_]+ {
-	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), lexerLineNo );
+	yylval.var = new ast::Var( string( yytext + 1, yyleng - 1 ), _lexerLineNo );
 	BEGIN( C );
 	return TK_SIZE;
 }
 
 <N,I>\$[a-zA-Z0-9_]+\( {
-	yylval.var = new ast::Var( string( yytext + 1, yyleng - 2 ), lexerLineNo );
+	yylval.var = new ast::Var( string( yytext + 1, yyleng - 2 ), _lexerLineNo );
 	BEGIN( I );
 	return TK_INDEX;
 }
@@ -123,7 +120,7 @@
 					case 'v': c = '\v';   break;
 					case 'e': c = '\x1b'; break;
 					default:
-						throw SyntaxError( lexerLineNo );
+						throw SyntaxError( _lexerLineNo );
 				}
 			}
 			else {
@@ -144,24 +141,24 @@
 <C>[^\)\] \t\n]		{ BEGIN( N ); yyless( 0 ); return '^'; }
 <I>[ \t]+			{}
 <N,C>[ \t]+			{ BEGIN( N ); }
-<I>"\n"				{ ++lexerLineNo; }
-<N,C>"\n"			{ BEGIN( N ); ++lexerLineNo; return ';'; }
+<I>"\n"				{ ++_lexerLineNo; }
+<N,C>"\n"			{ BEGIN( N ); ++_lexerLineNo; return ';'; }
 
 <I>"//"[^\n]*		{}
 <N,C>"//"[^\n]*		{ BEGIN( N ); }
 
 %%
 
-extern "C" int yywrap() {
+int yywrap() {
 	return 1;
 }
 
 void lexerInit( istream* istr ) {
-	lexerIStream = istr;
-	lexerLineNo  = 0;
+	_lexerIStream = istr;
+	_lexerLineNo  = 0;
 	BEGIN( N );
 }
 
-size_t lexerGetLineNo() {
-	return lexerLineNo;
+size_t lexerLineNo() {
+	return _lexerLineNo;
 }
