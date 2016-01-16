@@ -2,62 +2,10 @@
 #pragma once
 
 
-void lexerInit( istream* );
-size_t lexerGetLineNo();
-int yylex();
-int yyparse();
-extern unique_ptr<ast::Stmt> parserResult;
-
-
 struct SyntaxError: exception {
 	SyntaxError( size_t l ): line( l ) {}
 
 	size_t line;
 };
 
-inline unique_ptr<ast::Stmt> parse( istream& istr ) {
-	assert( !parserResult );
-	lexerInit( &istr );
-	yyparse();
-	lexerInit( nullptr );
-	assert( parserResult );
-
-	return std::move( parserResult );
-}
-
-template<class Iter>
-Iter lex( istream& istr, Iter dstIt ) {
-	lexerInit( &istr );
-	int c;
-	while( c = yylex(), c != 0 ) {
-		*dstIt++ = c;
-	}
-	return dstIt;
-}
-
-template<class T>
-struct StupidPtr {
-	// POD
-
-	StupidPtr& operator=( T* p ) {
-		_ptr = p;
-		return *this;
-	}
-
-	template<class U>
-	operator StupidPtr<U>() const {
-		StupidPtr<U> dst;
-		dst._ptr = _ptr;
-		return dst;
-	}
-
-	template<class U>
-	operator unique_ptr<U>() const {
-		return unique_ptr<U>( _ptr );
-	}
-
-	private:
-		T* _ptr;
-	
-	template<class U> friend struct StupidPtr;
-};
+unique_ptr<ast::Stmt> parse( istream& );

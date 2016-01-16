@@ -139,5 +139,4 @@ int main( int argc, char** argv ) {
 }
 
 
-#include "lexer.cpp"
 #include "parser.cpp"

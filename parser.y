@@ -1,15 +1,37 @@
 /* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
 
 %{
+	template<class T>
+	struct StupidPtr {
+		StupidPtr& operator=( T* p ) {
+			_ptr = p;
+			return *this;
+		}
+
+		template<class U>
+		operator StupidPtr<U>() const {
+			StupidPtr<U> dst;
+			dst._ptr = _ptr;
+			return dst;
+		}
+
+		template<class U>
+		operator unique_ptr<U>() const {
+			return unique_ptr<U>( _ptr );
+		}
+
+		private:
+			T* _ptr;
+		
+		template<class U> friend struct StupidPtr;
+	};
+
+	int yylex();
+	[[noreturn]] int yyerror( char const* );
+
+	unique_ptr<ast::Stmt> _parserResult;
+
 	using namespace ast;
-
-
-	unique_ptr<ast::Stmt> parserResult;
-
-	extern "C" int yyerror( char const* ) {
-		// XXX: memory leak
-		throw SyntaxError( lexerGetLineNo() );
-	}
 %}
 
 %union {
@@ -41,7 +63,7 @@
 %%
 
 top
-	: stmt_seq						{ ::parserResult = $1; }
+	: stmt_seq						{ ::_parserResult = $1; }
 
 /* use right recursion for tail-call optimized evaluator */
 stmt_seq
@@ -195,3 +217,22 @@ symbols
 	| TK_NE								{ $$ = new Word( basic_string<uint16_t>{ '!', '=' } ); }
 	| TK_LE								{ $$ = new Word( basic_string<uint16_t>{ '<', '=' } ); }
 	| TK_GE								{ $$ = new Word( basic_string<uint16_t>{ '>', '=' } ); }
+
+%%
+
+#include "lexer.cpp"
+
+unique_ptr<ast::Stmt> parse( istream& istr ) {
+	assert( !_parserResult );
+	lexerInit( &istr );
+	yyparse();
+	lexerInit( nullptr );
+	assert( _parserResult );
+
+	return std::move( _parserResult );
+}
+
+[[noreturn]] int yyerror( char const* ) {
+	// XXX: memory leak
+	throw SyntaxError( lexerLineNo() );
+}
