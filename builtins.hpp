@@ -1,20 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <cassert>
-#include <cmath>
-#include <vector>
-#include <sstream>
-#include <string>
-#include <cstdlib>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include "misc.hpp"
-#include "glob.hpp"
-#include "eval.hpp"
-#include "unix.hpp"
-
-using namespace std;
 
 namespace builtins {
 

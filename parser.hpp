@@ -1,11 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <memory>
-#include <iostream>
-#include "ast.hpp"
-#include "misc.hpp"
-
 
 void lexerInit( istream* );
 size_t lexerGetLineNo();

@@ -1,22 +1,5 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
-
-#include <cassert>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <cstdlib>
-#include <signal.h>
-#include <unistd.h>
-#include <readline/history.h>
-#include <readline/readline.h>
-#include "misc.hpp"
-#include "ast.hpp"
-#include "parser.hpp"
-#include "eval.hpp"
-#include "unix.hpp"
-//#include "builtins.hpp"
-
-using namespace std;
+#pragma once
 
 
 // broken, broken, broken

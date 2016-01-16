@@ -1,15 +1,8 @@
 /* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
 
 %{
-	#include <exception>
-	#include <vector>
-	#include <fcntl.h>
-	#include "misc.hpp"
-	#include "ast.hpp"
-	#include "parser.hpp"
-
-	using namespace std;
 	using namespace ast;
+
 
 	unique_ptr<ast::Stmt> parserResult;
 

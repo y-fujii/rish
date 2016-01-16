@@ -1,18 +1,8 @@
 /* (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license */
 
 %{
-	#include <cassert>
-	#include <exception>
-	#include <iostream>
-	#include <memory>
-	#include <string.h>
-	#include "misc.hpp"
-	#include "glob.hpp"
-	#include "ast.hpp"
-	#include "parser.hpp"
 	#include "tokens.hpp"
 
-	using namespace std;
 
 	istream* lexerIStream = nullptr;
 	size_t   lexerLineNo  = 0;
@@ -24,7 +14,6 @@
 
 	#pragma GCC diagnostic ignored "-Wsign-compare"
 	#pragma GCC diagnostic ignored "-Wunused-function"
-	#pragma GCC diagnostic ignored "-Wdeprecated"
 %}
 
 /* [N]ormal, auto [C]aret, [I]gnore newline */

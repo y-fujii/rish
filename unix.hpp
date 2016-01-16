@@ -1,21 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <array>
-#include <cassert>
-#include <iomanip>
-#include <map>
-#include <sstream>
-#include <cstring>
-#include <fcntl.h>
-#include <poll.h>
-#include <signal.h>
-#include <unistd.h>
-#include "misc.hpp"
-#include "glob.hpp"
-
-using namespace std;
-
 
 struct ThreadSupport {
 	struct Interrupt {

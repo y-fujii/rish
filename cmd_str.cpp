@@ -1,16 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
-#include <algorithm>
-#include <functional>
-#include <utility>
-#include <array>
-#include <string>
-#include <iostream>
-#include <regex>
-#include <unistd.h>
 #include "misc.hpp"
-
-using namespace std;
 
 
 void cmdChars( char**, int ) {

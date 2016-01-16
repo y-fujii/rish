@@ -1,10 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 #pragma once
 
-#include <vector>
-#include "glob.hpp"
-
-using namespace std;
 
 namespace ast {
 
