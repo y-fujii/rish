@@ -1,4 +1,5 @@
 # rish - Modern Unix shell language
+[![Build Status](https://travis-ci.org/y-fujii/rish.svg?branch=master)](https://travis-ci.org/y-fujii/rish)
 
 ## Example
 ```

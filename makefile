@@ -1,7 +1,6 @@
-#CXX  = g++
-CXX  = clang++
-LEX  = flex
-YACC = yacc
+#CXX  = clang++
+#LEX  = flex
+#YACC = yacc
 OPTS = -std=gnu++14 -pedantic -Wall -Wextra -pthread -O3
 SRCS = src/lexer.l src/parser.y src/main.cpp $(wildcard src/*.hpp)
 

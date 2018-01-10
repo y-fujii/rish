@@ -1,0 +1,19 @@
+group: travis_latest
+
+language: generic
+
+matrix:
+    include:
+        - os: linux
+          env: CC=clang CXX=clang++
+        - os: linux
+          env: CC=gcc-7 CXX=g++-7
+
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+        packages:
+            - g++-7
+
+script: make
