@@ -1,5 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
+#include "pch.hpp"
 #include "misc.hpp"
 #include "unix.hpp"
 #include "glob.hpp"
@@ -139,4 +140,5 @@ int main( int argc, char** argv ) {
 }
 
 
-#include "parser.cpp"
+#include "../build/parser.cpp"
+#include "../build/lexer.cpp"

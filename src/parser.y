@@ -220,8 +220,6 @@ symbols
 
 %%
 
-#include "lexer.cpp"
-
 unique_ptr<ast::Stmt> parse( istream& istr ) {
 	assert( !_parserResult );
 	lexerInit( &istr );

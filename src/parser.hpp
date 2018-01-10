@@ -8,4 +8,6 @@ struct SyntaxError: exception {
 	size_t line;
 };
 
+void lexerInit( istream* );
+size_t lexerLineNo();
 unique_ptr<ast::Stmt> parse( istream& );

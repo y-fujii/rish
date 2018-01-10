@@ -2,38 +2,32 @@
 CXX  = clang++
 LEX  = flex
 YACC = yacc
-OPTS = -std=c++14 -pedantic -Wall -Wextra -pthread -O3
+OPTS = -std=gnu++14 -pedantic -Wall -Wextra -pthread -O3
+SRCS = src/lexer.l src/parser.y src/main.cpp $(wildcard src/*.hpp)
 
-SRCS = \
-	lexer.l parser.y \
-	misc.hpp unix.hpp \
-	parser.hpp ast.hpp annotate.hpp eval.hpp glob.hpp \
-	builtins.hpp repl.hpp main.cpp
+.PHONY: all clean test analyze
 
-.PHONY: all test analyze clean
-all: rish str
-
-test: rish
-	wc $(SRCS)
-	./rish test.rs
-
-analyze: lexer.cpp parser.cpp
-	clang++ --analyze $(OPTS) -include pch.hpp main.cpp
+all: build/rish build/str
 
 clean:
-	rm -f parser.cpp parser.out lexer.cpp pch.hpp.gch rish str
+	rm -rf build
 
-rish: $(SRCS) lexer.cpp parser.cpp makefile pch.hpp.gch
-	$(CXX) $(OPTS) -include pch.hpp -o rish main.cpp -lreadline
+test: build/rish
+	wc $(SRCS)
+	build/rish examples/test.rs
 
-lexer.cpp: lexer.l
-	$(LEX) -olexer.cpp lexer.l
+analyze: $(SRCS)
+	mkdir -p build
+	$(LEX)  -obuild/lexer.cpp  src/lexer.l
+	$(YACC) -obuild/parser.cpp src/parser.y
+	cd build && clang++ --analyze $(OPTS) ../src/main.cpp
 
-parser.cpp: parser.y
-	$(YACC) -o parser.cpp parser.y
+build/rish: $(SRCS) makefile
+	mkdir -p build
+	$(LEX)  -obuild/lexer.cpp  src/lexer.l
+	$(YACC) -obuild/parser.cpp src/parser.y
+	$(CXX) $(OPTS) -o build/rish src/main.cpp -lreadline
 
-str: cmd_str.cpp makefile pch.hpp.gch
-	$(CXX) $(OPTS) -include pch.hpp -o str cmd_str.cpp
-
-pch.hpp.gch: pch.hpp makefile
-	$(CXX) $(OPTS) -x c++-header pch.hpp
+build/str: src/cmd_str.cpp makefile
+	mkdir -p build
+	$(CXX) $(OPTS) -o build/str src/cmd_str.cpp

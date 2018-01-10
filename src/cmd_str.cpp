@@ -1,5 +1,6 @@
 // (c) Yasuhiro Fujii <y-fujii at mimosa-pudica.net> / 2-clause BSD license
 
+#include "pch.hpp"
 #include "misc.hpp"
 
 
